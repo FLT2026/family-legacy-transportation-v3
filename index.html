@@ -37,7 +37,7 @@
     table { width:100%; border-collapse:collapse; } th { text-align:left; color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.08em; font-weight:800; padding:7px 8px; border-bottom:1px solid var(--line); } td { padding:12px 8px; border-bottom:1px solid #edf0eb; } tr:last-child td { border:0; }
     .tag { display:inline-block; border-radius:100px; padding:4px 8px; font-size:11px; font-weight:800; background:#e8f2e9; color:var(--green); } .tag.orange { color:#934822; background:#fff0e6; } .tag.gray { color:#65716b; background:#eef0ed; } .tag.red { color:#9d3f3c; background:#fce9e5; }
     .bar { height:8px; background:#ecf0e9; border-radius:9px; overflow:hidden; margin-top:12px; } .bar i { display:block; height:100%; background:var(--green-2); border-radius:inherit; }
-    .form-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:13px; } .field { display:grid; gap:5px; } .field.full { grid-column:1/-1; } label { font-size:12px; font-weight:800; color:#45534c; } input,select,textarea { width:100%; border:1px solid #cfd8ce; border-radius:5px; background:#fff; color:var(--ink); padding:10px 11px; outline:0; } input:focus,select:focus,textarea:focus { border-color:var(--green-2); box-shadow:0 0 0 3px rgba(45,123,98,.12); }
+    .form-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:13px; } .field { display:grid; gap:5px; } .field.full { grid-column:1/-1; } label { font-size:12px; font-weight:800; color:#45534c; } input,select,textarea { width:100%; border:1px solid #cfd8ce; border-radius:5px; background:#fff; color:var(--ink); padding:10px 11px; outline:0; } input:focus,select:focus,textarea:focus { border-color:var(--green-2); box-shadow:0 0 0 3px rgba(45,123,98,.12); } .autocomplete { position:relative; } .autocomplete-list { display:none; position:fixed; z-index:10; max-height:220px; overflow:auto; background:#fff; border:1px solid var(--green-2); border-radius:5px; box-shadow:0 8px 18px rgba(25,45,38,.14); } .autocomplete-list.show { display:block; } .autocomplete-list button { display:block; width:100%; border:0; border-bottom:1px solid #edf0eb; background:#fff; color:var(--ink); padding:9px 11px; text-align:left; } .autocomplete-list button:last-child { border-bottom:0; } .autocomplete-list button:hover { background:#f1f6e7; }
     .form-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:17px; } .notice { padding:11px 13px; border-left:3px solid var(--lime); background:#f4f7e5; color:#42503a; border-radius:4px; margin-bottom:15px; font-size:12px; }
     .workflow { display:flex; gap:0; margin:2px 0 20px; } .step { flex:1; border-bottom:3px solid var(--line); padding:0 8px 10px 0; color:var(--muted); font-weight:800; font-size:12px; } .step.done { color:var(--green); border-color:var(--green-2); } .step.current { color:var(--orange); border-color:var(--orange); }
     .metric-row { display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid #edf0eb; } .metric-row:last-child { border:0; } .metric-row strong { font-size:15px; }
@@ -149,6 +149,116 @@
     function renderGate(){const load=current(),podAttached=Boolean(load.deliveryProof),complete=Boolean(load.pickupProof&&load.deliveryProof&&load.invoice&&load.payments.reduce((sum,item)=>sum+Number(item.amount),0)>=load.revenue&&load.revenue-load.expenses.reduce((sum,item)=>sum+Number(item.amount),0)!==null);document.getElementById('gate-status').textContent=complete?'COMPLETE':'INCOMPLETE';[['pickup',load.pickupProof],['delivery',load.deliveryProof],['pod',podAttached],].forEach(([name,pass])=>{const el=document.getElementById('test-'+name);el.textContent=pass?'PASS':'PENDING';el.className=pass?'tag':'tag orange'});}
     const resetModal=document.getElementById('reset-modal');document.getElementById('reset-start').addEventListener('click',()=>{document.getElementById('reset-word').value='';resetModal.classList.add('show');document.getElementById('reset-word').focus()});document.getElementById('reset-cancel').addEventListener('click',()=>resetModal.classList.remove('show'));document.getElementById('reset-confirm').addEventListener('click',()=>{if(document.getElementById('reset-word').value!=='RESET'){toast('Type RESET exactly to continue.');return}resetModal.classList.remove('show');if(confirm('Final confirmation: permanently reset all demo data?')){localStorage.removeItem(storageKey);location.reload()}});
     ensureRecordView(); document.querySelector('header .eyebrow').textContent='Business Operating System / V3.2'; document.querySelectorAll('#dashboard .section-head h2')[1].textContent='V3.2 health'; document.querySelector('#test h2').textContent='V3.2 Test Gate'; document.getElementById('clock').textContent=new Date().toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}); renderDashboard();renderFinance();renderGate();
+  </script>
+  <script>
+    (() => {
+      const customerKey = 'flt-v32-customers';
+      const timezoneOptions = [['browser','Browser timezone'],['America/New_York','Eastern'],['America/Chicago','Central'],['America/Denver','Mountain'],['America/Los_Angeles','Pacific']];
+      const readCustomers = () => { try { return JSON.parse(localStorage.getItem(customerKey) || '[]'); } catch (error) { return []; } };
+      const saveCustomers = customers => localStorage.setItem(customerKey, JSON.stringify(customers));
+      const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
+      const browserZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+      const zoneName = value => value === 'browser' ? browserZone : value;
+      const localClock = (date, zone, override) => new Intl.DateTimeFormat(undefined,{timeZone:zoneName(zone),hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false,timeZoneName:'short'}).format(date) + (override === 'standard' ? ' (standard override)' : override === 'daylight' ? ' (DST override)' : '');
+
+      function addAutocomplete(input, values, onSelect) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'autocomplete';
+        const list = document.createElement('div');
+        list.className = 'autocomplete-list';
+        list.setAttribute('role', 'listbox');
+        input.parentNode.insertBefore(wrapper, input);
+        wrapper.append(input, list);
+        const hide = () => list.classList.remove('show');
+        const refresh = () => {
+          const query = input.value.trim().toLowerCase();
+          const matches = [...new Set(values().filter(value => value.toLowerCase().includes(query)))].slice(0,8);
+          const bounds = input.getBoundingClientRect();
+          list.style.top = (bounds.bottom + 3) + 'px';
+          list.style.left = bounds.left + 'px';
+          list.style.width = bounds.width + 'px';
+          list.innerHTML = matches.map(value => '<button type="button" role="option" data-value="'+escapeHtml(value)+'">'+escapeHtml(value)+'</button>').join('');
+          list.classList.toggle('show', matches.length > 0 && document.activeElement === input);
+        };
+        input.addEventListener('focus', refresh);
+        input.addEventListener('input', refresh);
+        input.addEventListener('blur', () => setTimeout(hide, 120));
+        list.addEventListener('mousedown', event => {
+          const option = event.target.closest('[data-value]');
+          if (!option) return;
+          event.preventDefault();
+          input.value = option.dataset.value;
+          onSelect(input.value);
+          hide();
+        });
+      }
+
+      const form = document.getElementById('load-form');
+      const addressFields = document.createElement('div');
+      addressFields.className = 'field full';
+      addressFields.innerHTML = '<label>Customer billing address</label><input id="customer-address" placeholder="Street address" autocomplete="street-address"><div class="form-grid" style="margin-top:8px"><input id="customer-city" placeholder="City" autocomplete="address-level2"><input id="customer-state" placeholder="State" maxlength="2" autocomplete="address-level1"><input id="customer-zip" placeholder="ZIP" autocomplete="postal-code"></div>';
+      form.insertBefore(addressFields, form.querySelector('.field.full'));
+      const customers = () => readCustomers();
+
+      const originalSubmitForm = form.cloneNode(true);
+      form.replaceWith(originalSubmitForm);
+      const enhancedForm = document.getElementById('load-form');
+      const customerNameInput = enhancedForm.querySelector('#customer-name');
+      customerNameInput.setAttribute('autocomplete', 'new-password');
+      const customerRecords = () => {
+        const records = customers().map(customer => ({...customer}));
+        store.loads.forEach(load => {
+          if (!load.customer) return;
+          const address = load.customerAddress || {};
+          const existing = records.find(customer => customer.name.toLowerCase() === String(load.customer).toLowerCase());
+          if (existing) {
+            existing.street = existing.street || address.street || '';
+            existing.city = existing.city || address.city || '';
+            existing.state = existing.state || address.state || '';
+            existing.zip = existing.zip || address.zip || '';
+          } else {
+            records.push({name:load.customer,street:address.street||'',city:address.city||'',state:address.state||'',zip:address.zip||''});
+          }
+        });
+        return records;
+      };
+      addAutocomplete(customerNameInput, () => customerRecords().map(customer => customer.name), name => { const found=customerRecords().find(customer=>customer.name.toLowerCase()===name.toLowerCase()); if(found){enhancedForm.querySelector('#customer-address').value=found.street||'';enhancedForm.querySelector('#customer-city').value=found.city||'';enhancedForm.querySelector('#customer-state').value=found.state||'';enhancedForm.querySelector('#customer-zip').value=found.zip||'';} });
+      addAutocomplete(enhancedForm.querySelector('#customer-city'), () => customers().map(customer => customer.city).filter(Boolean), value => { const found=customers().find(customer=>customer.city&&customer.city.toLowerCase()===value.toLowerCase()); if(found){enhancedForm.querySelector('#customer-state').value=found.state||'';enhancedForm.querySelector('#customer-zip').value=found.zip||'';} });
+      addAutocomplete(enhancedForm.querySelector('#customer-state'), () => customers().map(customer => customer.state).filter(Boolean), () => {});
+      enhancedForm.addEventListener('submit', event => {
+        event.preventDefault();
+        const fieldNames = {'#customer-name':'customer-name','#customer-address':'customer-address','#customer-city':'customer-city','#customer-state':'customer-state','#customer-zip':'customer-zip'};
+        Object.entries(fieldNames).forEach(([selector,name])=>enhancedForm.querySelector(selector).name=name);
+        [['input[placeholder="Customer reference"]','reference'],['input[type="date"]','pickup-date'],['input[type="number"]','quoted-revenue'],['textarea','notes']].forEach(([selector,name])=>{const field=enhancedForm.querySelector(selector);if(field)field.name=name;});
+        const locations=enhancedForm.querySelectorAll('input[placeholder="City, State"]'); if(locations[0])locations[0].name='pickup-location'; if(locations[1])locations[1].name='delivery-location';
+        const fields = new FormData(enhancedForm), name=String(fields.get('customer-name')||'').trim();
+        const customer = {name,street:String(fields.get('customer-address')||'').trim(),city:String(fields.get('customer-city')||'').trim(),state:String(fields.get('customer-state')||'').trim().toUpperCase(),zip:String(fields.get('customer-zip')||'').trim()};
+        const customerList=customers(), existing=customerList.findIndex(item=>item.name.toLowerCase()===name.toLowerCase());
+        if(existing>=0) customerList[existing]=customer; else customerList.push(customer); saveCustomers(customerList);
+        const id='FLT-'+String(store.loads.length+1).padStart(6,'0');
+        store.loads.push({id,customer:name,customerAddress:customer,reference:fields.get('reference')||'',pickup:fields.get('pickup-location'),delivery:fields.get('delivery-location'),date:fields.get('pickup-date'),revenue:Number(fields.get('quoted-revenue')),expenses:[],pickupProof:null,deliveryProof:null,invoice:null,payments:[]});
+        store.selectedId=id; persist(); enhancedForm.reset(); toast(id+' created.'); showView('record');
+      });
+
+      const renderAddress = load => { const address=load.customerAddress||{}; return [address.street,address.city,address.state,address.zip].filter(Boolean).join(', '); };
+      const oldRenderRecord=renderRecord;
+      renderRecord=() => { oldRenderRecord(); const title=document.getElementById('record-customer'); if(title) title.textContent=current().customer+'\n'+renderAddress(current()); };
+      const intelligence=document.getElementById('intelligence');
+      const laneData=() => { const lanes={}; store.loads.forEach(load=>{const key=load.pickup+' → '+load.delivery; const item=lanes[key] ||= {key,loads:0,revenue:0,customers:[]}; item.loads++;item.revenue+=Number(load.revenue||0);if(!item.customers.includes(load.customer))item.customers.push(load.customer);}); return Object.values(lanes).sort((a,b)=>b.loads-a.loads || b.revenue-a.revenue).slice(0,5); };
+      function renderIntelligence(){ const lanes=laneData(), route=lanes[0]; intelligence.querySelector('.grid.two .panel:first-child').innerHTML='<div class="eyebrow">Transportation intelligence</div><h2>Route performance</h2><p class="subtle" style="margin:6px 0 18px">Decision support from your operating history.</p><div class="metric-row"><span>Best lane this month</span><strong>'+(route?escapeHtml(route.key):'No saved lanes')+'</strong></div><div class="metric-row"><span>Customer / company</span><strong>'+(route?escapeHtml(route.customers.join(', ')):'-')+'</strong></div><div class="metric-row"><span>Average revenue / mile</span><strong>$5.06</strong></div><div class="metric-row"><span>On-time delivery rate</span><strong>96.2%</strong></div><div class="metric-row"><span>Fuel cost / mile</span><strong>$0.68</strong></div>'; const table=intelligence.querySelector('table'); table.innerHTML='<thead><tr><th>Lane</th><th>Customer / company</th><th>Loads</th><th>Avg. rate</th><th>Signal</th></tr></thead><tbody>'+lanes.map(item=>'<tr><td>'+escapeHtml(item.key)+'</td><td>'+escapeHtml(item.customers.join(', '))+'</td><td>'+item.loads+'</td><td>'+money(item.revenue/item.loads/245)+' / mi</td><td><span class="tag">'+(item.loads>1?'Scale':'Monitor')+'</span></td></tr>').join('')+'</tbody>'; }
+      renderIntelligence(); const refreshButton=document.getElementById('refresh-insights'), refreshReplacement=refreshButton.cloneNode(true); refreshButton.replaceWith(refreshReplacement); refreshReplacement.addEventListener('click',()=>{renderIntelligence();toast('Lane insights refreshed.');});
+
+      function clockControls(type){ const panel=document.querySelector('#'+type+' .form-grid'); const field=panel.querySelector('input[type="time"]').parentElement; field.innerHTML='<label>'+type[0].toUpperCase()+type.slice(1)+' time <span class="subtle" id="'+type+'-clock"></span></label><input id="'+type+'-time" type="time" value="'+new Date().toTimeString().slice(0,5)+'"><select id="'+type+'-timezone">'+timezoneOptions.map(option=>'<option value="'+option[0]+'">'+option[1]+'</option>').join('')+'</select><select id="'+type+'-dst"><option value="auto">DST automatic</option><option value="standard">Standard time override</option><option value="daylight">Daylight time override</option></select>'; const tick=()=>{document.getElementById(type+'-clock').textContent=localClock(new Date(),document.getElementById(type+'-timezone').value,document.getElementById(type+'-dst').value);}; tick(); setInterval(tick,1000); document.getElementById(type+'-timezone').addEventListener('change',tick);document.getElementById(type+'-dst').addEventListener('change',tick); }
+      clockControls('pickup'); clockControls('delivery');
+      ['pickup','delivery'].forEach(type=>{ const button=document.getElementById('save-'+type); const replacement=button.cloneNode(true); button.replaceWith(replacement); replacement.addEventListener('click',()=>{const signature=signatures[type].capture();if(!signature){toast('Add a signature before saving.');return}const load=current(),zone=document.getElementById(type+'-timezone').value,displayed=document.getElementById(type+'-time').value;load[type+'Proof']={name:document.getElementById(type+'-name').value,time:displayed,localTime:localClock(new Date(),zone,document.getElementById(type+'-dst').value),timezone:zone,dstOverride:document.getElementById(type+'-dst').value,isoTimestamp:new Date().toISOString(),signature,date:new Date().toISOString()};persist();toast(type+' proof saved.');renderProofStatus(type);renderGate();}); });
+
+      const paymentButton=document.getElementById('record-payment'), paymentReplacement=paymentButton.cloneNode(true); paymentButton.replaceWith(paymentReplacement); paymentReplacement.classList.add('primary'); paymentReplacement.addEventListener('click',()=>modalForm('payment','Record payment','<div class="field"><label>Amount</label><input name="amount" type="number" min="0.01" step="0.01" required value="'+Math.max(0,current().revenue-current().payments.reduce((sum,item)=>sum+Number(item.amount),0))+'"></div><div class="field"><label>Date</label><input name="date" type="date" required value="'+new Date().toISOString().slice(0,10)+'"></div><div class="field"><label>Method</label><select name="method"><option>ACH</option><option>Check</option><option>Card</option><option>Cash</option></select></div>',data=>{const load=current(),amount=Number(data.get('amount')),date=data.get('date'),method=data.get('method'),duplicate=load.payments.some(item=>Number(item.amount)===amount&&item.date===date&&item.method===method);if(duplicate&&!confirm('A matching payment is already recorded. Record another anyway?'))return;load.payments.push({amount,date,method});persist();renderFinance();toast('Payment recorded and balance updated.');}));
+      document.getElementById('add-expense').classList.add('primary');
+      const oldRenderFinance=renderFinance; renderFinance=()=>{oldRenderFinance();const load=current(),paid=load.payments.reduce((sum,item)=>sum+Number(item.amount),0),balance=Math.max(0,load.revenue-paid),heading=document.querySelector('#finance .grid.three .panel:first-child h2');if(heading)heading.textContent=balance?'Awaiting remittance':'PAID';document.querySelector('#finance .stat:nth-child(4) .value').textContent=money(balance);}; renderFinance();
+
+      function printableInvoice(){ const load=current(),paid=load.payments.reduce((sum,item)=>sum+Number(item.amount),0),balance=Math.max(0,load.revenue-paid),number=load.invoice?.number||'INV-'+load.id.slice(-6); load.invoice={number,created:new Date().toISOString()};persist(); const address=renderAddress(load); const win=window.open('','_blank'); if(!win){toast('Allow pop-ups to print the invoice.');return} win.document.write('<!doctype html><title>'+number+' | Family Legacy Transportation</title><style>body{font:14px Arial;color:#17221f;max-width:780px;margin:48px auto}header{border-bottom:4px solid #1e5a4d;padding-bottom:18px;display:flex;justify-content:space-between}h1{color:#1e5a4d}table{width:100%;border-collapse:collapse;margin-top:30px}td{padding:12px;border-bottom:1px solid #ddd}strong{font-size:18px}.total{font-size:22px;color:#1e5a4d}</style><header><div><h1>Family Legacy Transportation, LLC</h1><div>Professional transportation services</div></div><div><strong>INVOICE</strong><br>'+number+'<br>'+load.date+'</div></header><p><strong>Bill to:</strong><br>'+escapeHtml(load.customer)+'<br>'+escapeHtml(address||'Address on file')+'</p><table><tr><td>Load ID</td><td>'+load.id+'</td></tr><tr><td>Pickup</td><td>'+escapeHtml(load.pickup)+'</td></tr><tr><td>Delivery</td><td>'+escapeHtml(load.delivery)+'</td></tr><tr><td>POD status</td><td>'+ (load.deliveryProof?'Attached':'Pending')+'</td></tr><tr><td>Payment terms</td><td>Net 30</td></tr><tr><td>Amount due</td><td>'+money(balance)+'</td></tr><tr><td class="total"><strong>Total</strong></td><td class="total"><strong>'+money(load.revenue)+'</strong></td></tr></table><p>Thank you for your business.</p>');win.document.close();win.focus();win.print();toast('Invoice '+number+' ready to print as PDF.');renderGate(); }
+      document.querySelectorAll('#generate-invoice, #generate-invoice-top').forEach(button=>{const replacement=button.cloneNode(true);button.replaceWith(replacement);replacement.addEventListener('click',printableInvoice);});
+    })();
   </script>
 </body>
 </html>
