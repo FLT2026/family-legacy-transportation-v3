@@ -168,6 +168,60 @@ Every Load ID must connect:
 - Estimated and actual profitability snapshots
 - Audit history
 
+## 8A. FLT Accessorial Charge Engine
+
+Accessorials are charges in addition to the base transportation rate for added labor, equipment, delay, risk, stops, or changed instructions. FLT must price, authorize, document, and invoice them as separate revenue line items.
+
+### Configurable FLT accessorial catalog
+
+- Tarping: small/indoor, standard outdoor, multiple tarps, complex or tarp-at-risk
+- Tarp removal and re-tarping at an additional stop
+- Driver assist with loading or unloading
+- Winching or non-running vehicle handling
+- Detention after the agreed free-time period
+- Layover or overnight/weekend hold
+- Truck Ordered Not Used (TONU) or cancellation after dispatch
+- Additional pickup or delivery stop
+- Reconsignment or destination change
+- Out-of-route miles
+- Rush, same-day, after-hours, weekend, or holiday service
+- Difficult site, residential, limited-access, auction-yard, port, military, or government facility
+- Liftgate, forklift, crane, special equipment, dunnage, blocking or special securement
+- Tolls, permits, escorts, parking, scales, lumper, storage, washout or other reimbursable costs
+- Redelivery, refused delivery, return trip or customer-caused delay
+
+### FLT starting-rate policy
+
+Rates remain editable by customer, transportation type, equipment, lane, and contract. They are starting negotiation settings—not universal market rates.
+
+| Accessorial | Suggested configurable starting point |
+|---|---:|
+| Standard tarping | $100–$150 per load |
+| Complex/multiple-tarp work | $175–$250+ |
+| Tarp removal and re-tarp | $75–$125 per occurrence |
+| Driver assist / special labor | $75–$150 per hour; minimum charge configurable |
+| Winching / non-running vehicle | $50–$150+ based on difficulty and equipment |
+| Detention | $50–$75 per hour after 2 free hours |
+| Layover | $250–$350 per occurrence/night |
+| TONU / cancellation after dispatch | $150–$300 or documented miles/time, whichever policy controls |
+| Additional stop | $50–$100 per stop, plus detention when applicable |
+| Reconsignment / destination change | Added miles at required rate plus $100–$250 administration/service charge |
+| After-hours, weekend, holiday or rush | Configurable flat fee or percentage |
+
+### Accessorial workflow
+
+1. Select anticipated accessorials during Quick Check or Full Analysis.
+2. Add them to gross quoted revenue and the recommended asking price.
+3. State trigger, free time, unit, rate, minimum, maximum if any, and responsible payer in writing.
+4. Require customer/broker authorization on the quote, contract, or rate confirmation before dispatch whenever foreseeable.
+5. Capture proof: timestamps, GPS/check-in, photographs, receipts, messages, signed documents, and employee notes.
+6. When an unplanned event occurs, notify the responsible party and request written authorization inside FLT.
+7. Convert approved events into invoice line items without retyping.
+8. Track requested, approved, denied, invoiced, collected, and written-off amounts separately.
+9. Include collected accessorial revenue in actual load profit; do not count an unapproved or uncollected request as collected revenue.
+
+The system must never hide an accessorial inside the linehaul calculation. The customer-facing quote and invoice must show the base transportation charge, each approved accessorial, credits/adjustments, and total due.
+
 ## 9. Automation Without Loss of Control
 
 FLT should automatically:
