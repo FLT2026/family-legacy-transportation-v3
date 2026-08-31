@@ -3,7 +3,7 @@
 <head>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="theme-color" content="#0e1a18" />
-  <title>FLT OS V3.5 Fuel Profit Core | Family Legacy Transportation</title>
+  <title>Family Legacy Commercial Command™ V3.5</title>
   <style>
     :root { --ink:#17221f; --muted:#66746e; --paper:#f7f6f0; --panel:#fff; --line:#dfe4dc; --green:#1e5a4d; --green-2:#2d7b62; --lime:#cfe86a; --orange:#e17b46; --red:#b94c48; --shadow:0 16px 40px rgba(25,45,38,.08); }
     * { box-sizing:border-box; }
@@ -46,12 +46,32 @@
     .modal-backdrop { display:none; position:fixed; inset:0; z-index:8; background:rgba(12,24,20,.62); place-items:center; padding:18px; } .modal-backdrop.show { display:grid; } .modal { max-width:440px; width:100%; background:#fff; border-radius:9px; padding:24px; box-shadow:0 25px 80px rgba(0,0,0,.25); } .modal h2 { margin-bottom:7px; } .modal .field { margin-top:17px; }
     @media(max-width:900px) { aside { width:70px; padding:20px 9px; } .brand { padding:0 7px 28px; } .brand > div:last-child,.nav-label,.side-footer { display:none; } nav button { justify-content:center; padding:11px 5px; } main { margin-left:70px; width:calc(100% - 70px); padding:24px 18px 45px; } .stats { grid-template-columns:repeat(2,1fr); } .two { grid-template-columns:1fr; } }
     @media(max-width:600px) { main { padding:20px 13px 40px; } .topbar { display:block; } .top-actions { margin-top:15px; } .hero { display:block; padding:20px; } .hero .btn { margin-top:15px; } .stats,.three,.form-grid { grid-template-columns:1fr; } .panel { padding:15px; overflow-x:auto; } table { min-width:520px; } .workflow { overflow:auto; } .step { min-width:115px; } h1 { font-size:26px; } }
+  
+    .v35-banner { background:linear-gradient(135deg,#173f36,#1e5a4d); color:#fff; border:0; }
+    .v35-banner .subtle { color:#d5e2d8; }
+    .choice-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+    .choice { display:flex; align-items:flex-start; gap:8px; border:1px solid var(--line); border-radius:6px; padding:9px; background:#fbfcf8; font-size:12px; font-weight:700; }
+    .choice input { width:auto; margin-top:2px; }
+    .decision-card { border:2px solid var(--green-2); background:#f5f9f4; }
+    .decision-card.block { border-color:var(--red); background:#fff3f1; }
+    .decision-card.warn { border-color:var(--orange); background:#fff7ef; }
+    .decision-title { font-size:26px; font-weight:900; letter-spacing:-.03em; }
+    .decision-reasons { margin:12px 0 0; padding-left:20px; color:var(--muted); }
+    .decision-reasons li { margin:5px 0; }
+    .metric-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-top:14px; }
+    .metric-box { background:#fff; border:1px solid var(--line); border-radius:7px; padding:12px; }
+    .metric-box span { display:block; color:var(--muted); font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.06em; }
+    .metric-box strong { display:block; margin-top:5px; font-size:18px; }
+    .hard-stop { border-left-color:var(--red); background:#fff1ef; color:#76322f; }
+    .subhead { grid-column:1/-1; margin-top:8px; padding-top:14px; border-top:1px solid var(--line); }
+    @media(max-width:700px){ .choice-grid,.metric-grid { grid-template-columns:1fr; } }
+
   </style>
 </head>
 <body>
   <div class="shell">
     <aside>
-      <div class="brand"><div class="brand-mark">FL</div><div><strong>Family Legacy</strong><small>TRANSPORTATION OS</small></div></div>
+      <div class="brand"><div class="brand-mark">FL</div><div><strong>Family Legacy</strong><small>COMMERCIAL COMMAND™</small></div></div>
       <nav id="nav">
         <button class="active" data-view="dashboard"><span class="nav-icon">⌂</span><span class="nav-label">Dashboard</span></button>
         <button data-view="business-setup"><span class="nav-icon">▣</span><span class="nav-label">Business Setup</span></button>
@@ -62,10 +82,10 @@
         <button data-view="finance"><span class="nav-icon">$</span><span class="nav-label">Finance & Ledger</span></button>
         <button data-view="test"><span class="nav-icon">◎</span><span class="nav-label">V3 Test Gate</span></button>
       </nav>
-      <div class="side-footer">V3.5 FUEL PROFIT CORE · <span id="clock"></span></div>
+      <div class="side-footer">V3.5 COMMERCIAL COMMAND · <span id="clock"></span></div>
     </aside>
     <main>
-      <header class="topbar"><div><div class="eyebrow">Business Operating System / V3.5 Fuel Profit Core</div><h1 id="page-title">Good morning, operator.</h1><p class="subtle" id="page-subtitle">One source of truth for every mile, signature, and dollar.</p></div><div class="top-actions"><button class="tag" id="live-demo" title="Load the original demo transaction">● Live demo</button><button class="btn" data-view-jump="load">＋ New load</button></div></header>
+      <header class="topbar"><div><div class="eyebrow">Family Legacy Commercial Command™ / V3.5</div><h1 id="page-title">Good morning, operator.</h1><p class="subtle" id="page-subtitle">One source of truth for every mile, signature, and dollar.</p></div><div class="top-actions"><button class="tag" id="live-demo" title="Load the original demo transaction">● Live demo</button><button class="btn" data-view-jump="load">＋ New load</button></div></header>
 
       <section class="view active" id="dashboard">
         <div class="hero"><div><div class="eyebrow" style="color:var(--lime)">Active command center</div><h2>DEMO-000001 is on the road.</h2><p class="subtle">Atlanta, GA → Charlotte, NC · 245 mi · ETA today, 4:30 PM</p></div><button class="btn lime" data-view-jump="record">Open load record →</button></div>
@@ -73,11 +93,84 @@
         <div class="grid two"><div class="panel"><div class="section-head"><h2>Load pipeline</h2><span class="subtle">Today, Aug 22</span></div><table><thead><tr><th>Load</th><th>Route</th><th>Status</th><th>Margin</th></tr></thead><tbody id="load-table"><tr><td><strong>DEMO-000001</strong><br><span class="subtle">Northstar Foods</span></td><td>ATL → CLT<br><span class="subtle">245 mi</span></td><td><span class="tag orange">In transit</span></td><td><strong>31.4%</strong></td></tr></tbody></table></div><div class="panel"><div class="section-head"><h2>V3.1 health</h2><span class="tag" id="health-ready">0% ready</span></div><div class="metric-row"><span>Data completeness</span><strong id="health-completeness">0%</strong></div><div class="metric-row"><span>Documents captured</span><strong id="health-documents">0 / 4</strong></div><div class="metric-row"><span>Invoice readiness</span><strong id="health-invoice">Pending</strong></div><div class="bar"><i id="health-bar" style="width:0%"></i></div></div></div>
       </section>
 
-      <section class="view" id="business-setup"><div class="panel"><div class="section-head"><div><div class="eyebrow">Business identity</div><h2>Business Setup</h2><p class="subtle" style="margin-top:5px">Keep your company details ready for future business documents.</p></div><span class="tag gray" id="business-profile-status">Not saved</span></div><div class="notice" id="business-profile-notice">Save your business profile once. Your information stays in this browser.</div><form id="business-profile-form" class="form-grid" autocomplete="off"><div class="field"><label for="business-legal-name">Legal business name</label><input required id="business-legal-name" name="legalName" autocomplete="organization" /></div><div class="field"><label for="business-dba">DBA / trade name</label><input id="business-dba" name="dba" autocomplete="organization" /></div><div class="address-section"><h3>Business address</h3><div class="form-grid"><div class="field full"><label for="business-address">Street address</label><input id="business-address" name="address" autocomplete="street-address" /></div><div class="field"><label for="business-city">City</label><input id="business-city" name="city" autocomplete="address-level2" /></div><div class="field"><label for="business-state">State</label><input id="business-state" name="state" maxlength="2" autocomplete="address-level1" /></div><div class="field"><label for="business-zip">ZIP code</label><input id="business-zip" name="zip" autocomplete="postal-code" /></div></div></div><div class="field"><label for="business-phone">Business phone</label><input id="business-phone" name="phone" type="tel" autocomplete="tel" /></div><div class="field"><label for="business-email">Business email</label><input id="business-email" name="email" type="email" autocomplete="email" /></div><div class="field"><label for="business-usdot">USDOT number</label><input id="business-usdot" name="usdot" inputmode="numeric" /></div><div class="field"><label for="business-mc">MC number</label><input id="business-mc" name="mc" inputmode="numeric" /><label class="checkbox-field"><input id="business-mc-na" name="mcNotApplicable" type="checkbox" /> Not Applicable</label></div><div class="field"><label for="business-ein">EIN</label><input required id="business-ein" name="ein" type="password" inputmode="numeric" autocomplete="off" /><span class="subtle" style="font-size:12px">Only the last 4 digits will be shown after saving.</span></div><div class="form-actions field full"><button type="button" class="btn" id="business-profile-cancel" hidden>Cancel</button><button class="btn primary" id="business-profile-save">Save business profile</button></div></form><div id="business-profile-summary" class="grid three profile-summary"><div><label>Legal business name</label><div class="profile-value" id="profile-legal-name"></div></div><div><label>DBA / trade name</label><div class="profile-value" id="profile-dba"></div></div><div><label>Business address</label><div class="profile-value" id="profile-address"></div></div><div><label>Business phone</label><div class="profile-value" id="profile-phone"></div></div><div><label>Business email</label><div class="profile-value" id="profile-email"></div></div><div><label>USDOT number</label><div class="profile-value" id="profile-usdot"></div></div><div><label>MC number</label><div class="profile-value" id="profile-mc"></div></div><div><label>EIN</label><div class="profile-value" id="profile-ein"></div></div><div class="profile-actions field full"><button type="button" class="btn" id="business-profile-edit">Edit business profile</button></div></div></section>
+      <section class="view" id="business-setup"><div class="panel"><div class="section-head"><div><div class="eyebrow">Business identity</div><h2>Business Setup</h2><p class="subtle" style="margin-top:5px">Keep your company details ready for future business documents.</p></div><span class="tag gray" id="business-profile-status">Not saved</span></div><div class="notice" id="business-profile-notice">Save your business profile once. Your information stays in this browser.</div><form id="business-profile-form" class="form-grid" autocomplete="off"><div class="field"><label for="business-legal-name">Legal business name</label><input required id="business-legal-name" name="legalName" autocomplete="organization" /></div><div class="field"><label for="business-dba">DBA / trade name</label><input id="business-dba" name="dba" autocomplete="organization" /></div><div class="address-section"><h3>Business address</h3><div class="form-grid"><div class="field full"><label for="business-address">Street address</label><input id="business-address" name="address" autocomplete="street-address" /></div><div class="field"><label for="business-city">City</label><input id="business-city" name="city" autocomplete="address-level2" /></div><div class="field"><label for="business-state">State</label><input id="business-state" name="state" maxlength="2" autocomplete="address-level1" /></div><div class="field"><label for="business-zip">ZIP code</label><input id="business-zip" name="zip" autocomplete="postal-code" /></div></div></div><div class="field"><label for="business-phone">Business phone</label><input id="business-phone" name="phone" type="tel" autocomplete="tel" /></div><div class="field"><label for="business-email">Business email</label><input id="business-email" name="email" type="email" autocomplete="email" /></div><div class="field"><label for="business-usdot">USDOT number</label><input id="business-usdot" name="usdot" inputmode="numeric" /></div><div class="field"><label for="business-mc">MC number</label><input id="business-mc" name="mc" inputmode="numeric" /><label class="checkbox-field"><input id="business-mc-na" name="mcNotApplicable" type="checkbox" /> Not Applicable</label></div><div class="field"><label for="business-ein">EIN</label><input required id="business-ein" name="ein" type="password" inputmode="numeric" autocomplete="off" /><span class="subtle" style="font-size:12px">Only the last 4 digits will be shown after saving.</span></div><div class="form-actions field full"><button type="button" class="btn" id="business-profile-cancel" hidden>Cancel</button><button class="btn primary" id="business-profile-save">Save business profile</button></div></form><div id="business-profile-summary" class="grid three profile-summary"><div><label>Legal business name</label><div class="profile-value" id="profile-legal-name"></div></div><div><label>DBA / trade name</label><div class="profile-value" id="profile-dba"></div></div><div><label>Business address</label><div class="profile-value" id="profile-address"></div></div><div><label>Business phone</label><div class="profile-value" id="profile-phone"></div></div><div><label>Business email</label><div class="profile-value" id="profile-email"></div></div><div><label>USDOT number</label><div class="profile-value" id="profile-usdot"></div></div><div><label>MC number</label><div class="profile-value" id="profile-mc"></div></div><div><label>EIN</label><div class="profile-value" id="profile-ein"></div></div><div class="profile-actions field full"><button type="button" class="btn" id="business-profile-edit">Edit business profile</button></div></div>
+<div class="panel v35-banner" style="margin-top:14px"><div class="eyebrow" style="color:var(--lime)">V3.5 classification foundation</div><h2>Commercial Operation, Driver & Equipment</h2><p class="subtle" style="margin-top:6px">Enter once. Auto-populate every load, compliance check, and dispatch decision.</p></div>
+<div class="panel" style="margin-top:14px">
+  <div class="section-head"><div><h2>Operation & Equipment Classification</h2><p class="subtle" style="margin-top:5px">One company can support multiple operations, drivers, trucks, and trailers.</p></div><span class="tag gray" id="v35-class-status">Not saved</span></div>
+  <form id="v35-classification-form" class="form-grid">
+    <div class="field"><label>Primary commercial operation</label><select id="v35-primary-operation" required>
+      <option value="">Select operation</option><option>Hotshot Carrier</option><option>Box Truck / Straight Truck Carrier</option><option>Cargo Van / Sprinter Van</option><option>Auto Transporter / Car Hauler</option><option>Flatbed Carrier</option><option>Step-Deck Carrier</option><option>Dry Van Carrier</option><option>Refrigerated Carrier</option><option>Tanker Carrier</option><option>Dump Truck Carrier</option><option>Tow and Recovery Company</option><option>Heavy-Haul / Equipment Transport</option><option>Household Goods / Moving Company</option><option>Courier / Last-Mile Delivery</option><option>Construction / Building-Material Delivery</option><option>Agricultural / Livestock Transport</option><option>Intermodal / Drayage Carrier</option><option>Private Fleet</option><option>General Freight Carrier</option><option>Passenger Transportation</option><option>Dispatch Service</option><option>Freight Broker / 3PL</option><option>Other Commercial Operation</option>
+    </select></div>
+    <div class="field"><label>Company role</label><select id="v35-company-role" required><option value="">Select role</option><option>Motor Carrier</option><option>Private Carrier</option><option>Dispatch Service</option><option>Freight Broker / 3PL</option></select></div>
+    <div class="field full"><label>Secondary operations</label><div class="choice-grid">
+      <label class="choice"><input type="checkbox" name="v35-secondary" value="Auto Transporter / Car Hauler">Auto Transporter / Car Hauler</label>
+      <label class="choice"><input type="checkbox" name="v35-secondary" value="General Freight Carrier">General Freight Carrier</label>
+      <label class="choice"><input type="checkbox" name="v35-secondary" value="Courier / Last-Mile Delivery">Courier / Last-Mile Delivery</label>
+      <label class="choice"><input type="checkbox" name="v35-secondary" value="Hotshot Carrier">Hotshot Carrier</label>
+    </div></div>
+    <div class="subhead"><h3>Driver profile</h3></div>
+    <div class="field"><label>Driver qualification</label><select id="v35-driver-class" required><option value="">Select qualification</option><option>Non-CDL Driver</option><option>CDL Class A</option><option>CDL Class B</option><option>CDL Class C</option><option>Commercial Learner's Permit</option><option>Intrastate-Only Driver</option><option>Interstate-Qualified Driver</option><option>Not Applicable — Non-Driving User</option></select></div>
+    <div class="field"><label>Operating area</label><select id="v35-operating-area" required><option value="">Select area</option><option>Intrastate Only</option><option>Interstate</option></select></div>
+    <div class="subhead"><h3>Assigned equipment</h3></div>
+    <div class="field"><label>Vehicle configuration</label><select id="v35-vehicle-config" required><option value="">Select configuration</option><option>Pickup and bumper-pull trailer</option><option>Pickup and gooseneck trailer</option><option>Pickup and fifth-wheel trailer</option><option>Box truck</option><option>Straight truck</option><option>Cargo van</option><option>Tractor and semi-trailer</option><option>Flatbed</option><option>Step deck</option><option>Dry van</option><option>Refrigerated trailer</option><option>Auto-hauler trailer</option><option>Enclosed trailer</option><option>Dump truck or dump trailer</option><option>Tow truck</option><option>Specialized equipment</option><option>Vehicle without trailer</option><option>Other configuration</option></select></div>
+    <div class="field"><label>Truck GVWR (lb)</label><input id="v35-truck-gvwr" type="number" min="1" value="10000" required></div>
+    <div class="field"><label>Trailer GVWR (lb)</label><input id="v35-trailer-gvwr" type="number" min="0" value="14000" required></div>
+    <div class="field"><label>Truck curb/empty weight (lb)</label><input id="v35-truck-empty" type="number" min="0" value="6800" required></div>
+    <div class="field"><label>Trailer empty weight (lb)</label><input id="v35-trailer-empty" type="number" min="0" value="4800" required></div>
+    <div class="field"><label>Manufacturer GCWR (lb)</label><input id="v35-gcwr" type="number" min="1" value="23000" required></div>
+    <div class="field full"><label>Compliance confirmations</label><div class="choice-grid">
+      <label class="choice"><input id="v35-insurance-ok" type="checkbox" checked>Insurance and cargo coverage active</label>
+      <label class="choice"><input id="v35-authority-ok" type="checkbox" checked>Authority and operating area verified</label>
+      <label class="choice"><input id="v35-equipment-ok" type="checkbox" checked>Truck, trailer, hitch, tires, brakes, ramps and securement safe</label>
+      <label class="choice"><input id="v35-driver-ok" type="checkbox" checked>Driver license and qualification current</label>
+    </div></div>
+    <div class="form-actions field full"><button class="btn primary">Save classification</button></div>
+  </form>
+</div></section>
 
       <section class="view" id="load"><div class="panel"><div class="section-head"><div><div class="eyebrow">Customer intake</div><h2>Create a new load</h2></div><span class="tag gray">Auto-numbered</span></div><div class="notice">Every new load becomes one connected record across operations, documents, and finance.</div><form id="load-form" class="form-grid" autocomplete="off"><div class="field"><label for="customer-name">Customer / Company Name</label><input required placeholder="e.g. Northstar Foods" id="customer-name" name="customerName" autocomplete="off" /></div><div class="field"><label for="load-reference">Customer Reference / PO Number</label><input id="load-reference" placeholder="Reference for this load" name="reference" autocomplete="off" /></div><div class="address-section"><h3>Customer Billing Address</h3><div class="form-grid"><div class="field full"><label for="billing-street">Street</label><input id="billing-street" name="billingStreet" autocomplete="off" /></div><div class="field"><label for="billing-city">City</label><input id="billing-city" name="billingCity" autocomplete="off" /></div><div class="field"><label for="billing-state">State</label><input id="billing-state" name="billingState" maxlength="2" autocomplete="off" /></div><div class="field"><label for="billing-zip">ZIP</label><input id="billing-zip" name="billingZip" autocomplete="off" /></div></div></div><div class="address-section"><h3>Pickup Address</h3><div class="form-grid"><div class="field"><label for="pickup-facility">Facility / Contact Name</label><input required id="pickup-facility" name="pickupFacility" autocomplete="off" /></div><div class="field full"><label for="pickup-street">Street</label><input required id="pickup-street" name="pickupStreet" autocomplete="off" /></div><div class="field"><label for="pickup-city">City</label><input required id="pickup-city" name="pickupCity" autocomplete="off" /></div><div class="field"><label for="pickup-state">State</label><input required id="pickup-state" name="pickupState" maxlength="2" autocomplete="off" /></div><div class="field"><label for="pickup-zip">ZIP</label><input required id="pickup-zip" name="pickupZip" autocomplete="off" /></div></div></div><div class="address-section"><h3>Delivery Address</h3><div class="form-grid"><div class="field"><label for="delivery-facility">Facility / Contact Name</label><input required id="delivery-facility" name="deliveryFacility" autocomplete="off" /></div><div class="field full"><label for="delivery-street">Street</label><input required id="delivery-street" name="deliveryStreet" autocomplete="off" /></div><div class="field"><label for="delivery-city">City</label><input required id="delivery-city" name="deliveryCity" autocomplete="off" /></div><div class="field"><label for="delivery-state">State</label><input required id="delivery-state" name="deliveryState" maxlength="2" autocomplete="off" /></div><div class="field"><label for="delivery-zip">ZIP</label><input required id="delivery-zip" name="deliveryZip" autocomplete="off" /></div><label class="checkbox-field"><input type="checkbox" id="billing-same-as-delivery" name="billingSameAsDelivery" /> Billing address same as delivery address</label></div></div><div class="field"><label for="pickup-date">Pickup Date</label><input type="date" required value="2026-08-22" id="pickup-date" name="pickupDate" /></div><div class="field"><label for="delivery-date">Delivery Date</label><input type="date" required id="delivery-date" name="deliveryDate" /></div><div class="field"><label for="quoted-revenue">Quoted Revenue</label><input type="number" required value="1240" min="0" id="quoted-revenue" name="quotedRevenue" /></div><div class="field"><label for="load-weight">Load Weight</label><input type="number" min="0" step="0.01" id="load-weight" name="loadWeight" placeholder="Weight" /></div><div class="field full"><label for="commodity">Commodity / Load Description</label><input id="commodity" name="commodity" placeholder="Freight details or commodity" /></div><div class="field full"><label for="load-notes">Notes / Special Instructions</label><textarea rows="3" id="load-notes" name="notes" placeholder="Accessorials, handling, or delivery instructions..."></textarea></div><div class="form-actions full"><button type="reset" class="btn">Clear</button><button class="btn primary">Create load</button></div></form></div></section>
 
-      <section class="view" id="intelligence"><div class="grid two"><div class="panel"><div class="eyebrow">Transportation intelligence</div><h2>Route performance</h2><p class="subtle" style="margin:6px 0 18px">Decision support from your operating history.</p><div class="metric-row"><span>Best lane this month</span><strong>ATL → CLT</strong></div><div class="metric-row"><span>Average revenue / mile</span><strong>$5.06</strong></div><div class="metric-row"><span>On-time delivery rate</span><strong>96.2%</strong></div><div class="metric-row"><span>Fuel cost / mile</span><strong>$0.68</strong></div></div><div class="panel"><div class="section-head"><h2>Margin signal</h2><span class="tag">Strong</span></div><div style="font-size:42px;font-weight:800;color:var(--green)">31.4%</div><p class="subtle">Projected final profit margin</p><div class="bar"><i style="width:78%"></i></div><p class="subtle" style="margin-top:15px;font-size:12px">This load is 8.2 points above your 30-day average.</p></div></div><div class="panel" style="margin-top:14px"><div class="section-head"><h2>Lane insights</h2><button class="btn" id="refresh-insights">Refresh data</button></div><table><thead><tr><th>Lane</th><th>Loads</th><th>Avg. rate</th><th>On-time</th><th>Signal</th></tr></thead><tbody><tr><td>Atlanta → Charlotte</td><td>12</td><td>$5.06 / mi</td><td>96%</td><td><span class="tag">Scale</span></td></tr><tr><td>Atlanta → Nashville</td><td>8</td><td>$4.72 / mi</td><td>91%</td><td><span class="tag orange">Watch</span></td></tr><tr><td>Charlotte → Atlanta</td><td>6</td><td>$4.38 / mi</td><td>88%</td><td><span class="tag red">Review</span></td></tr></tbody></table></div></section>
+      
+<section class="view" id="intelligence">
+  <div class="panel v35-banner"><div class="eyebrow" style="color:var(--lime)">Transportation Intelligence™</div><h2>V3.5 Load Decision Center</h2><p class="subtle" style="margin-top:6px">True cost and dispatch eligibility using the selected driver, truck, trailer, total business miles, and accessorials.</p></div>
+  <div class="grid two" style="margin-top:14px">
+    <form id="v35-decision-form" class="panel form-grid">
+      <div class="field"><label>Loaded miles</label><input id="v35-loaded-miles" type="number" min="0" value="245" required></div>
+      <div class="field"><label>Deadhead miles</label><input id="v35-deadhead-miles" type="number" min="0" value="35" required></div>
+      <div class="field"><label>Offered linehaul rate</label><input id="v35-offer" type="number" min="0" value="1240" required></div>
+      <div class="field"><label>Cargo/load weight (lb)</label><input id="v35-cargo-weight" type="number" min="0" value="5000" required></div>
+      <div class="subhead"><h3>Fuel and trip costs</h3></div>
+      <div class="field"><label>Fuel price per gallon</label><input id="v35-fuel-price" type="number" min="0" step=".01" value="3.49" required></div>
+      <div class="field"><label>Average MPG</label><input id="v35-mpg" type="number" min=".1" step=".1" value="9" required></div>
+      <div class="field"><label>Maintenance reserve / mile</label><input id="v35-maintenance" type="number" min="0" step=".01" value=".20"></div>
+      <div class="field"><label>Tire reserve / mile</label><input id="v35-tires" type="number" min="0" step=".01" value=".05"></div>
+      <div class="field"><label>Tolls / permits</label><input id="v35-tolls" type="number" min="0" step=".01" value="0"></div>
+      <div class="field"><label>Driver pay</label><input id="v35-driver-pay" type="number" min="0" step=".01" value="0"></div>
+      <div class="field"><label>Insurance + fixed cost / mile</label><input id="v35-fixed-cpm" type="number" min="0" step=".01" value=".35"></div>
+      <div class="field"><label>Dispatcher fee (%)</label><input id="v35-dispatch-percent" type="number" min="0" max="100" step=".1" value="0"></div>
+      <div class="subhead"><h3>Accessorial charges</h3></div>
+      <div class="field"><label>Tarping charge</label><input id="v35-tarping" type="number" min="0" step=".01" value="0"></div>
+      <div class="field"><label>Detention / layover charge</label><input id="v35-detention" type="number" min="0" step=".01" value="0"></div>
+      <div class="field"><label>Other accessorials</label><input id="v35-other-accessorials" type="number" min="0" step=".01" value="0"></div>
+      <div class="field"><label>Desired profit</label><input id="v35-target-profit" type="number" min="0" step=".01" value="350"></div>
+      <div class="form-actions field full"><button class="btn primary">Run Load Decision</button></div>
+    </form>
+    <div>
+      <div class="panel decision-card" id="v35-decision-card"><div class="eyebrow">Approved decision</div><div class="decision-title" id="v35-decision">MORE INFORMATION REQUIRED</div><p class="subtle" id="v35-decision-summary" style="margin-top:6px">Save a complete classification and run the decision.</p><ul class="decision-reasons" id="v35-decision-reasons"></ul></div>
+      <div class="metric-grid">
+        <div class="metric-box"><span>Total miles</span><strong id="v35-total-miles">—</strong></div>
+        <div class="metric-box"><span>True CPM</span><strong id="v35-cpm">—</strong></div>
+        <div class="metric-box"><span>Offered RPM</span><strong id="v35-rpm">—</strong></div>
+        <div class="metric-box"><span>Estimated profit</span><strong id="v35-profit">—</strong></div>
+        <div class="metric-box"><span>Walk-away</span><strong id="v35-walkaway">—</strong></div>
+        <div class="metric-box"><span>Target</span><strong id="v35-target">—</strong></div>
+        <div class="metric-box"><span>Recommended ask</span><strong id="v35-ask">—</strong></div>
+        <div class="metric-box"><span>Remaining payload</span><strong id="v35-payload">—</strong></div>
+      </div>
+      <div class="notice hard-stop" style="margin-top:14px;margin-bottom:0"><strong>Non-negotiable:</strong> Non-CDL never bypasses GVWR, GCWR, actual weight, insurance, authority, driver, or equipment checks. A hard failure cannot be overridden.</div>
+    </div>
+  </div>
+</section>
 
       <section class="view" id="pickup"><div class="workflow"><div class="step done">1 · Load created</div><div class="step current">2 · Pickup proof</div><div class="step">3 · Delivery proof</div><div class="step">4 · Invoice</div></div><div class="grid two"><div class="panel"><div class="eyebrow" id="pickup-load-label"></div><h2>Capture pickup signature</h2><p class="subtle" style="margin:6px 0 17px">Confirm freight was collected in good order.</p><div class="form-grid"><div class="field"><label>Signed by</label><input id="pickup-name" /></div><div class="field"><label>Pickup time</label><input type="time" id="pickup-time" /></div><div class="field full"><label>Signature pad</label><canvas class="signature" id="pickup-signature"></canvas></div></div><div class="form-actions"><button class="btn" data-clear-canvas="pickup-signature">Clear</button><button class="btn primary" id="save-pickup">Save pickup proof</button></div></div><div class="panel"><h3>Pickup checklist</h3><div class="metric-row"><span>Bill of lading</span><span class="tag">Captured</span></div><div class="metric-row"><span>Count verified</span><span class="tag">Verified</span></div><div class="metric-row"><span>Condition notes</span><span class="tag gray">None</span></div><div class="metric-row"><span>Signature</span><span class="tag orange" id="pickup-status">Pending</span></div></div></div></section>
 
@@ -157,7 +250,7 @@
     document.getElementById('download-pod').addEventListener('click',()=>{const load=current();if(!load.deliveryProof){toast('Save delivery proof before downloading the POD.');return}const content='PROOF OF DELIVERY\n'+load.id+'\nCustomer: '+load.customer+'\nRoute: '+load.pickup+' to '+load.delivery+'\nPickup signed by: '+(load.pickupProof ? load.pickupProof.name : 'Not captured')+'\nDelivery received by: '+load.deliveryProof.name+'\nDelivery time: '+load.deliveryProof.time+'\n';download('POD-'+load.id+'.txt',content);load.pod=true;persist();renderGate();toast('POD summary downloaded.');});
     function renderGate(){const load=current(),checks={load:Boolean(load?.id&&load.customer&&load.pickup&&load.delivery&&load.date&&Number.isFinite(Number(load.revenue))),pickup:Boolean(load?.pickupProof?.signature),delivery:Boolean(load?.deliveryProof?.signature),pod:Boolean(load?.deliveryProof?.signature),invoice:Boolean(load?.invoice?.number&&Array.isArray(load.expenses)&&load.expenses.every(item=>Number.isFinite(Number(item.amount)))),profit:Boolean(load&&Number.isFinite(actualRevenue(load)-actualExpenses(load)))};document.getElementById('test-load-label').textContent=(load?.id||'No selected load')+' · End-to-end transaction checklist';document.getElementById('gate-status').textContent=Object.values(checks).every(Boolean)?'COMPLETE':'INCOMPLETE';Object.entries(checks).forEach(([name,pass])=>{const el=document.getElementById('test-'+name);el.textContent=pass?'PASS':'FAIL';el.className=pass?'tag':'tag orange';});}
     const resetModal=document.getElementById('reset-modal');document.getElementById('reset-start').addEventListener('click',()=>{document.getElementById('reset-word').value='';resetModal.classList.add('show');document.getElementById('reset-word').focus()});document.getElementById('reset-cancel').addEventListener('click',()=>resetModal.classList.remove('show'));document.getElementById('reset-confirm').addEventListener('click',()=>{if(document.getElementById('reset-word').value!=='RESET'){toast('Type RESET exactly to continue.');return}resetModal.classList.remove('show');if(confirm('Final confirmation: permanently reset all demo data?')){localStorage.removeItem(storageKey);location.reload()}});
-    ensureRecordView(); document.querySelector('header .eyebrow').textContent='Business Operating System / V3.5 Fuel Profit Core'; document.querySelectorAll('#dashboard .section-head h2')[1].textContent='V3.5 health'; document.querySelector('#test h2').textContent='V3.5 Test Gate'; document.getElementById('clock').textContent=new Date().toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}); renderDashboard();renderFinance();renderGate();
+    ensureRecordView(); document.querySelector('header .eyebrow').textContent='Family Legacy Commercial Command™ / V3.5'; document.querySelectorAll('#dashboard .section-head h2')[1].textContent='V3.5 health'; document.querySelector('#test h2').textContent='V3.5 Test Gate'; document.getElementById('clock').textContent=new Date().toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}); renderDashboard();renderFinance();renderGate();
   </script>
   <script>
     (() => {
@@ -364,5 +457,107 @@
       renderProfile();
     })();
   </script>
+
+  <script>
+    (() => {
+      const classKey='flt-v35-classification';
+      const $=id=>document.getElementById(id);
+      const n=id=>Number($(id)?.value);
+      const cash=value=>Number.isFinite(value)?value.toLocaleString('en-US',{style:'currency',currency:'USD'}):'—';
+      let classification=null;
+      try{classification=JSON.parse(localStorage.getItem(classKey)||'null')}catch(error){classification=null}
+
+      function fillClassification(){
+        if(!classification)return;
+        $('v35-primary-operation').value=classification.primaryOperation||'';
+        $('v35-company-role').value=classification.companyRole||'';
+        $('v35-driver-class').value=classification.driverClass||'';
+        $('v35-operating-area').value=classification.operatingArea||'';
+        $('v35-vehicle-config').value=classification.vehicleConfig||'';
+        ['truck-gvwr','trailer-gvwr','truck-empty','trailer-empty','gcwr'].forEach(key=>{const el=$('v35-'+key);if(el&&classification[key.replaceAll('-','_')]!=null)el.value=classification[key.replaceAll('-','_')]});
+        document.querySelectorAll('[name="v35-secondary"]').forEach(box=>box.checked=(classification.secondary||[]).includes(box.value));
+        ['insurance','authority','equipment','driver'].forEach(key=>{const el=$('v35-'+key+'-ok');if(el)el.checked=classification[key+'Ok']!==false});
+        $('v35-class-status').textContent='Saved';
+        $('v35-class-status').className='tag';
+      }
+
+      $('v35-classification-form').addEventListener('submit',event=>{
+        event.preventDefault();
+        classification={
+          primaryOperation:$('v35-primary-operation').value,companyRole:$('v35-company-role').value,
+          secondary:[...document.querySelectorAll('[name="v35-secondary"]:checked')].map(box=>box.value),
+          driverClass:$('v35-driver-class').value,operatingArea:$('v35-operating-area').value,
+          vehicleConfig:$('v35-vehicle-config').value,truck_gvwr:n('v35-truck-gvwr'),trailer_gvwr:n('v35-trailer-gvwr'),
+          truck_empty:n('v35-truck-empty'),trailer_empty:n('v35-trailer-empty'),gcwr:n('v35-gcwr'),
+          insuranceOk:$('v35-insurance-ok').checked,authorityOk:$('v35-authority-ok').checked,
+          equipmentOk:$('v35-equipment-ok').checked,driverOk:$('v35-driver-ok').checked,
+          savedAt:new Date().toISOString()
+        };
+        localStorage.setItem(classKey,JSON.stringify(classification));
+        $('v35-class-status').textContent='Saved';
+        $('v35-class-status').className='tag';
+        toast('V3.5 classification saved and ready for Load Decision.');
+      });
+
+      function setDecision(decision,reasons,metrics){
+        const card=$('v35-decision-card');
+        card.className='panel decision-card'+(decision==='DO NOT DISPATCH'?' block':(decision==='NEGOTIATE RATE'||decision==='PASS ON LOAD'||decision==='MORE INFORMATION REQUIRED'?' warn':''));
+        $('v35-decision').textContent=decision;
+        $('v35-decision-summary').textContent={
+          'ACCEPT LOAD':'Offer meets the target and all current dispatch checks passed.',
+          'NEGOTIATE RATE':'The load covers cost but does not meet the selected profit target.',
+          'PASS ON LOAD':'The offer does not cover the true estimated business cost.',
+          'MORE INFORMATION REQUIRED':'A reliable legal, safety, or profit decision cannot be completed yet.',
+          'DO NOT DISPATCH':'A non-negotiable legal, safety, insurance, driver, or equipment check failed.'
+        }[decision];
+        $('v35-decision-reasons').innerHTML=reasons.map(reason=>'<li>'+reason+'</li>').join('');
+        $('v35-total-miles').textContent=metrics.totalMiles!=null?metrics.totalMiles.toLocaleString()+' mi':'—';
+        $('v35-cpm').textContent=metrics.cpm!=null?cash(metrics.cpm)+' / mi':'—';
+        $('v35-rpm').textContent=metrics.rpm!=null?cash(metrics.rpm)+' / mi':'—';
+        $('v35-profit').textContent=metrics.profit!=null?cash(metrics.profit):'—';
+        $('v35-walkaway').textContent=metrics.walkaway!=null?cash(metrics.walkaway):'—';
+        $('v35-target').textContent=metrics.target!=null?cash(metrics.target):'—';
+        $('v35-ask').textContent=metrics.ask!=null?cash(metrics.ask):'—';
+        $('v35-payload').textContent=metrics.payload!=null?metrics.payload.toLocaleString()+' lb':'—';
+      }
+
+      $('v35-decision-form').addEventListener('submit',event=>{
+        event.preventDefault();
+        const required=[n('v35-loaded-miles'),n('v35-deadhead-miles'),n('v35-offer'),n('v35-cargo-weight'),n('v35-fuel-price'),n('v35-mpg')];
+        if(!classification||!classification.primaryOperation||!classification.driverClass||!classification.vehicleConfig||required.some(value=>!Number.isFinite(value))||n('v35-mpg')<=0){
+          setDecision('MORE INFORMATION REQUIRED',['Complete and save the company, driver, and equipment classification.','Enter reliable mileage, rate, weight, fuel-price, and MPG information.'],{});
+          return;
+        }
+        const loaded=n('v35-loaded-miles'),deadhead=n('v35-deadhead-miles'),totalMiles=loaded+deadhead,offer=n('v35-offer');
+        const accessorials=n('v35-tarping')+n('v35-detention')+n('v35-other-accessorials');
+        const totalRevenue=offer+accessorials;
+        const fuel=totalMiles/n('v35-mpg')*n('v35-fuel-price');
+        const mileageCosts=totalMiles*(n('v35-maintenance')+n('v35-tires')+n('v35-fixed-cpm'));
+        const dispatcher=totalRevenue*n('v35-dispatch-percent')/100;
+        const totalCost=fuel+mileageCosts+n('v35-tolls')+n('v35-driver-pay')+dispatcher;
+        const targetProfit=n('v35-target-profit'),walkaway=totalCost,target=totalCost+targetProfit,ask=target*1.05;
+        const actualCombination=classification.truck_empty+classification.trailer_empty+n('v35-cargo-weight');
+        const combinationRating=classification.truck_gvwr+classification.trailer_gvwr;
+        const legalCapacity=Math.min(combinationRating,classification.gcwr);
+        const payload=Math.max(0,legalCapacity-classification.truck_empty-classification.trailer_empty);
+        const hard=[];
+        if(classification.driverClass==='Non-CDL Driver'&&combinationRating>=26001)hard.push('The '+combinationRating.toLocaleString()+' lb combined GVWR requires a CDL evaluation; Non-CDL cannot be dispatched.');
+        if(actualCombination>classification.gcwr)hard.push('Estimated combination weight exceeds the manufacturer GCWR.');
+        if(actualCombination>combinationRating)hard.push('Estimated combination weight exceeds the truck-plus-trailer GVWR limit.');
+        if(!classification.insuranceOk)hard.push('Insurance or cargo coverage is missing, expired, inadequate, or unverified.');
+        if(!classification.authorityOk)hard.push('Operating authority or service area is not verified.');
+        if(!classification.driverOk)hard.push('Driver license, restriction, endorsement, expiration, or qualification check failed.');
+        if(!classification.equipmentOk)hard.push('Truck, trailer, hitch, tire, brake, ramp, winch, or securement condition failed.');
+        const metrics={totalMiles,cpm:totalMiles?totalCost/totalMiles:null,rpm:totalMiles?totalRevenue/totalMiles:null,profit:totalRevenue-totalCost,walkaway,target,ask,payload};
+        if(hard.length){setDecision('DO NOT DISPATCH',hard,metrics);return}
+        const reasons=['Total business miles: '+loaded.toLocaleString()+' loaded + '+deadhead.toLocaleString()+' deadhead.','Fuel estimate: '+cash(fuel)+' at '+n('v35-mpg')+' MPG and '+cash(n('v35-fuel-price'))+'/gal.','Accessorial revenue included: '+cash(accessorials)+'.','Assigned combination: '+classification.driverClass+' · '+classification.vehicleConfig+'.'];
+        if(totalRevenue>=target)setDecision('ACCEPT LOAD',reasons.concat('Offer meets or exceeds the target rate.'),metrics);
+        else if(totalRevenue>=walkaway)setDecision('NEGOTIATE RATE',reasons.concat('Offer is '+cash(target-totalRevenue)+' below the target. Recommended ask: '+cash(ask)+'.'),metrics);
+        else setDecision('PASS ON LOAD',reasons.concat('Offer is '+cash(walkaway-totalRevenue)+' below the walk-away amount.'),metrics);
+      });
+      fillClassification();
+    })();
+  </script>
+
 </body>
 </html>
