@@ -2,6 +2,7 @@
   const loadScript=(src,next)=>{
     const script=document.createElement('script');
     script.src=src;
+    script.charset='utf-8';
     script.async=false;
     if(next)script.addEventListener('load',next,{once:true});
     script.addEventListener('error',()=>console.error('Unable to load V3.5 module:',src),{once:true});
