@@ -17,7 +17,7 @@
   fields.id='v35-completion-fields';
   fields.className='field full';
   fields.innerHTML=`<div class="panel" style="margin-top:10px">
-    <div class="section-head"><div><div class="eyebrow">V3.5 completion pass</div><h2>Complete Proposed-Load Economics</h2><p class="subtle" style="margin-top:5px">Return/repositioning miles, loaded/empty or blended MPG, configurable costs, minimum acceptable price, profit floors, negotiation allowance, counteroffer, and saved estimate history.</p></div></div>
+    <div class="section-head"><div><div class="eyebrow">V3.5 completion pass</div><h2>Complete Proposed-Load Economics</h2><p class="subtle" style="margin-top:5px">Pricing can be evaluated before dispatch qualification is complete. Missing driver/equipment data blocks dispatch, not the economic estimate.</p></div></div>
     <div class="form-grid">
       <div class="field"><label>Repositioning / Return Deadhead Miles</label><input id="v35-return-deadhead" type="number" min="0" step="0.1" value="0"></div>
       <div class="field"><label>MPG Calculation Mode</label><select id="v35-mpg-mode"><option value="blended">Blended MPG</option><option value="separate">Separate Loaded / Empty MPG</option></select></div>
@@ -66,10 +66,10 @@
     if(card)card.className='panel decision-card'+(decision==='DO NOT DISPATCH'?' block':(['NEGOTIATE RATE','DECLINE LOAD','MORE INFORMATION REQUIRED'].includes(decision)?' warn':''));
     if($('v35-decision'))$('v35-decision').textContent=decision;
     const summaries={
-      'ACCEPT LOAD':'Offer satisfies every configured V3.5 profit floor and current dispatch checks.',
+      'ACCEPT LOAD':'Economics meet every configured V3.5 profit floor. Dispatch qualification may still be pending.',
       'NEGOTIATE RATE':'The load clears minimum acceptable economics but misses one or more target profit floors.',
       'DECLINE LOAD':'The offer is below the minimum acceptable price.',
-      'MORE INFORMATION REQUIRED':'Reliable V3.5 economics cannot be completed until required inputs are supplied.',
+      'MORE INFORMATION REQUIRED':'The economic estimate is complete, but dispatch qualification is incomplete.',
       'DO NOT DISPATCH':'A non-negotiable legal, safety, insurance, driver, weight, or equipment check failed.'
     };
     if($('v35-decision-summary'))$('v35-decision-summary').textContent=summaries[decision]||'';
@@ -95,25 +95,26 @@
     let panel=$('v35-official-gate');
     if(!panel){
       panel=document.createElement('div');panel.id='v35-official-gate';panel.className='panel';panel.style.marginTop='14px';
-      panel.innerHTML='<div class="section-head"><div><div class="eyebrow">Blueprint-aligned gate</div><h2>V3.5 Accurate Proposed Load</h2><p class="subtle" style="margin-top:5px">Passes only when the latest saved estimate proves every V3.5 build requirement.</p></div><span class="tag orange" id="v35-official-status">PENDING</span></div><div id="v35-official-checks"></div>';
+      panel.innerHTML='<div class="section-head"><div><div class="eyebrow">Blueprint-aligned gate</div><h2>V3.5 Accurate Proposed Load</h2><p class="subtle" style="margin-top:5px">This gate validates the proposed-load economic engine separately from V3.8 dispatch qualification.</p></div><span class="tag orange" id="v35-official-status">PENDING</span></div><div id="v35-official-checks"></div>';
       test.appendChild(panel);
     }
     const snapshots=readSnapshots(),last=snapshots.at(-1);
     const costsComplete=Boolean(last&&last.costs&&requiredCostKeys.every(k=>Number.isFinite(last.costs[k])));
-    const allowedDecisions=['ACCEPT LOAD','NEGOTIATE RATE','DECLINE LOAD','DO NOT DISPATCH'];
+    const allowedEconomicDecisions=['ACCEPT LOAD','NEGOTIATE RATE','DECLINE LOAD'];
     const checks={
       'Loaded + all deadhead miles':Boolean(last&&Number.isFinite(last.inputs?.loadedMiles)&&Number.isFinite(last.inputs?.deadheadToPickup)&&Number.isFinite(last.inputs?.returnDeadhead)),
       'Loaded/empty or blended MPG':Boolean(last&&last.inputs?.mpgMode&&Number.isFinite(last.metrics?.fuelGallons)),
       'Fuel price per gallon':Boolean(last&&Number.isFinite(last.inputs?.fuelPrice)&&last.inputs.fuelPrice>0),
       'Complete configurable costs + reserves':costsComplete,
       'Walk-away + minimum + target + ask + counteroffer':Boolean(last&&['walkaway','minimumAcceptable','target','ask','counteroffer'].every(k=>Number.isFinite(last.metrics?.[k]))),
-      'ACCEPT / NEGOTIATE / DECLINE / DO NOT DISPATCH':Boolean(last&&allowedDecisions.includes(last.decision)),
+      'ACCEPT / NEGOTIATE / DECLINE economic decision':Boolean(last&&allowedEconomicDecisions.includes(last.economicDecision)),
       'Decision with reasons':Boolean(last&&Array.isArray(last.reasons)&&last.reasons.length),
       'Saved estimate snapshot':Boolean(last&&last.snapshotId&&snapshots.length>0)
     };
     const box=$('v35-official-checks');if(!box)return;box.innerHTML='';
     Object.entries(checks).forEach(([label,pass])=>{const row=document.createElement('div');row.className='metric-row';const text=document.createElement('span');text.textContent=label;const tag=document.createElement('span');tag.className='tag '+(pass?'':'gray');tag.textContent=pass?'PASS':'PENDING';row.append(text,tag);box.appendChild(row)});
-    const pass=Object.values(checks).every(Boolean),status=$('v35-official-status');if(status){status.textContent=pass?'PASS':'PENDING';status.className='tag '+(pass?'':'orange')}
+    const pass=Object.values(checks).every(Boolean),status=$('v35-official-status');
+    if(status){status.textContent=pass?'PASS':'PENDING';status.className='tag '+(pass?'':'orange')}
     const legacy=$('v35-gate-status');if(legacy){legacy.textContent=pass?'PASS':'V3.5 COMPLETION PENDING';legacy.className='tag '+(pass?'':'orange')}
     updateSnapshotCount();
   }
@@ -123,8 +124,8 @@
     const classification=readClassification();
     const loaded=requiredNumber('v35-loaded-miles'),deadheadToPickup=requiredNumber('v35-deadhead-miles'),returnDeadhead=number('v35-return-deadhead'),offer=requiredNumber('v35-offer'),cargoWeight=requiredNumber('v35-cargo-weight'),fuelPrice=requiredNumber('v35-fuel-price');
     const mpgMode=value('v35-mpg-mode')||'blended',blendedMpg=requiredNumber('v35-mpg'),loadedMpg=requiredNumber('v35-loaded-mpg'),emptyMpg=requiredNumber('v35-empty-mpg');
-    const missing=!classification?.primaryOperation||!classification?.driverClass||!classification?.vehicleConfig||[loaded,deadheadToPickup,offer,cargoWeight,fuelPrice].some(v=>v===null||!Number.isFinite(v))||(mpgMode==='blended'&&(!Number.isFinite(blendedMpg)||blendedMpg<=0))||(mpgMode==='separate'&&(!Number.isFinite(loadedMpg)||loadedMpg<=0||!Number.isFinite(emptyMpg)||emptyMpg<=0));
-    if(missing){renderDecision('MORE INFORMATION REQUIRED',['Complete and save the company, driver, and equipment classification.','Enter loaded miles, deadhead miles, offer, cargo weight, fuel price, and a valid MPG method.']);renderOfficialGate();return}
+    const economicsMissing=[loaded,deadheadToPickup,offer,cargoWeight,fuelPrice].some(v=>v===null||!Number.isFinite(v))||(mpgMode==='blended'&&(!Number.isFinite(blendedMpg)||blendedMpg<=0))||(mpgMode==='separate'&&(!Number.isFinite(loadedMpg)||loadedMpg<=0||!Number.isFinite(emptyMpg)||emptyMpg<=0));
+    if(economicsMissing){renderDecision('MORE INFORMATION REQUIRED',['Enter loaded miles, deadhead miles, offer, cargo weight, fuel price, and a valid MPG method.']);renderOfficialGate();return}
 
     const emptyMiles=deadheadToPickup+returnDeadhead,totalMiles=loaded+emptyMiles;
     const fuelGallons=mpgMode==='separate'?(loaded/loadedMpg+emptyMiles/emptyMpg):(totalMiles/blendedMpg),fuel=fuelGallons*fuelPrice;
@@ -146,30 +147,38 @@
     if(hourlyFloor>0&&tripHours>0)targets.push((baseCost+hourlyFloor*tripHours)/(1-feeRate));
     const target=Math.max(...targets),negotiation=Math.max(0,number('v35-negotiation-percent'))/100,ask=target*(1+negotiation),counteroffer=Math.max(0,target-totalRevenue),counterofferRate=totalMiles?target/totalMiles:null;
 
-    const verifiedRatings=[classification.truck_gvwr,classification.trailer_gvwr,classification.truck_empty,classification.trailer_empty,classification.gcwr].every(v=>Number.isFinite(v)&&v>0);
-    const baseMetrics={totalMiles,cpm:totalMiles?totalCost/totalMiles:null,rpm:totalMiles?totalRevenue/totalMiles:null,profit:totalRevenue-totalCost,walkaway,minimumAcceptable,target,ask,counteroffer,counterofferRate,fuelGallons,totalCost};
-    if(classification.equipmentStatus!=='active'||!verifiedRatings){renderDecision('MORE INFORMATION REQUIRED',['The saved equipment record is planned or has unverified weight ratings.','Verify truck GVWR, trailer GVWR, truck/trailer empty weights, and manufacturer GCWR before final dispatch evaluation.'],baseMetrics);renderOfficialGate();return}
+    const profit=totalRevenue-totalCost,margin=totalRevenue?profit/totalRevenue:null,profitPerMile=totalMiles?profit/totalMiles:null,profitPerHour=tripHours>0?profit/tripHours:null;
+    const baseMetrics={totalMiles,cpm:totalMiles?totalCost/totalMiles:null,rpm:totalMiles?totalRevenue/totalMiles:null,profit,walkaway,minimumAcceptable,target,ask,counteroffer,counterofferRate,fuelGallons,totalCost,margin,profitPerMile,profitPerHour};
+    const reasons=['Economic decision can be calculated independently of dispatch qualification.','Total business miles: '+loaded.toLocaleString()+' loaded + '+deadheadToPickup.toLocaleString()+' pickup deadhead + '+returnDeadhead.toLocaleString()+' reposition/return deadhead.','Fuel estimate: '+fuelGallons.toFixed(2)+' gal · '+cash(fuel)+' at '+cash(fuelPrice)+'/gal using '+(mpgMode==='separate'?'loaded/empty MPG':'blended MPG')+'.','Base trip cost before percentage fees: '+cash(baseCost)+'. Walk-away: '+cash(walkaway)+'. Minimum acceptable: '+cash(minimumAcceptable)+'.','Configured target: '+cash(target)+'. Recommended ask: '+cash(ask)+'.','Accessorial revenue included: '+cash(accessorials)+'. Percentage fees: '+percent(feeRate)+'.'];
+    let economicDecision;
+    if(totalRevenue>=target){economicDecision='ACCEPT LOAD';reasons.push('Economic decision: ACCEPT LOAD — offer satisfies all configured profit floors.')}
+    else if(totalRevenue>=minimumAcceptable){economicDecision='NEGOTIATE RATE';reasons.push('Economic decision: NEGOTIATE RATE — counteroffer requires '+cash(counteroffer)+' additional revenue; target rate is '+cash(counterofferRate)+' per total mile.')}
+    else{economicDecision='DECLINE LOAD';reasons.push('Economic decision: DECLINE LOAD — offer is '+cash(minimumAcceptable-totalRevenue)+' below minimum acceptable.')}
 
-    const actualCombination=classification.truck_empty+classification.trailer_empty+cargoWeight,combinationRating=classification.truck_gvwr+classification.trailer_gvwr,legalCapacity=Math.min(combinationRating,classification.gcwr),payload=Math.max(0,legalCapacity-classification.truck_empty-classification.trailer_empty),hard=[];
-    if(classification.driverClass==='Non-CDL Driver'&&combinationRating>=26001)hard.push('The '+combinationRating.toLocaleString()+' lb combined GVWR requires a CDL evaluation; Non-CDL cannot be dispatched.');
-    if(actualCombination>classification.gcwr)hard.push('Estimated combination weight exceeds the manufacturer GCWR.');
-    if(actualCombination>combinationRating)hard.push('Estimated combination weight exceeds the truck-plus-trailer GVWR limit.');
-    if(!classification.insuranceOk)hard.push('Insurance or cargo coverage is missing, expired, inadequate, or unverified.');
-    if(!classification.authorityOk)hard.push('Operating authority or service area is not verified.');
-    if(!classification.driverOk)hard.push('Driver license, restriction, endorsement, expiration, or qualification check failed.');
-    if(!classification.equipmentOk)hard.push('Truck, trailer, hitch, tire, brake, ramp, winch, or securement condition failed.');
+    let decision=economicDecision,dispatchStatus='QUALIFIED',payload=null;
+    const classificationCore=Boolean(classification?.primaryOperation&&classification?.driverClass&&classification?.vehicleConfig);
+    const verifiedRatings=classificationCore&&[classification.truck_gvwr,classification.trailer_gvwr,classification.truck_empty,classification.trailer_empty,classification.gcwr].every(v=>Number.isFinite(v)&&v>0);
+    if(!classificationCore||classification?.equipmentStatus!=='active'||!verifiedRatings){
+      dispatchStatus='PENDING';
+      decision='MORE INFORMATION REQUIRED';
+      reasons.push('Dispatch qualification pending: complete company/driver/equipment classification and verify active truck/trailer ratings before dispatch.');
+    }else{
+      const actualCombination=classification.truck_empty+classification.trailer_empty+cargoWeight,combinationRating=classification.truck_gvwr+classification.trailer_gvwr,legalCapacity=Math.min(combinationRating,classification.gcwr),hard=[];
+      payload=Math.max(0,legalCapacity-classification.truck_empty-classification.trailer_empty);
+      if(classification.driverClass==='Non-CDL Driver'&&combinationRating>=26001)hard.push('The '+combinationRating.toLocaleString()+' lb combined GVWR requires a CDL evaluation; Non-CDL cannot be dispatched.');
+      if(actualCombination>classification.gcwr)hard.push('Estimated combination weight exceeds the manufacturer GCWR.');
+      if(actualCombination>combinationRating)hard.push('Estimated combination weight exceeds the truck-plus-trailer GVWR limit.');
+      if(!classification.insuranceOk)hard.push('Insurance or cargo coverage is missing, expired, inadequate, or unverified.');
+      if(!classification.authorityOk)hard.push('Operating authority or service area is not verified.');
+      if(!classification.driverOk)hard.push('Driver license, restriction, endorsement, expiration, or qualification check failed.');
+      if(!classification.equipmentOk)hard.push('Truck, trailer, hitch, tire, brake, ramp, winch, or securement condition failed.');
+      if(hard.length){dispatchStatus='BLOCKED';decision='DO NOT DISPATCH';reasons.push(...hard)}
+    }
 
-    const profit=totalRevenue-totalCost,margin=totalRevenue?profit/totalRevenue:null,profitPerMile=totalMiles?profit/totalMiles:null,profitPerHour=tripHours>0?profit/tripHours:null,metrics={...baseMetrics,payload,margin,profitPerMile,profitPerHour};
-    const reasons=['Total business miles: '+loaded.toLocaleString()+' loaded + '+deadheadToPickup.toLocaleString()+' pickup deadhead + '+returnDeadhead.toLocaleString()+' reposition/return deadhead.','Fuel estimate: '+fuelGallons.toFixed(2)+' gal · '+cash(fuel)+' at '+cash(fuelPrice)+'/gal using '+(mpgMode==='separate'?'loaded/empty MPG':'blended MPG')+'.','Base trip cost before percentage fees: '+cash(baseCost)+'. Walk-away: '+cash(walkaway)+'. Minimum acceptable: '+cash(minimumAcceptable)+'.','Configured target: '+cash(target)+'. Recommended ask: '+cash(ask)+'.','Accessorial revenue included: '+cash(accessorials)+'. Percentage fees: '+percent(feeRate)+'.'];
-    let decision;
-    if(hard.length){decision='DO NOT DISPATCH';reasons.push(...hard)}
-    else if(totalRevenue>=target){decision='ACCEPT LOAD';reasons.push('Offer satisfies all configured profit floors.')}
-    else if(totalRevenue>=minimumAcceptable){decision='NEGOTIATE RATE';reasons.push('Counteroffer requires '+cash(counteroffer)+' additional revenue; target rate is '+cash(counterofferRate)+' per total mile.')}
-    else{decision='DECLINE LOAD';reasons.push('Offer is '+cash(minimumAcceptable-totalRevenue)+' below minimum acceptable.')}
-
-    const snapshot={snapshotId:'EST-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,7),version:'V3.5',createdAt:new Date().toISOString(),decision,reasons:[...reasons],classification:{...classification},inputs:{loadedMiles:loaded,deadheadToPickup,returnDeadhead,offer,cargoWeight,fuelPrice,mpgMode,blendedMpg,loadedMpg,emptyMpg,accessorialRevenue:accessorials,minimumProfit,targetProfit,targetMargin,profitMileFloor,tripHours,hourlyFloor,negotiationAllowance:negotiation},costs:{fuel,mileageCosts,baseCost,dispatchRate,factoringRate,feeRate,dispatcher,factoring,...flatCosts},metrics:{...metrics}};
+    const metrics={...baseMetrics,payload};
+    const snapshot={snapshotId:'EST-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,7),version:'V3.5',createdAt:new Date().toISOString(),decision,economicDecision,dispatchStatus,reasons:[...reasons],classification:classification?{...classification}:null,inputs:{loadedMiles:loaded,deadheadToPickup,returnDeadhead,offer,cargoWeight,fuelPrice,mpgMode,blendedMpg,loadedMpg,emptyMpg,accessorialRevenue:accessorials,minimumProfit,targetProfit,targetMargin,profitMileFloor,tripHours,hourlyFloor,negotiationAllowance:negotiation},costs:{fuel,mileageCosts,baseCost,dispatchRate,factoringRate,feeRate,dispatcher,factoring,...flatCosts},metrics:{...metrics}};
     const count=saveSnapshot(snapshot);
-    localStorage.setItem('flt-v35-last-decision',JSON.stringify({decision,reasons,metrics,at:snapshot.createdAt,snapshotId:snapshot.snapshotId}));
+    localStorage.setItem('flt-v35-last-decision',JSON.stringify({decision,economicDecision,dispatchStatus,reasons,metrics,at:snapshot.createdAt,snapshotId:snapshot.snapshotId}));
     renderDecision(decision,reasons,metrics);updateSnapshotCount();renderOfficialGate();
     if(typeof toast==='function')toast('V3.5 estimate snapshot saved · '+count+' total.');
   }
