@@ -15,7 +15,7 @@
   fields.id='v35-completion-fields';
   fields.className='field full';
   fields.innerHTML=`<div class="panel" style="margin-top:10px">
-    <div class="section-head"><div><div class="eyebrow">V3.5 completion pass</div><h2>Complete Proposed-Load Economics</h2><p class="subtle" style="margin-top:5px">Adds return/repositioning miles, separate loaded/empty MPG, full configurable trip costs, profit floors, negotiation allowance, counteroffer, and immutable estimate history.</p></div></div>
+    <div class="section-head"><div><div class="eyebrow">V3.5 completion pass</div><h2>Complete Proposed-Load Economics</h2><p class="subtle" style="margin-top:5px">Adds return/repositioning miles, separate loaded/empty MPG, full configurable trip costs, profit floors, negotiation allowance, counteroffer, and saved estimate history.</p></div></div>
     <div class="form-grid">
       <div class="field"><label>Repositioning / Return Deadhead Miles</label><input id="v35-return-deadhead" type="number" min="0" step="0.1" value="0"></div>
       <div class="field"><label>MPG Calculation Mode</label><select id="v35-mpg-mode"><option value="blended">Blended MPG</option><option value="separate">Separate Loaded / Empty MPG</option></select></div>
@@ -32,7 +32,7 @@
       <div class="field"><label>Securement ($)</label><input id="v35-securement-cost" type="number" min="0" step="0.01" value="0"></div>
       <div class="field"><label>Insurance / Fixed Allocation ($)</label><input id="v35-insurance-allocation" type="number" min="0" step="0.01" value="0"></div>
       <div class="field"><label>Other Trip Costs ($)</label><input id="v35-other-costs" type="number" min="0" step="0.01" value="0"></div>
-      <div class="field"><label>Factoring / Payment Fee (%)</label><input id="v35-factoring-percent" type="number" min="0" step="0.01" value="0"></div>
+      <div class="field"><label>Factoring / Payment Fee (%)</label><input id="v35-factoring-percent" type="number" min="0" max="99" step="0.01" value="0"></div>
       <div class="subhead"><h3>Required profit floors</h3></div>
       <div class="field"><label>Target Margin (%)</label><input id="v35-target-margin" type="number" min="0" max="95" step="0.1" value="0"></div>
       <div class="field"><label>Minimum Profit / Total Mile ($)</label><input id="v35-profit-mile-floor" type="number" min="0" step="0.01" value="0"></div>
@@ -118,11 +118,17 @@
     const fuelGallons=mpgMode==='separate'?(loaded/loadedMpg+emptyMiles/emptyMpg):(totalMiles/blendedMpg),fuel=fuelGallons*fuelPrice;
     const accessorials=number('v35-tarping')+number('v35-detention')+number('v35-other-accessorials'),totalRevenue=offer+accessorials;
     const mileageCosts=totalMiles*(number('v35-maintenance')+number('v35-tires')+number('v35-fixed-cpm'));
-    const dispatcher=totalRevenue*number('v35-dispatch-percent')/100,factoring=totalRevenue*number('v35-factoring-percent')/100;
+    const dispatchRate=Math.max(0,number('v35-dispatch-percent'))/100,factoringRate=Math.max(0,number('v35-factoring-percent'))/100,feeRate=dispatchRate+factoringRate;
     const flatCosts={tolls:number('v35-tolls'),driverPay:number('v35-driver-pay'),parking:number('v35-parking'),permits:number('v35-permits'),lodging:number('v35-lodging'),meals:number('v35-meals'),scales:number('v35-scales'),washout:number('v35-washout'),loading:number('v35-loading-cost'),securement:number('v35-securement-cost'),insuranceAllocation:number('v35-insurance-allocation'),other:number('v35-other-costs')};
-    const additionalFlat=Object.values(flatCosts).reduce((sum,v)=>sum+v,0),totalCost=fuel+mileageCosts+dispatcher+factoring+additionalFlat,walkaway=totalCost;
+    const additionalFlat=Object.values(flatCosts).reduce((sum,v)=>sum+v,0),baseCost=fuel+mileageCosts+additionalFlat;
+    if(feeRate>=1){renderDecision('MORE INFORMATION REQUIRED',['Dispatcher plus factoring/payment percentages must total less than 100%.'],{});renderOfficialGate();return}
+    const dispatcher=totalRevenue*dispatchRate,factoring=totalRevenue*factoringRate,totalCost=baseCost+dispatcher+factoring,walkaway=baseCost/(1-feeRate);
     const targetProfit=number('v35-target-profit'),targetMargin=Math.min(.95,number('v35-target-margin')/100),profitMileFloor=number('v35-profit-mile-floor'),tripHours=number('v35-trip-hours'),hourlyFloor=number('v35-hourly-floor');
-    const targets=[totalCost+targetProfit];if(targetMargin>0)targets.push(totalCost/(1-targetMargin));if(profitMileFloor>0)targets.push(totalCost+profitMileFloor*totalMiles);if(hourlyFloor>0&&tripHours>0)targets.push(totalCost+hourlyFloor*tripHours);
+    if(targetMargin>0&&1-feeRate-targetMargin<=0){renderDecision('MORE INFORMATION REQUIRED',['The selected target margin is impossible with the configured percentage fees. Lower the target margin or percentage fees.'],{});renderOfficialGate();return}
+    const targets=[(baseCost+targetProfit)/(1-feeRate)];
+    if(targetMargin>0)targets.push(baseCost/(1-feeRate-targetMargin));
+    if(profitMileFloor>0)targets.push((baseCost+profitMileFloor*totalMiles)/(1-feeRate));
+    if(hourlyFloor>0&&tripHours>0)targets.push((baseCost+hourlyFloor*tripHours)/(1-feeRate));
     const target=Math.max(...targets),negotiation=Math.max(0,number('v35-negotiation-percent'))/100,ask=target*(1+negotiation),counteroffer=Math.max(0,target-totalRevenue),counterofferRate=totalMiles?target/totalMiles:null;
 
     const verifiedRatings=[classification.truck_gvwr,classification.trailer_gvwr,classification.truck_empty,classification.trailer_empty,classification.gcwr].every(v=>Number.isFinite(v)&&v>0);
@@ -139,10 +145,10 @@
     if(!classification.equipmentOk)hard.push('Truck, trailer, hitch, tire, brake, ramp, winch, or securement condition failed.');
 
     const profit=totalRevenue-totalCost,margin=totalRevenue?profit/totalRevenue:null,profitPerMile=totalMiles?profit/totalMiles:null,profitPerHour=tripHours>0?profit/tripHours:null,metrics={...baseMetrics,payload,margin,profitPerMile,profitPerHour};
-    const reasons=['Total business miles: '+loaded.toLocaleString()+' loaded + '+deadheadToPickup.toLocaleString()+' pickup deadhead + '+returnDeadhead.toLocaleString()+' reposition/return deadhead.','Fuel estimate: '+fuelGallons.toFixed(2)+' gal · '+cash(fuel)+' at '+cash(fuelPrice)+'/gal using '+(mpgMode==='separate'?'loaded/empty MPG':'blended MPG')+'.','Estimated total cost: '+cash(totalCost)+'. Walk-away: '+cash(walkaway)+'.','Configured target: '+cash(target)+'. Recommended ask: '+cash(ask)+'.','Accessorial revenue included: '+cash(accessorials)+'.'];
+    const reasons=['Total business miles: '+loaded.toLocaleString()+' loaded + '+deadheadToPickup.toLocaleString()+' pickup deadhead + '+returnDeadhead.toLocaleString()+' reposition/return deadhead.','Fuel estimate: '+fuelGallons.toFixed(2)+' gal · '+cash(fuel)+' at '+cash(fuelPrice)+'/gal using '+(mpgMode==='separate'?'loaded/empty MPG':'blended MPG')+'.','Base trip cost before percentage fees: '+cash(baseCost)+'. Walk-away after percentage fees: '+cash(walkaway)+'.','Configured target: '+cash(target)+'. Recommended ask: '+cash(ask)+'.','Accessorial revenue included: '+cash(accessorials)+'. Percentage fees: '+percent(feeRate)+'.'];
     let decision;if(hard.length){decision='DO NOT DISPATCH';reasons.push(...hard)}else if(totalRevenue>=target){decision='ACCEPT LOAD';reasons.push('Offer satisfies all configured profit floors.')}else if(totalRevenue>=walkaway){decision='NEGOTIATE RATE';reasons.push('Counteroffer requires '+cash(counteroffer)+' additional revenue; target rate is '+cash(counterofferRate)+' per total mile.')}else{decision='PASS ON LOAD';reasons.push('Offer is '+cash(walkaway-totalRevenue)+' below walk-away.')}
 
-    const snapshot={snapshotId:'EST-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,7),version:'V3.5',createdAt:new Date().toISOString(),decision,reasons:[...reasons],classification:{...classification},inputs:{loadedMiles:loaded,deadheadToPickup,returnDeadhead,offer,cargoWeight,fuelPrice,mpgMode,blendedMpg,loadedMpg,emptyMpg,accessorialRevenue:accessorials,targetProfit,targetMargin,profitMileFloor,tripHours,hourlyFloor,negotiationAllowance:negotiation},costs:{fuel,mileageCosts,dispatcher,factoring,...flatCosts},metrics:{...metrics}};
+    const snapshot={snapshotId:'EST-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,7),version:'V3.5',createdAt:new Date().toISOString(),decision,reasons:[...reasons],classification:{...classification},inputs:{loadedMiles:loaded,deadheadToPickup,returnDeadhead,offer,cargoWeight,fuelPrice,mpgMode,blendedMpg,loadedMpg,emptyMpg,accessorialRevenue:accessorials,targetProfit,targetMargin,profitMileFloor,tripHours,hourlyFloor,negotiationAllowance:negotiation},costs:{fuel,mileageCosts,baseCost,dispatchRate,factoringRate,feeRate,dispatcher,factoring,...flatCosts},metrics:{...metrics}};
     const count=saveSnapshot(snapshot);localStorage.setItem('flt-v35-last-decision',JSON.stringify({decision,reasons,metrics,at:snapshot.createdAt,snapshotId:snapshot.snapshotId}));
     renderDecision(decision,reasons,metrics);updateSnapshotCount();renderOfficialGate();
     if(typeof toast==='function')toast('V3.5 estimate snapshot saved · '+count+' total.');
