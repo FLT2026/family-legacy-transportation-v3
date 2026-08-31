@@ -23,7 +23,7 @@
       <div class="field"><label>MPG Calculation Mode</label><select id="v35-mpg-mode"><option value="blended">Blended MPG</option><option value="separate">Separate Loaded / Empty MPG</option></select></div>
       <div class="field"><label>Loaded MPG</label><input id="v35-loaded-mpg" type="number" min="0.1" step="0.1" placeholder="Used in separate mode"></div>
       <div class="field"><label>Empty MPG</label><input id="v35-empty-mpg" type="number" min="0.1" step="0.1" placeholder="Used in separate mode"></div>
-      <div class="subhead"><h3>Additional trip costs</h3></div>
+      <details id="v35-advanced-economics" class="field full advanced-economics"><summary>Advanced trip costs & profit controls <span>Optional</span></summary><p class="subtle">Open this section when the load has extra expenses, percentage fees, hourly requirements, or custom profit floors.</p><div class="form-grid" style="margin-top:12px"><div class="subhead"><h3>Additional trip costs</h3></div>
       <div class="field"><label>Parking ($)</label><input id="v35-parking" type="number" min="0" step="0.01" value="0"></div>
       <div class="field"><label>Permits ($)</label><input id="v35-permits" type="number" min="0" step="0.01" value="0"></div>
       <div class="field"><label>Lodging ($)</label><input id="v35-lodging" type="number" min="0" step="0.01" value="0"></div>
@@ -41,7 +41,7 @@
       <div class="field"><label>Minimum Profit / Total Mile ($)</label><input id="v35-profit-mile-floor" type="number" min="0" step="0.01" value="0"></div>
       <div class="field"><label>Expected Trip Hours</label><input id="v35-trip-hours" type="number" min="0" step="0.25" value="0"></div>
       <div class="field"><label>Minimum Profit / Hour ($)</label><input id="v35-hourly-floor" type="number" min="0" step="0.01" value="0"></div>
-      <div class="field"><label>Negotiation Allowance (%)</label><input id="v35-negotiation-percent" type="number" min="0" step="0.1" value="5"></div>
+      <div class="field"><label>Negotiation Allowance (%)</label><input id="v35-negotiation-percent" type="number" min="0" step="0.1" value="5"></div></div></details>
     </div>
     <div class="grid three" style="margin-top:14px">
       <div class="panel"><div class="eyebrow">Minimum acceptable</div><h3 id="v35-minimum-acceptable">—</h3><p class="subtle">Walk-away plus minimum required profit</p></div>
