@@ -114,15 +114,15 @@
     <div class="subhead"><h3>Assigned equipment</h3></div>
     <div class="field"><label>Vehicle configuration</label><select id="v35-vehicle-config" required><option value="">Select configuration</option><option>Pickup and bumper-pull trailer</option><option>Pickup and gooseneck trailer</option><option>Pickup and fifth-wheel trailer</option><option>Box truck</option><option>Straight truck</option><option>Cargo van</option><option>Tractor and semi-trailer</option><option>Flatbed</option><option>Step deck</option><option>Dry van</option><option>Refrigerated trailer</option><option>Auto-hauler trailer</option><option>Enclosed trailer</option><option>Dump truck or dump trailer</option><option>Tow truck</option><option>Specialized equipment</option><option>Vehicle without trailer</option><option>Other configuration</option></select></div>
     <div class="field"><label>Truck GVWR (lb)</label><input id="v35-truck-gvwr" type="number" min="1" value="10000" required></div>
-    <div class="field"><label>Trailer GVWR (lb)</label><input id="v35-trailer-gvwr" type="number" min="0" value="14000" required></div>
-    <div class="field"><label>Truck curb/empty weight (lb)</label><input id="v35-truck-empty" type="number" min="0" value="6800" required></div>
-    <div class="field"><label>Trailer empty weight (lb)</label><input id="v35-trailer-empty" type="number" min="0" value="4800" required></div>
-    <div class="field"><label>Manufacturer GCWR (lb)</label><input id="v35-gcwr" type="number" min="1" value="23000" required></div>
-    <div class="field full"><label>Compliance confirmations</label><div class="choice-grid">
-      <label class="choice"><input id="v35-insurance-ok" type="checkbox" checked>Insurance and cargo coverage active</label>
-      <label class="choice"><input id="v35-authority-ok" type="checkbox" checked>Authority and operating area verified</label>
-      <label class="choice"><input id="v35-equipment-ok" type="checkbox" checked>Truck, trailer, hitch, tires, brakes, ramps and securement safe</label>
-      <label class="choice"><input id="v35-driver-ok" type="checkbox" checked>Driver license and qualification current</label>
+    <div class="field"><label>Trailer GVWR (lb) — verify rating plate</label><input id="v35-trailer-gvwr" type="number" min="0" placeholder="Enter exact rating" required></div>
+    <div class="field"><label>Truck actual/empty weight (lb) — verify scale/record</label><input id="v35-truck-empty" type="number" min="0" placeholder="Enter verified weight" required></div>
+    <div class="field"><label>Trailer empty weight (lb) — verify manufacturer</label><input id="v35-trailer-empty" type="number" min="0" placeholder="Enter verified weight" required></div>
+    <div class="field"><label>Manufacturer GCWR (lb) — verify truck documentation</label><input id="v35-gcwr" type="number" min="1" placeholder="Enter exact GCWR" required></div>
+    <div class="field full"><div class="notice hard-stop" style="margin-bottom:8px"><strong>Confirmation required:</strong> Check these boxes only after the current documents and equipment have actually been verified. They are intentionally unchecked by default.</div><label>Compliance confirmations</label><div class="choice-grid">
+      <label class="choice"><input id="v35-insurance-ok" type="checkbox">Insurance and cargo coverage active</label>
+      <label class="choice"><input id="v35-authority-ok" type="checkbox">Authority and operating area verified</label>
+      <label class="choice"><input id="v35-equipment-ok" type="checkbox">Truck, trailer, hitch, tires, brakes, ramps and securement safe</label>
+      <label class="choice"><input id="v35-driver-ok" type="checkbox">Driver license and qualification current</label>
     </div></div>
     <div class="form-actions field full"><button class="btn primary">Save classification</button></div>
   </form>
@@ -476,7 +476,7 @@
         $('v35-vehicle-config').value=classification.vehicleConfig||'';
         ['truck-gvwr','trailer-gvwr','truck-empty','trailer-empty','gcwr'].forEach(key=>{const el=$('v35-'+key);if(el&&classification[key.replaceAll('-','_')]!=null)el.value=classification[key.replaceAll('-','_')]});
         document.querySelectorAll('[name="v35-secondary"]').forEach(box=>box.checked=(classification.secondary||[]).includes(box.value));
-        ['insurance','authority','equipment','driver'].forEach(key=>{const el=$('v35-'+key+'-ok');if(el)el.checked=classification[key+'Ok']!==false});
+        ['insurance','authority','equipment','driver'].forEach(key=>{const el=$('v35-'+key+'-ok');if(el)el.checked=classification[key+'Ok']===true});
         $('v35-class-status').textContent='Saved';
         $('v35-class-status').className='tag';
       }
