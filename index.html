@@ -111,13 +111,13 @@
     <div class="subhead"><h3>Driver profile</h3></div>
     <div class="field"><label>Driver qualification</label><select id="v35-driver-class" required><option value="">Select qualification</option><option>Non-CDL Driver</option><option>CDL Class A</option><option>CDL Class B</option><option>CDL Class C</option><option>Commercial Learner's Permit</option><option>Intrastate-Only Driver</option><option>Interstate-Qualified Driver</option><option>Not Applicable — Non-Driving User</option></select></div>
     <div class="field"><label>Operating area</label><select id="v35-operating-area" required><option value="">Select area</option><option>Intrastate Only</option><option>Interstate</option></select></div>
-    <div class="subhead"><h3>Assigned equipment</h3></div>
+    <div class="subhead"><h3>Assigned equipment</h3></div><div class="field"><label>Equipment record status</label><select id="v35-equipment-status" required><option value="planned">Planned / Not Yet Verified</option><option value="active">Active / Verified Equipment</option></select></div>
     <div class="field"><label>Vehicle configuration</label><select id="v35-vehicle-config" required><option value="">Select configuration</option><option>Pickup and bumper-pull trailer</option><option>Pickup and gooseneck trailer</option><option>Pickup and fifth-wheel trailer</option><option>Box truck</option><option>Straight truck</option><option>Cargo van</option><option>Tractor and semi-trailer</option><option>Flatbed</option><option>Step deck</option><option>Dry van</option><option>Refrigerated trailer</option><option>Auto-hauler trailer</option><option>Enclosed trailer</option><option>Dump truck or dump trailer</option><option>Tow truck</option><option>Specialized equipment</option><option>Vehicle without trailer</option><option>Other configuration</option></select></div>
     <div class="field"><label>Truck GVWR (lb)</label><input id="v35-truck-gvwr" type="number" min="1" value="10000" required></div>
-    <div class="field"><label>Trailer GVWR (lb) — verify rating plate</label><input id="v35-trailer-gvwr" type="number" min="0" placeholder="Enter exact rating" required></div>
-    <div class="field"><label>Truck actual/empty weight (lb) — verify scale/record</label><input id="v35-truck-empty" type="number" min="0" placeholder="Enter verified weight" required></div>
-    <div class="field"><label>Trailer empty weight (lb) — verify manufacturer</label><input id="v35-trailer-empty" type="number" min="0" placeholder="Enter verified weight" required></div>
-    <div class="field"><label>Manufacturer GCWR (lb) — verify truck documentation</label><input id="v35-gcwr" type="number" min="1" placeholder="Enter exact GCWR" required></div>
+    <div class="field"><label>Trailer GVWR (lb) — verify rating plate</label><input id="v35-trailer-gvwr" type="number" min="0" placeholder="Enter when known"></div>
+    <div class="field"><label>Truck actual/empty weight (lb) — verify scale/record</label><input id="v35-truck-empty" type="number" min="0" placeholder="Enter when verified"></div>
+    <div class="field"><label>Trailer empty weight (lb) — verify manufacturer</label><input id="v35-trailer-empty" type="number" min="0" placeholder="Enter when known"></div>
+    <div class="field"><label>Manufacturer GCWR (lb) — verify truck documentation</label><input id="v35-gcwr" type="number" min="1" placeholder="Enter when verified"></div>
     <div class="field full"><div class="notice hard-stop" style="margin-bottom:8px"><strong>Confirmation required:</strong> Check these boxes only after the current documents and equipment have actually been verified. They are intentionally unchecked by default.</div><label>Compliance confirmations</label><div class="choice-grid">
       <label class="choice"><input id="v35-insurance-ok" type="checkbox">Insurance and cargo coverage active</label>
       <label class="choice"><input id="v35-authority-ok" type="checkbox">Authority and operating area verified</label>
@@ -473,7 +473,7 @@
         $('v35-company-role').value=classification.companyRole||'';
         $('v35-driver-class').value=classification.driverClass||'';
         $('v35-operating-area').value=classification.operatingArea||'';
-        $('v35-vehicle-config').value=classification.vehicleConfig||'';
+        $('v35-vehicle-config').value=classification.vehicleConfig||'';$('v35-equipment-status').value=classification.equipmentStatus||'planned';
         ['truck-gvwr','trailer-gvwr','truck-empty','trailer-empty','gcwr'].forEach(key=>{const el=$('v35-'+key);if(el&&classification[key.replaceAll('-','_')]!=null)el.value=classification[key.replaceAll('-','_')]});
         document.querySelectorAll('[name="v35-secondary"]').forEach(box=>box.checked=(classification.secondary||[]).includes(box.value));
         ['insurance','authority','equipment','driver'].forEach(key=>{const el=$('v35-'+key+'-ok');if(el)el.checked=classification[key+'Ok']===true});
@@ -487,7 +487,7 @@
           primaryOperation:$('v35-primary-operation').value,companyRole:$('v35-company-role').value,
           secondary:[...document.querySelectorAll('[name="v35-secondary"]:checked')].map(box=>box.value),
           driverClass:$('v35-driver-class').value,operatingArea:$('v35-operating-area').value,
-          vehicleConfig:$('v35-vehicle-config').value,truck_gvwr:n('v35-truck-gvwr'),trailer_gvwr:n('v35-trailer-gvwr'),
+          vehicleConfig:$('v35-vehicle-config').value,equipmentStatus:$('v35-equipment-status').value,truck_gvwr:n('v35-truck-gvwr'),trailer_gvwr:n('v35-trailer-gvwr'),
           truck_empty:n('v35-truck-empty'),trailer_empty:n('v35-trailer-empty'),gcwr:n('v35-gcwr'),
           insuranceOk:$('v35-insurance-ok').checked,authorityOk:$('v35-authority-ok').checked,
           equipmentOk:$('v35-equipment-ok').checked,driverOk:$('v35-driver-ok').checked,
@@ -536,7 +536,7 @@
         const dispatcher=totalRevenue*n('v35-dispatch-percent')/100;
         const totalCost=fuel+mileageCosts+n('v35-tolls')+n('v35-driver-pay')+dispatcher;
         const targetProfit=n('v35-target-profit'),walkaway=totalCost,target=totalCost+targetProfit,ask=target*1.05;
-        const actualCombination=classification.truck_empty+classification.trailer_empty+n('v35-cargo-weight');
+        if(classification.equipmentStatus!=='active'||![classification.truck_gvwr,classification.trailer_gvwr,classification.truck_empty,classification.trailer_empty,classification.gcwr].every(value=>Number.isFinite(value)&&value>0)){setDecision('MORE INFORMATION REQUIRED',['The saved equipment record is planned or has unverified weight ratings.','Enter the exact trailer GVWR, truck empty weight, trailer empty weight, and manufacturer GCWR before dispatch evaluation.','Do not check compliance confirmations until the documents and equipment have actually been verified.'],{totalMiles,cpm:totalMiles?totalCost/totalMiles:null,rpm:totalMiles?totalRevenue/totalMiles:null,profit:totalRevenue-totalCost,walkaway,target,ask});return;}const actualCombination=classification.truck_empty+classification.trailer_empty+n('v35-cargo-weight');
         const combinationRating=classification.truck_gvwr+classification.trailer_gvwr;
         const legalCapacity=Math.min(combinationRating,classification.gcwr);
         const payload=Math.max(0,legalCapacity-classification.truck_empty-classification.trailer_empty);
