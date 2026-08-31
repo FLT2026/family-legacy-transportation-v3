@@ -9,7 +9,11 @@
     .validation-summary strong{display:block;margin-bottom:4px}.validation-summary button{border:0;background:transparent;color:#6f2926;text-decoration:underline;padding:2px 0;cursor:pointer;text-align:left}
     .next-action{display:flex;justify-content:space-between;gap:18px;align-items:center;border-left:5px solid var(--lime);margin:0 0 14px}
     .workflow-map{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}.workflow-map span{font-size:11px;padding:5px 8px;border-radius:999px;background:#eef2eb;color:#506059}.workflow-map span.current{background:var(--lime);color:var(--ink);font-weight:800}
+    #nav button.nav-required{background:#365247;color:#fff;box-shadow:inset 4px 0 var(--lime),0 0 0 1px rgba(207,232,106,.5)}
+    #nav button.nav-required::after{content:'NEXT';margin-left:auto;background:var(--lime);color:var(--ink);font-size:9px;font-weight:900;letter-spacing:.08em;padding:3px 6px;border-radius:999px}
+    #nav button.nav-required.active{background:#3f5e51}
     .nav-admin{margin-top:12px;border-top:1px solid rgba(255,255,255,.12)!important;padding-top:14px!important}
+    @media(max-width:900px){#nav button.nav-required::after{content:'';width:7px;height:7px;padding:0;position:absolute;right:5px}}
     @media(max-width:700px){.next-action{align-items:flex-start;flex-direction:column}}
   `;
   document.head.appendChild(style);
@@ -45,8 +49,9 @@
     hero.insertAdjacentElement('afterend',card);
   }
   function renderNext(){
-    const card=document.getElementById('v35-next-action');if(!card)return;
     const next=nextAction(),steps=['Business','Classification','Fleet','Evaluate','Create Load','Dispatch','Pickup','Delivery','Invoice'];
+    nav?.querySelectorAll('button').forEach(button=>button.classList.toggle('nav-required',button.dataset.view===next.view));
+    const card=document.getElementById('v35-next-action');if(!card)return;
     card.innerHTML='<div><div class="eyebrow">Next required action</div><h2>'+next.title+'</h2><p class="subtle" style="margin-top:5px">'+next.detail+'</p><div class="workflow-map">'+steps.map((s,i)=>'<span class="'+(i+1===next.step?'current':'')+'">'+(i+1)+' · '+s+'</span>').join('')+'</div></div><button class="btn primary" id="v35-next-button">Continue →</button>';
     card.querySelector('#v35-next-button').addEventListener('click',()=>nav?.querySelector('[data-view="'+next.view+'"]')?.click());
   }
@@ -117,5 +122,8 @@
       if(fail(panel,errors)){e.preventDefault();e.stopImmediatePropagation()}
     },true)
   });
+  document.addEventListener('submit',()=>setTimeout(renderNext,250));
+  ['save-pickup','save-delivery'].forEach(id=>document.getElementById(id)?.addEventListener('click',()=>setTimeout(renderNext,250)));
+  nav?.querySelectorAll('button').forEach(button=>button.addEventListener('click',()=>setTimeout(renderNext,50)));
   renderNext();
 })();
