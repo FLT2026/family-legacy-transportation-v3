@@ -7,7 +7,7 @@
   if(!nav||!loadNav||document.getElementById('fleet'))return;
   const navButton=document.createElement('button');
   navButton.dataset.view='fleet';
-  navButton.innerHTML='<span class="nav-icon">▤</span><span class="nav-label">Drivers & Equipment</span>';
+  navButton.innerHTML='<span class="nav-icon">&#9636;</span><span class="nav-label">Drivers & Equipment</span>';
   nav.insertBefore(navButton,loadNav);
   const section=document.createElement('section');
   section.className='view';section.id='fleet';
