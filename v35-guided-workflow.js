@@ -12,6 +12,10 @@
     #nav button.nav-required{background:#365247;color:#fff;box-shadow:inset 4px 0 var(--lime),0 0 0 1px rgba(207,232,106,.5)}
     #nav button.nav-required::after{content:'NEXT';margin-left:auto;background:var(--lime);color:var(--ink);font-size:9px;font-weight:900;letter-spacing:.08em;padding:3px 6px;border-radius:999px}
     #nav button.nav-required.active{background:#3f5e51}
+    .advanced-economics{border:1px solid var(--line);border-radius:8px;padding:0;background:#fbfcf8}
+    .advanced-economics summary{cursor:pointer;padding:13px 15px;font-weight:800;color:var(--green);display:flex;justify-content:space-between;align-items:center}
+    .advanced-economics summary span{font-size:10px;letter-spacing:.08em;background:#eef2eb;color:var(--muted);padding:3px 7px;border-radius:999px}
+    .advanced-economics[open]{padding:0 15px 15px}.advanced-economics[open] summary{margin:0 -15px 10px;border-bottom:1px solid var(--line)}
     .nav-admin{margin-top:12px;border-top:1px solid rgba(255,255,255,.12)!important;padding-top:14px!important}
     @media(max-width:900px){#nav button.nav-required::after{content:'';width:7px;height:7px;padding:0;position:absolute;right:5px}}
     @media(max-width:700px){.next-action{align-items:flex-start;flex-direction:column}}
