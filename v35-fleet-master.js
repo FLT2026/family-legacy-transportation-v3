@@ -3,13 +3,19 @@
   if(!fleet||document.getElementById('v35-fleet-master-manager'))return;
   const key='flt-v35-fleet',read=()=>{try{return {...{drivers:[],trucks:[],trailers:[],locks:[],audit:[]},...JSON.parse(localStorage.getItem(key)||'{}')}}catch(error){return{drivers:[],trucks:[],trailers:[],locks:[],audit:[]}}};
   const esc=value=>String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
-  const numeric=['gvwr','gcwr','emptyWeight','frontGawr','rearGawr','tireCapacity','hitchCapacity','axleCapacity'];
+  const numeric=['gvwr','gcwr','emptyWeight','frontGawr','rearGawr','frontTireCapacity','rearTireCapacity','tireCapacity','hitchCapacity','axleCapacity','manufacturerPayload','frontColdPsi','rearColdPsi'];
   const truckFields=`
     <div class="field"><label>Year</label><input name="year" inputmode="numeric" placeholder="2016"></div>
     <div class="field"><label>Make / Model</label><input name="makeModel" placeholder="Ford F-250"></div>
     <div class="field"><label>Front GAWR (lb) <span class="subtle">(Active)</span></label><input name="frontGawr" type="number" min="1"></div>
     <div class="field"><label>Rear GAWR (lb) <span class="subtle">(Active)</span></label><input name="rearGawr" type="number" min="1"></div>
-    <div class="field"><label>Combined tire capacity (lb) <span class="subtle">(Active)</span></label><input name="tireCapacity" type="number" min="1"></div>
+    <div class="field"><label>Manufacturer payload label (lb)</label><input name="manufacturerPayload" type="number" min="1" placeholder="Reference only"></div>
+    <div class="field"><label>Front tire size</label><input name="frontTireSize" placeholder="LT245/75R17E 121/118S"></div>
+    <div class="field"><label>Rear tire size</label><input name="rearTireSize" placeholder="LT245/75R17E 121/118S"></div>
+    <div class="field"><label>Front cold pressure (PSI)</label><input name="frontColdPsi" type="number" min="1"></div>
+    <div class="field"><label>Rear cold pressure (PSI)</label><input name="rearColdPsi" type="number" min="1"></div>
+    <div class="field"><label>Front-axle tire capacity (lb) <span class="subtle">(Active)</span></label><input name="frontTireCapacity" type="number" min="1"></div>
+    <div class="field"><label>Rear-axle tire capacity (lb) <span class="subtle">(Active)</span></label><input name="rearTireCapacity" type="number" min="1"></div>
     <div class="field"><label>Hitch rating (lb) <span class="subtle">(Active)</span></label><input name="hitchCapacity" type="number" min="1"></div>
     <div class="field"><label>Ready-to-work scale date <span class="subtle">(Active)</span></label><input name="verificationDate" type="date"></div>
     <div class="field"><label>Weight verification</label><select name="weightBasis"><option value="planned">Planned / estimate</option><option value="scale-ticket">Scale ticket · full fuel and normal equipment</option><option value="manufacturer">Manufacturer document</option></select></div>`;
@@ -47,7 +53,7 @@
 
   function setActiveRequirements(form,kind){
     const active=form.elements.status?.value==='active';
-    const names=kind==='truck'?['vin','gvwr','gcwr','emptyWeight','frontGawr','rearGawr','tireCapacity','hitchCapacity','verificationDate']:kind==='trailer'?['vin','gvwr','emptyWeight','axleCapacity','tireCapacity','hitchCapacity','verificationDate']:['licenseState','expiration'];
+    const names=kind==='truck'?['vin','gvwr','gcwr','emptyWeight','frontGawr','rearGawr','frontTireCapacity','rearTireCapacity','hitchCapacity','verificationDate']:kind==='trailer'?['vin','gvwr','emptyWeight','axleCapacity','tireCapacity','hitchCapacity','verificationDate']:['licenseState','expiration'];
     form.noValidate=true;
     names.forEach(name=>{if(form.elements[name]){form.elements[name].required=false;form.elements[name].setAttribute('aria-required',active?'true':'false')}});
   }
@@ -93,7 +99,7 @@
 
   function validateActive(form,kind){
     if(form.elements.status?.value!=='active')return null;
-    const names=kind==='truck'?['vin','gvwr','gcwr','emptyWeight','frontGawr','rearGawr','tireCapacity','hitchCapacity','verificationDate']:kind==='trailer'?['vin','gvwr','emptyWeight','axleCapacity','tireCapacity','hitchCapacity','verificationDate']:['licenseState','expiration'];
+    const names=kind==='truck'?['vin','gvwr','gcwr','emptyWeight','frontGawr','rearGawr','frontTireCapacity','rearTireCapacity','hitchCapacity','verificationDate']:kind==='trailer'?['vin','gvwr','emptyWeight','axleCapacity','tireCapacity','hitchCapacity','verificationDate']:['licenseState','expiration'];
     const missing=names.find(name=>!String(form.elements[name]?.value||'').trim());
     if(missing)return{control:form.elements[missing],message:'Complete the highlighted Active / Verified field.'};
     const fail=(name,message)=>({control:form.elements[name],message}),n=name=>Number(form.elements[name]?.value),validVin=value=>/^[A-HJ-NPR-Z0-9]{17}$/i.test(String(value||'').trim()),validScaleDate=value=>{const date=new Date(String(value||'')+'T23:59:59');return Number.isFinite(date.getTime())&&date<=new Date()};
@@ -109,7 +115,8 @@
       if(n('emptyWeight')>=n('gvwr'))return fail('emptyWeight','Truck ready-to-work empty weight must be below truck GVWR.');
       if(n('gvwr')>n('gcwr'))return fail('gcwr','Truck GCWR cannot be lower than truck GVWR.');
       if(n('frontGawr')+n('rearGawr')<n('gvwr'))return fail('rearGawr','Combined front and rear GAWR must cover truck GVWR.');
-      if(n('tireCapacity')<n('gvwr'))return fail('tireCapacity','Combined truck tire capacity must cover truck GVWR.');
+      if(n('frontTireCapacity')<n('frontGawr'))return fail('frontTireCapacity','Front-axle tire capacity must cover front GAWR.');
+      if(n('rearTireCapacity')<n('rearGawr'))return fail('rearTireCapacity','Rear-axle tire capacity must cover rear GAWR.');
     }
     if(kind==='trailer'){
       if(!validVin(form.elements.vin.value))return fail('vin','Enter the complete 17-character trailer VIN. Letters I, O, and Q are not used.');
