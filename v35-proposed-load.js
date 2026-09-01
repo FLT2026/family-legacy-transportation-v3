@@ -190,9 +190,9 @@
     const baseMetrics={totalMiles,cpm:totalMiles?totalCost/totalMiles:null,rpm:totalMiles?totalRevenue/totalMiles:null,profit,walkaway,minimumAcceptable,target,ask,counteroffer,counterofferRate,fuelGallons,totalCost,margin,profitPerMile,profitPerHour};
     const reasons=['Economic decision can be calculated independently of dispatch qualification.','Total business miles: '+loaded.toLocaleString()+' loaded + '+deadheadToPickup.toLocaleString()+' pickup deadhead + '+returnDeadhead.toLocaleString()+' reposition/return deadhead.','Fuel estimate: '+fuelGallons.toFixed(2)+' gal · '+cash(fuel)+' at '+cash(fuelPrice)+'/gal using '+(mpgMode==='separate'?'loaded/empty MPG':'blended MPG')+'.','Base trip cost before percentage fees: '+cash(baseCost)+'. Walk-away: '+cash(walkaway)+'. Minimum acceptable: '+cash(minimumAcceptable)+'.','Configured target: '+cash(target)+'. Recommended ask: '+cash(ask)+'.','Accessorial revenue included: '+cash(accessorials)+'. Percentage fees: '+percent(feeRate)+'.'];
     let economicDecision;
-    if(totalRevenue>=target){economicDecision='ACCEPT LOAD';reasons.push('Economic decision: ACCEPT LOAD — offer satisfies all configured profit floors.')}
-    else if(totalRevenue>=minimumAcceptable){economicDecision='NEGOTIATE RATE';reasons.push('Economic decision: NEGOTIATE RATE — counteroffer requires '+cash(counteroffer)+' additional revenue; target rate is '+cash(counterofferRate)+' per total mile.')}
-    else{economicDecision='PASS ON LOAD';reasons.push('Economic decision: PASS ON LOAD — offer is '+cash(minimumAcceptable-totalRevenue)+' below minimum acceptable.')}
+    if(totalRevenue>=target){economicDecision='ACCEPT LOAD';reasons.push('Rate profitability: PROFITABLE — offer satisfies all configured profit floors.')}
+    else if(totalRevenue>=minimumAcceptable){economicDecision='NEGOTIATE RATE';reasons.push('Rate profitability: NEGOTIATE — counteroffer requires '+cash(counteroffer)+' additional revenue; target rate is '+cash(counterofferRate)+' per total mile.')}
+    else{economicDecision='PASS ON LOAD';reasons.push('Rate profitability: UNPROFITABLE — offer is '+cash(minimumAcceptable-totalRevenue)+' below minimum acceptable.')}
 
     let decision=economicDecision,dispatchStatus='QUALIFIED',payload=null,selectedFleet=null;
     const classificationCore=Boolean(classification?.primaryOperation&&classification?.companyRole&&classification?.operatingArea);
