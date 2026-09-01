@@ -54,18 +54,36 @@
     form.elements.status?.addEventListener('change',()=>setActiveRequirements(form,kind));setActiveRequirements(form,kind);
   });
 
+  const editForms=[['driver','drivers',document.getElementById('fleet-driver-form')],['truck','trucks',truckForm],['trailer','trailers',trailerForm]];
+  function clearEditState(restore=true,clearReason=true){
+    const data=read();
+    editForms.forEach(([kind,bucket,form])=>{
+      if(restore&&form.dataset.editId){
+        const saved=(data[bucket]||[]).find(item=>item.id===form.dataset.editId);
+        form.reset();
+        if(saved)Object.entries(saved).forEach(([name,value])=>{if(form.elements[name])form.elements[name].value=value??''});
+        setActiveRequirements(form,kind);
+      }
+      delete form.dataset.editId;delete form.dataset.editReason;
+      form.querySelector('button[type="submit"],button:not([type])').textContent='Save '+kind;
+      form.querySelectorAll('.field-error-control,.guided-current-control').forEach(control=>control.classList.remove('field-error-control','guided-current-control'));
+    });
+    document.getElementById('v35-master-cancel').hidden=true;
+    if(clearReason)reason.value='';
+  }
   function cancelEdit(){
-    ['fleet-driver-form','fleet-truck-form','fleet-trailer-form'].forEach(id=>{const form=document.getElementById(id);delete form.dataset.editId;form.querySelector('button[type="submit"],button:not([type])').textContent='Save '+id.split('-')[1]});
-    document.getElementById('v35-master-cancel').hidden=true;reason.value='';notice.textContent='Edit cancelled. No saved record was changed.';
+    clearEditState(true,true);notice.textContent='Edit cancelled. No saved record was changed.';
   }
   document.getElementById('v35-master-cancel').addEventListener('click',cancelEdit);
   document.getElementById('v35-master-edit').addEventListener('click',()=>{
     const data=read(),bucket=type.value,record=(data[bucket]||[]).find(x=>x.id===recordSelect.value);
     if(!record){notice.innerHTML='<strong>Select a saved record first.</strong>';recordSelect.focus();return}
     if(!reason.value.trim()){notice.innerHTML='<strong>Enter the authorized change reason first.</strong>';reason.focus();return}
+    const authorizedReason=reason.value.trim();
+    clearEditState(true,false);
     const kind=bucketLabel[bucket],form=document.getElementById('fleet-'+kind+'-form');
     Object.entries(record).forEach(([name,value])=>{if(form.elements[name])form.elements[name].value=value??''});
-    form.dataset.editId=record.id;form.dataset.editReason=reason.value.trim();setActiveRequirements(form,kind);
+    form.dataset.editId=record.id;form.dataset.editReason=authorizedReason;setActiveRequirements(form,kind);
     form.querySelector('button[type="submit"],button:not([type])').textContent='Update '+kind;
     document.getElementById('v35-master-cancel').hidden=false;
     notice.innerHTML='<strong>Editing '+esc(record.name||record.unit)+'.</strong><br>Review every highlighted Active / Verified field, then press Update '+kind+'.';
