@@ -57,10 +57,10 @@
     return !Number.isNaN(expiration.getTime())&&expiration>=new Date();
   }
   function truckReady(x){
-    return Boolean(x?.status==='active'&&x.vin&&Number(x.gvwr)>0&&Number(x.gcwr)>0&&Number(x.emptyWeight)>0&&Number(x.frontGawr)>0&&Number(x.rearGawr)>0&&Number(x.tireCapacity)>0&&Number(x.hitchCapacity)>0&&x.verificationDate&&Number(x.emptyWeight)<Number(x.gvwr)&&Number(x.gvwr)<=Number(x.gcwr));
+    return Boolean(x?.status==='active'&&validVin(x.vin)&&Number(x.gvwr)>0&&Number(x.gcwr)>0&&Number(x.emptyWeight)>0&&Number(x.frontGawr)>0&&Number(x.rearGawr)>0&&Number(x.tireCapacity)>0&&Number(x.hitchCapacity)>0&&validScaleDate(x.verificationDate)&&x.weightBasis==='scale-ticket'&&Number(x.emptyWeight)<Number(x.gvwr)&&Number(x.gvwr)<=Number(x.gcwr));
   }
   function trailerReady(x){
-    return Boolean(x?.status==='active'&&x.vin&&Number(x.gvwr)>0&&Number(x.emptyWeight)>0&&Number(x.axleCapacity)>0&&Number(x.tireCapacity)>0&&Number(x.hitchCapacity)>0&&x.verificationDate&&Number(x.emptyWeight)<Number(x.gvwr));
+    return Boolean(x?.status==='active'&&validVin(x.vin)&&Number(x.gvwr)>0&&Number(x.emptyWeight)>0&&Number(x.axleCapacity)>0&&Number(x.tireCapacity)>0&&Number(x.hitchCapacity)>0&&validScaleDate(x.verificationDate)&&x.weightBasis==='scale-ticket'&&Number(x.emptyWeight)<Number(x.gvwr));
   }
   function fleetReady(fleet){
     return Boolean(fleet?.drivers?.some(driverReady)&&fleet?.trucks?.some(truckReady)&&fleet?.trailers?.some(trailerReady));
@@ -94,6 +94,8 @@
   }
   nav?.querySelector('[data-view="dashboard"]')?.addEventListener('click',()=>setTimeout(renderNext,0));
 
+  const validVin=value=>/^[A-HJ-NPR-Z0-9]{17}$/i.test(String(value||'').trim());
+  const validScaleDate=value=>{const date=new Date(String(value||'')+'T23:59:59');return Number.isFinite(date.getTime())&&date<=new Date()};
   let guidedQueue=[],guidedTotal=0;
   function fieldContainer(control){return control?.closest?.('.field')||control?.closest?.('.choice')||control?.parentElement}
   function clearError(control){
@@ -201,8 +203,8 @@
       const identity=type==='driver'?['name','Enter the driver name or internal ID.']:['unit','Enter the '+type+' unit ID.'];
       if(!String(data.get(identity[0])||'').trim())errors.push({control:form.elements[identity[0]],message:identity[1]});
       if(active&&type==='driver'){if(!String(data.get('licenseState')||'').trim())errors.push({control:form.elements.licenseState,message:'Enter the driver license state.'});if(!data.get('expiration'))errors.push({control:form.elements.expiration,message:'Enter the driver license expiration date.'})}
-      if(active&&type==='truck'){[['vin','Enter the truck VIN.'],['gvwr','Enter the verified truck GVWR.'],['gcwr','Enter the manufacturer GCWR.'],['emptyWeight','Enter the ready-to-work truck scale weight.'],['frontGawr','Enter the manufacturer front GAWR.'],['rearGawr','Enter the manufacturer rear GAWR.'],['tireCapacity','Enter the lowest verified truck tire capacity.'],['hitchCapacity','Enter the verified truck hitch rating.'],['verificationDate','Enter the truck weight verification date.']].forEach(([name,message])=>{if(!data.get(name))errors.push({control:form.elements[name],message})})}
-      if(active&&type==='trailer'){[['vin','Enter the trailer VIN.'],['gvwr','Enter the verified trailer GVWR.'],['emptyWeight','Enter the ready-to-work trailer scale weight.'],['axleCapacity','Enter the trailer combined axle rating.'],['tireCapacity','Enter the lowest verified trailer tire capacity.'],['hitchCapacity','Enter the verified hitch/coupler rating.'],['verificationDate','Enter the trailer weight verification date.']].forEach(([name,message])=>{if(!data.get(name))errors.push({control:form.elements[name],message})})}
+      if(active&&type==='truck'){[['vin','Enter the complete 17-character truck VIN.',validVin],['gvwr','Enter the verified truck GVWR.',v=>Number(v)>0],['gcwr','Enter the manufacturer GCWR.',v=>Number(v)>0],['emptyWeight','Enter the ready-to-work truck scale weight.',v=>Number(v)>0],['frontGawr','Enter the manufacturer front GAWR.',v=>Number(v)>0],['rearGawr','Enter the manufacturer rear GAWR.',v=>Number(v)>0],['tireCapacity','Enter the lowest verified truck tire capacity.',v=>Number(v)>0],['hitchCapacity','Enter the verified truck hitch rating.',v=>Number(v)>0],['verificationDate','Enter a truck scale date that is not in the future.',validScaleDate],['weightBasis','Select Scale ticket — full fuel and normal equipment.',v=>v==='scale-ticket']].forEach(([name,message,valid])=>{if(!valid(data.get(name)))errors.push({control:form.elements[name],message,resolved:()=>valid(form.elements[name]?.value)})})}
+      if(active&&type==='trailer'){[['vin','Enter the complete 17-character trailer VIN.',validVin],['gvwr','Enter the verified trailer GVWR.',v=>Number(v)>0],['emptyWeight','Enter the ready-to-work trailer scale weight.',v=>Number(v)>0],['axleCapacity','Enter the trailer combined axle rating.',v=>Number(v)>0],['tireCapacity','Enter the lowest verified trailer tire capacity.',v=>Number(v)>0],['hitchCapacity','Enter the verified hitch/coupler rating.',v=>Number(v)>0],['verificationDate','Enter a trailer scale date that is not in the future.',validScaleDate],['weightBasis','Select Scale ticket — normal equipment included.',v=>v==='scale-ticket']].forEach(([name,message,valid])=>{if(!valid(data.get(name)))errors.push({control:form.elements[name],message,resolved:()=>valid(form.elements[name]?.value)})})}
       if(fail(form,errors)){e.preventDefault();e.stopImmediatePropagation()}
     },true)
   });
