@@ -12,6 +12,8 @@
     #nav button.nav-required{background:#365247;color:#fff;box-shadow:inset 4px 0 var(--lime),0 0 0 1px rgba(207,232,106,.5)}
     #nav button.nav-required::after{content:'NEXT';margin-left:auto;background:var(--lime);color:var(--ink);font-size:9px;font-weight:900;letter-spacing:.08em;padding:3px 6px;border-radius:999px}
     #nav button.nav-required.active{background:#3f5e51}
+    #nav button.nav-complete:not(.nav-required)::after{content:'✓';margin-left:auto;color:var(--lime);font-weight:900;font-size:14px}
+    #nav button.nav-waiting:not(.nav-required){opacity:.68}
     .advanced-economics{border:1px solid var(--line);border-radius:8px;padding:0;background:#fbfcf8}
     .advanced-economics summary{cursor:pointer;padding:13px 15px;font-weight:800;color:var(--green);display:flex;justify-content:space-between;align-items:center}
     .advanced-economics summary span{font-size:10px;letter-spacing:.08em;background:#eef2eb;color:var(--muted);padding:3px 7px;border-radius:999px}
@@ -35,16 +37,27 @@
 
   const viewNames={business:'business-setup',fleet:'fleet',intelligence:'intelligence',load:'load',pickup:'pickup',delivery:'delivery',finance:'finance'};
   function read(key,fallback=null){try{return JSON.parse(localStorage.getItem(key)||JSON.stringify(fallback))}catch(error){return fallback}}
+  function workflowState(){
+    const profile=read('flt-v34-business-profile'),classification=read('flt-v35-classification');
+    const fleet=read('flt-v35-fleet',{drivers:[],trucks:[],trailers:[],locks:[]}),snapshots=read('flt-v35-estimate-snapshots',[]);
+    const loads=read('flt-v32-loads',[]),selectedId=localStorage.getItem('flt-v32-loads-selected');
+    const load=loads.find(x=>x.id===selectedId)||loads.at(-1)||null,isOperational=Boolean(load&&!String(load.id||'').startsWith('DEMO-'));
+    const lock=Boolean(isOperational&&fleet.locks?.some(x=>x.loadId===load.id));
+    const pickup=Boolean(isOperational&&load.pickupProof?.signature),delivery=Boolean(isOperational&&load.deliveryProof?.signature),invoice=Boolean(isOperational&&load.invoice?.number);
+    const paid=isOperational?(load.payments||[]).reduce((sum,x)=>sum+Number(x.amount||0),0):0,balance=isOperational?Math.max(0,Number(load.revenue||0)-paid):0;
+    return{profile,classification,fleet,snapshots,load,isOperational,lock,pickup,delivery,invoice,balance};
+  }
   function nextAction(){
-    const profile=read('flt-v34-business-profile');
-    const classification=read('flt-v35-classification');
-    const fleet=read('flt-v35-fleet',{drivers:[],trucks:[],trailers:[]});
-    const snapshots=read('flt-v35-estimate-snapshots',[]);
-    if(!profile)return{title:'Complete Business Setup',detail:'Save the company identity and operating state once so later records can auto-fill.',view:viewNames.business,step:1};
-    if(!classification)return{title:'Save Operation Classification',detail:'Choose the company role, operating area, driver class, and planned equipment.',view:viewNames.business,step:2};
-    if(!fleet.drivers?.length||!fleet.trucks?.length||!fleet.trailers?.length)return{title:'Add Driver and Equipment Records',detail:'Create separate planned records for at least one driver, truck, and trailer.',view:viewNames.fleet,step:3};
-    if(!snapshots.length)return{title:'Evaluate a Proposed Load',detail:'Enter the route, miles, offer, fuel, costs, and profit requirements before accepting the work.',view:viewNames.intelligence,step:4};
-    return{title:'Create or Review the Load',detail:'The economics are saved. Accept the work only after reviewing the decision and reasons.',view:viewNames.load,step:5};
+    const s=workflowState(),hasFleet=Boolean(s.fleet.drivers?.length&&s.fleet.trucks?.length&&s.fleet.trailers?.length);
+    if(!s.profile)return{title:'Complete Business Setup',detail:'Save the company identity and operating state once so later records can auto-fill.',view:viewNames.business,step:1};
+    if(!s.classification)return{title:'Save Operation Classification',detail:'Choose the company role, operating area, driver class, and planned equipment.',view:viewNames.business,step:2};
+    if(!hasFleet)return{title:'Add Driver and Equipment Records',detail:'Create separate planned records for at least one driver, truck, and trailer.',view:viewNames.fleet,step:3};
+    if(s.isOperational&&!s.lock)return{title:'Verify and Lock the Dispatch Assignment',detail:'Select an eligible driver, truck, and trailer. Planned or incomplete records remain blocked.',view:viewNames.fleet,step:6};
+    if(s.isOperational&&!s.pickup)return{title:'Capture Pickup Proof',detail:'Record the signer and signature before leaving the pickup location.',view:viewNames.pickup,step:7};
+    if(s.isOperational&&!s.delivery)return{title:'Capture Delivery Proof',detail:'Record the receiver and signature to close the chain of custody.',view:viewNames.delivery,step:8};
+    if(s.isOperational&&(!s.invoice||s.balance>0))return{title:s.invoice?'Record Payment or Review Balance':'Generate the Invoice',detail:'Complete billing, expenses, payments, and final profit for the selected load.',view:viewNames.finance,step:9};
+    if(!s.snapshots.length||s.isOperational)return{title:'Evaluate the Next Proposed Load',detail:'Start the next cycle with miles, offer, fuel, expenses, and profit requirements.',view:viewNames.intelligence,step:4};
+    return{title:'Accept & Create the Load',detail:'The economic estimate is saved. Create the load only after reviewing the decision and reasons.',view:viewNames.load,step:5};
   }
   const dashboard=document.getElementById('dashboard');
   const hero=dashboard?.querySelector('.hero');
@@ -53,8 +66,9 @@
     hero.insertAdjacentElement('afterend',card);
   }
   function renderNext(){
-    const next=nextAction(),steps=['Business','Classification','Fleet','Evaluate','Create Load','Dispatch','Pickup','Delivery','Invoice'];
-    nav?.querySelectorAll('button').forEach(button=>button.classList.toggle('nav-required',button.dataset.view===next.view));
+    const next=nextAction(),s=workflowState(),steps=['Business','Classification','Fleet','Evaluate','Create Load','Dispatch','Pickup','Delivery','Invoice'];
+    const complete={dashboard:false,'business-setup':Boolean(s.profile&&s.classification),fleet:Boolean(s.fleet.drivers?.length&&s.fleet.trucks?.length&&s.fleet.trailers?.length),intelligence:Boolean(s.snapshots.length),load:s.isOperational,pickup:s.pickup,delivery:s.delivery,finance:Boolean(s.invoice&&s.balance===0),test:false};
+    nav?.querySelectorAll('button').forEach(button=>{const required=button.dataset.view===next.view;button.classList.toggle('nav-required',required);button.classList.toggle('nav-complete',Boolean(complete[button.dataset.view]));button.classList.toggle('nav-waiting',!required&&!complete[button.dataset.view]&&button.dataset.view!=='dashboard'&&button.dataset.view!=='test')});
     const card=document.getElementById('v35-next-action');if(!card)return;
     card.innerHTML='<div><div class="eyebrow">Next required action</div><h2>'+next.title+'</h2><p class="subtle" style="margin-top:5px">'+next.detail+'</p><div class="workflow-map">'+steps.map((s,i)=>'<span class="'+(i+1===next.step?'current':'')+'">'+(i+1)+' · '+s+'</span>').join('')+'</div></div><button class="btn primary" id="v35-next-button">Continue →</button>';
     card.querySelector('#v35-next-button').addEventListener('click',()=>nav?.querySelector('[data-view="'+next.view+'"]')?.click());
