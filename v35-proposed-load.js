@@ -61,18 +61,31 @@
   function saveSnapshot(snapshot){const list=readSnapshots();list.push({...snapshot});localStorage.setItem(snapshotKey,JSON.stringify(list));return list.length}
   function updateSnapshotCount(){const el=$('v35-snapshot-count');if(el)el.textContent=readSnapshots().length+' snapshots'}
 
-  function renderDecision(decision,reasons,metrics={}){
-    const card=$('v35-decision-card');
-    if(card)card.className='panel decision-card'+(decision==='DO NOT DISPATCH'?' block':(['NEGOTIATE RATE','DECLINE LOAD','MORE INFORMATION REQUIRED'].includes(decision)?' warn':''));
-    if($('v35-decision'))$('v35-decision').textContent=decision;
+  function renderDecision(decision,reasons,metrics={},economicDecision=null,dispatchStatus=''){
+    const displayDecision=economicDecision||decision,card=$('v35-decision-card');
+    if(card)card.className='panel decision-card'+(displayDecision==='DO NOT DISPATCH'?' block':(['NEGOTIATE RATE','PASS ON LOAD','MORE INFORMATION REQUIRED'].includes(displayDecision)?' warn':''));
+    if($('v35-decision'))$('v35-decision').textContent=displayDecision;
     const summaries={
-      'ACCEPT LOAD':'Economics meet every configured V3.5 profit floor. Dispatch qualification may still be pending.',
-      'NEGOTIATE RATE':'The load clears minimum acceptable economics but misses one or more target profit floors.',
-      'DECLINE LOAD':'The offer is below the minimum acceptable price.',
-      'MORE INFORMATION REQUIRED':'The economic estimate is complete, but dispatch qualification is incomplete.',
+      'ACCEPT LOAD':'The offer meets every configured profit requirement.',
+      'NEGOTIATE RATE':'The load clears the walk-away price but needs a higher rate to meet the target.',
+      'PASS ON LOAD':'The offer is below the minimum acceptable price.',
+      'MORE INFORMATION REQUIRED':'Complete the highlighted load information to calculate profitability.',
       'DO NOT DISPATCH':'A non-negotiable legal, safety, insurance, driver, weight, or equipment check failed.'
     };
-    if($('v35-decision-summary'))$('v35-decision-summary').textContent=summaries[decision]||'';
+    if($('v35-decision-summary'))$('v35-decision-summary').textContent=summaries[displayDecision]||'';
+    let readiness=$('v35-dispatch-readiness');
+    if(!readiness&&$('v35-decision-summary')){
+      readiness=document.createElement('div');readiness.id='v35-dispatch-readiness';
+      $('v35-decision-summary').insertAdjacentElement('afterend',readiness);
+    }
+    if(readiness){
+      readiness.hidden=!economicDecision;
+      if(economicDecision){
+        const label=dispatchStatus==='BLOCKED'?'DO NOT DISPATCH':(dispatchStatus==='PENDING'?'MORE INFORMATION REQUIRED':'QUALIFIED');
+        readiness.className='notice'+(dispatchStatus==='BLOCKED'?' hard-stop':'');
+        readiness.innerHTML='<strong>Dispatch readiness: '+label+'</strong><br>'+(dispatchStatus==='PENDING'?'Profitability is complete. Verify driver, equipment, weight, insurance, and authority only after choosing to accept and create the load.':(dispatchStatus==='BLOCKED'?'The economic result is shown above, but this load cannot be dispatched until the non-negotiable failure is corrected.':'Required dispatch information is currently verified.'));
+      }
+    }
     const list=$('v35-decision-reasons');if(list){list.innerHTML='';reasons.forEach(reason=>{const li=document.createElement('li');li.textContent=reason;list.appendChild(li)})}
     const set=(id,text)=>{if($(id))$(id).textContent=text};
     set('v35-total-miles',metrics.totalMiles!=null?metrics.totalMiles.toLocaleString()+' mi':'—');
@@ -100,7 +113,7 @@
     }
     const snapshots=readSnapshots(),last=snapshots.at(-1);
     const costsComplete=Boolean(last&&last.costs&&requiredCostKeys.every(k=>Number.isFinite(last.costs[k])));
-    const allowedEconomicDecisions=['ACCEPT LOAD','NEGOTIATE RATE','DECLINE LOAD'];
+    const allowedEconomicDecisions=['ACCEPT LOAD','NEGOTIATE RATE','PASS ON LOAD'];
     const checks={
       'Loaded + all deadhead miles':Boolean(last&&Number.isFinite(last.inputs?.loadedMiles)&&Number.isFinite(last.inputs?.deadheadToPickup)&&Number.isFinite(last.inputs?.returnDeadhead)),
       'Loaded/empty or blended MPG':Boolean(last&&last.inputs?.mpgMode&&Number.isFinite(last.metrics?.fuelGallons)),
@@ -153,7 +166,7 @@
     let economicDecision;
     if(totalRevenue>=target){economicDecision='ACCEPT LOAD';reasons.push('Economic decision: ACCEPT LOAD — offer satisfies all configured profit floors.')}
     else if(totalRevenue>=minimumAcceptable){economicDecision='NEGOTIATE RATE';reasons.push('Economic decision: NEGOTIATE RATE — counteroffer requires '+cash(counteroffer)+' additional revenue; target rate is '+cash(counterofferRate)+' per total mile.')}
-    else{economicDecision='DECLINE LOAD';reasons.push('Economic decision: DECLINE LOAD — offer is '+cash(minimumAcceptable-totalRevenue)+' below minimum acceptable.')}
+    else{economicDecision='PASS ON LOAD';reasons.push('Economic decision: PASS ON LOAD — offer is '+cash(minimumAcceptable-totalRevenue)+' below minimum acceptable.')}
 
     let decision=economicDecision,dispatchStatus='QUALIFIED',payload=null;
     const classificationCore=Boolean(classification?.primaryOperation&&classification?.driverClass&&classification?.vehicleConfig);
@@ -179,7 +192,7 @@
     const snapshot={snapshotId:'EST-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,7),version:'V3.5',createdAt:new Date().toISOString(),decision,economicDecision,dispatchStatus,reasons:[...reasons],classification:classification?{...classification}:null,inputs:{loadedMiles:loaded,deadheadToPickup,returnDeadhead,offer,cargoWeight,fuelPrice,mpgMode,blendedMpg,loadedMpg,emptyMpg,accessorialRevenue:accessorials,minimumProfit,targetProfit,targetMargin,profitMileFloor,tripHours,hourlyFloor,negotiationAllowance:negotiation},costs:{fuel,mileageCosts,baseCost,dispatchRate,factoringRate,feeRate,dispatcher,factoring,...flatCosts},metrics:{...metrics}};
     const count=saveSnapshot(snapshot);
     localStorage.setItem('flt-v35-last-decision',JSON.stringify({decision,economicDecision,dispatchStatus,reasons,metrics,at:snapshot.createdAt,snapshotId:snapshot.snapshotId}));
-    renderDecision(decision,reasons,metrics);updateSnapshotCount();renderOfficialGate();
+    renderDecision(decision,reasons,metrics,economicDecision,dispatchStatus);updateSnapshotCount();renderOfficialGate();
     if(typeof toast==='function')toast('V3.5 estimate snapshot saved · '+count+' total.');
   }
 
