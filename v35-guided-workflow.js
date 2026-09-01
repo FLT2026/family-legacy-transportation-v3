@@ -51,18 +51,32 @@
     const paid=isOperational?(load.payments||[]).reduce((sum,x)=>sum+Number(x.amount||0),0):0,balance=isOperational?Math.max(0,Number(load.revenue||0)-paid):0;
     return{profile,classification,fleet,snapshots,load,isOperational,lock,pickup,delivery,invoice,balance};
   }
+  function driverReady(x){
+    if(x?.status!=='active'||!x.licenseState||!x.expiration)return false;
+    const expiration=new Date(x.expiration+'T23:59:59');
+    return !Number.isNaN(expiration.getTime())&&expiration>=new Date();
+  }
+  function truckReady(x){
+    return Boolean(x?.status==='active'&&x.vin&&Number(x.gvwr)>0&&Number(x.gcwr)>0&&Number(x.emptyWeight)>0&&Number(x.emptyWeight)<Number(x.gvwr)&&Number(x.gvwr)<=Number(x.gcwr));
+  }
+  function trailerReady(x){
+    return Boolean(x?.status==='active'&&x.vin&&Number(x.gvwr)>0&&Number(x.emptyWeight)>0&&Number(x.emptyWeight)<Number(x.gvwr));
+  }
+  function fleetReady(fleet){
+    return Boolean(fleet?.drivers?.some(driverReady)&&fleet?.trucks?.some(truckReady)&&fleet?.trailers?.some(trailerReady));
+  }
   function nextAction(){
-    const s=workflowState(),hasFleet=Boolean(s.fleet.drivers?.length&&s.fleet.trucks?.length&&s.fleet.trailers?.length);
+    const s=workflowState();
     if(!s.profile)return{title:'Complete Business Setup',detail:'Save the company identity and operating state once so later records can auto-fill.',view:viewNames.business,step:1};
     if(!s.classification)return{title:'Save Operation Classification',detail:'Choose the company role, operating area, driver class, and planned equipment.',view:viewNames.business,step:2};
-    if(!hasFleet)return{title:'Add Driver and Equipment Records',detail:'Create separate planned records for at least one driver, truck, and trailer.',view:viewNames.fleet,step:3};
     if(s.isOperational&&s.delivery&&(!s.invoice||s.balance>0))return{title:s.invoice?'Record Payment or Review Balance':'Generate the Invoice',detail:'Delivery is complete. Finish billing, expenses, payments, and final profit without reopening earlier stages.',view:viewNames.finance,step:9};
     if(s.isOperational&&s.delivery)return{title:'Evaluate the Next Proposed Load',detail:'This load is complete. Start the next cycle with miles, offer, fuel, expenses, and profit requirements.',view:viewNames.intelligence,step:4};
     if(s.isOperational&&s.pickup&&!s.delivery)return{title:'Capture Delivery Proof',detail:'Pickup is complete. Record the receiver and signature to close the chain of custody.',view:viewNames.delivery,step:8};
     if(s.isOperational&&!s.lock)return{title:'Verify and Lock the Dispatch Assignment',detail:'Select an eligible driver, truck, and trailer before pickup. Planned or incomplete records remain blocked.',view:viewNames.fleet,step:6};
     if(s.isOperational&&!s.pickup)return{title:'Capture Pickup Proof',detail:'Dispatch is locked. Record the signer and signature before leaving the pickup location.',view:viewNames.pickup,step:7};
     if(!s.snapshots.length||s.isOperational)return{title:'Evaluate the Next Proposed Load',detail:'Start the next cycle with miles, offer, fuel, expenses, and profit requirements.',view:viewNames.intelligence,step:4};
-    return{title:'Accept & Create the Load',detail:'The economic estimate is saved. Create the load only after reviewing the decision and reasons.',view:viewNames.load,step:5};
+    if(!fleetReady(s.fleet))return{title:'Verify Fleet Before Final Acceptance',detail:'The rate can be reviewed now, but final acceptance requires one current driver and Active / Verified truck and trailer records with complete ratings.',view:viewNames.fleet,step:3};
+    return{title:'Accept & Create the Load',detail:'The economic estimate is saved and verified fleet records are available. Review the final decision before creating the load.',view:viewNames.load,step:5};
   }
   const dashboard=document.getElementById('dashboard');
   const hero=dashboard?.querySelector('.hero');
@@ -72,7 +86,7 @@
   }
   function renderNext(){
     const next=nextAction(),s=workflowState(),steps=['Business','Classification','Fleet','Evaluate','Create Load','Dispatch','Pickup','Delivery','Invoice'];
-    const complete={dashboard:false,'business-setup':Boolean(s.profile&&s.classification),fleet:Boolean(s.fleet.drivers?.length&&s.fleet.trucks?.length&&s.fleet.trailers?.length),intelligence:Boolean(s.snapshots.length),load:s.isOperational,pickup:s.pickup,delivery:s.delivery,finance:Boolean(s.invoice&&s.balance===0),test:false};
+    const complete={dashboard:false,'business-setup':Boolean(s.profile&&s.classification),fleet:fleetReady(s.fleet),intelligence:Boolean(s.snapshots.length),load:s.isOperational,pickup:s.pickup,delivery:s.delivery,finance:Boolean(s.invoice&&s.balance===0),test:false};
     nav?.querySelectorAll('button').forEach(button=>{const required=button.dataset.view===next.view;button.classList.toggle('nav-required',required);button.classList.toggle('nav-complete',Boolean(complete[button.dataset.view]));button.classList.toggle('nav-waiting',!required&&!complete[button.dataset.view]&&button.dataset.view!=='dashboard'&&button.dataset.view!=='test')});
     const card=document.getElementById('v35-next-action');if(!card)return;
     card.innerHTML='<div><div class="eyebrow">Next required action</div><h2>'+next.title+'</h2><p class="subtle" style="margin-top:5px">'+next.detail+'</p><div class="workflow-map">'+steps.map((s,i)=>'<span class="'+(i+1===next.step?'current':'')+'">'+(i+1)+' · '+s+'</span>').join('')+'</div></div><button class="btn primary" id="v35-next-button">Continue →</button>';
