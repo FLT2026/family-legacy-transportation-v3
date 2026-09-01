@@ -52,10 +52,11 @@
     if(!s.profile)return{title:'Complete Business Setup',detail:'Save the company identity and operating state once so later records can auto-fill.',view:viewNames.business,step:1};
     if(!s.classification)return{title:'Save Operation Classification',detail:'Choose the company role, operating area, driver class, and planned equipment.',view:viewNames.business,step:2};
     if(!hasFleet)return{title:'Add Driver and Equipment Records',detail:'Create separate planned records for at least one driver, truck, and trailer.',view:viewNames.fleet,step:3};
-    if(s.isOperational&&!s.lock)return{title:'Verify and Lock the Dispatch Assignment',detail:'Select an eligible driver, truck, and trailer. Planned or incomplete records remain blocked.',view:viewNames.fleet,step:6};
-    if(s.isOperational&&!s.pickup)return{title:'Capture Pickup Proof',detail:'Record the signer and signature before leaving the pickup location.',view:viewNames.pickup,step:7};
-    if(s.isOperational&&!s.delivery)return{title:'Capture Delivery Proof',detail:'Record the receiver and signature to close the chain of custody.',view:viewNames.delivery,step:8};
-    if(s.isOperational&&(!s.invoice||s.balance>0))return{title:s.invoice?'Record Payment or Review Balance':'Generate the Invoice',detail:'Complete billing, expenses, payments, and final profit for the selected load.',view:viewNames.finance,step:9};
+    if(s.isOperational&&s.delivery&&(!s.invoice||s.balance>0))return{title:s.invoice?'Record Payment or Review Balance':'Generate the Invoice',detail:'Delivery is complete. Finish billing, expenses, payments, and final profit without reopening earlier stages.',view:viewNames.finance,step:9};
+    if(s.isOperational&&s.delivery)return{title:'Evaluate the Next Proposed Load',detail:'This load is complete. Start the next cycle with miles, offer, fuel, expenses, and profit requirements.',view:viewNames.intelligence,step:4};
+    if(s.isOperational&&s.pickup&&!s.delivery)return{title:'Capture Delivery Proof',detail:'Pickup is complete. Record the receiver and signature to close the chain of custody.',view:viewNames.delivery,step:8};
+    if(s.isOperational&&!s.lock)return{title:'Verify and Lock the Dispatch Assignment',detail:'Select an eligible driver, truck, and trailer before pickup. Planned or incomplete records remain blocked.',view:viewNames.fleet,step:6};
+    if(s.isOperational&&!s.pickup)return{title:'Capture Pickup Proof',detail:'Dispatch is locked. Record the signer and signature before leaving the pickup location.',view:viewNames.pickup,step:7};
     if(!s.snapshots.length||s.isOperational)return{title:'Evaluate the Next Proposed Load',detail:'Start the next cycle with miles, offer, fuel, expenses, and profit requirements.',view:viewNames.intelligence,step:4};
     return{title:'Accept & Create the Load',detail:'The economic estimate is saved. Create the load only after reviewing the decision and reasons.',view:viewNames.load,step:5};
   }
