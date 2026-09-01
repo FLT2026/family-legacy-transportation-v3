@@ -55,6 +55,9 @@
   </div>`;
   const actions=form.querySelector('.form-actions');
   if(actions)form.insertBefore(fields,actions);else form.appendChild(fields);
+  const selection=document.createElement('div');selection.id='v35-master-selection';selection.className='panel';selection.style.marginBottom='14px';
+  selection.innerHTML='<div class="section-head"><div><div class="eyebrow">Reusable master records</div><h2>Driver & Equipment for This Estimate</h2><p class="subtle" style="margin-top:5px">Your saved default combination is selected automatically. Change it only when another driver, truck, or trailer will handle this load.</p></div><span class="tag" id="v35-selection-status">CHECK RECORDS</span></div><div class="form-grid" style="margin-top:12px"><div class="field"><label>Driver</label><select id="v35-estimate-driver"></select></div><div class="field"><label>Truck</label><select id="v35-estimate-truck"></select></div><div class="field"><label>Trailer</label><select id="v35-estimate-trailer"></select></div></div>';
+  form.insertBefore(selection,form.firstElementChild);
 
   function readClassification(){try{return JSON.parse(localStorage.getItem(classKey)||'null')}catch(error){return null}}
   function readFleet(){try{return {...{drivers:[],trucks:[],trailers:[]},...JSON.parse(localStorage.getItem('flt-v35-fleet')||'{}')}}catch(error){return{drivers:[],trucks:[],trailers:[]}}}
@@ -63,13 +66,38 @@
     const expiration=new Date(x.expiration+'T23:59:59');
     return !Number.isNaN(expiration.getTime())&&expiration>=new Date();
   }
-  function truckReady(x){return Boolean(x?.status==='active'&&x.vin&&Number(x.gvwr)>0&&Number(x.gcwr)>0&&Number(x.emptyWeight)>0&&Number(x.emptyWeight)<Number(x.gvwr)&&Number(x.gvwr)<=Number(x.gcwr))}
-  function trailerReady(x){return Boolean(x?.status==='active'&&x.vin&&Number(x.gvwr)>0&&Number(x.emptyWeight)>0&&Number(x.emptyWeight)<Number(x.gvwr))}
-  function fleetReadiness(){
-    const fleet=readFleet(),driver=fleet.drivers?.find(driverReady),truck=fleet.trucks?.find(truckReady),trailer=fleet.trailers?.find(trailerReady);
-    const missing=[];if(!driver)missing.push('No current Active / Verified driver record is available.');if(!truck)missing.push('No Active / Verified truck with VIN, GVWR, GCWR, and ready-to-work empty weight is available.');if(!trailer)missing.push('No Active / Verified trailer with VIN, GVWR, and ready-to-work empty weight is available.');
-    return{ready:Boolean(driver&&truck&&trailer),driver,truck,trailer,missing};
+  function truckReady(x){return Boolean(x?.status==='active'&&x.vin&&Number(x.gvwr)>0&&Number(x.gcwr)>0&&Number(x.emptyWeight)>0&&Number(x.frontGawr)>0&&Number(x.rearGawr)>0&&Number(x.tireCapacity)>0&&Number(x.hitchCapacity)>0&&x.verificationDate&&Number(x.emptyWeight)<Number(x.gvwr)&&Number(x.gvwr)<=Number(x.gcwr))}
+  function trailerReady(x){return Boolean(x?.status==='active'&&x.vin&&Number(x.gvwr)>0&&Number(x.emptyWeight)>0&&Number(x.axleCapacity)>0&&Number(x.tireCapacity)>0&&Number(x.hitchCapacity)>0&&x.verificationDate&&Number(x.emptyWeight)<Number(x.gvwr))}
+  const selectionKey='flt-v35-default-fleet-selection';
+  function readSelection(){try{return JSON.parse(localStorage.getItem(selectionKey)||'{}')}catch(error){return{}}}
+  function saveSelection(){
+    const selected={driverId:$('v35-estimate-driver')?.value||'',truckId:$('v35-estimate-truck')?.value||'',trailerId:$('v35-estimate-trailer')?.value||''};
+    localStorage.setItem(selectionKey,JSON.stringify(selected));updateSelectionStatus();
   }
+  function optionLabel(record,ready){return (record.name||record.unit||'Unnamed')+' · '+(ready?'VERIFIED':(record.status==='active'?'INCOMPLETE':'PLANNED'))}
+  function populateFleetSelection(){
+    const fleet=readFleet(),saved=readSelection(),pairs=[['driver',fleet.drivers||[],driverReady],['truck',fleet.trucks||[],truckReady],['trailer',fleet.trailers||[],trailerReady]];
+    pairs.forEach(([kind,items,ready])=>{
+      const select=$('v35-estimate-'+kind);if(!select)return;
+      select.innerHTML='<option value="">Select '+kind+'</option>'+items.map(item=>'<option value="'+String(item.id).replaceAll('"','&quot;')+'">'+optionLabel(item,ready(item))+'</option>').join('');
+      const savedId=saved[kind+'Id'],fallback=items.find(ready)?.id||'';
+      select.value=items.some(item=>item.id===savedId)?savedId:fallback;
+    });
+    saveSelection();
+  }
+  function fleetReadiness(){
+    const fleet=readFleet(),saved=readSelection();
+    const driver=fleet.drivers?.find(x=>x.id===($('v35-estimate-driver')?.value||saved.driverId)),truck=fleet.trucks?.find(x=>x.id===($('v35-estimate-truck')?.value||saved.truckId)),trailer=fleet.trailers?.find(x=>x.id===($('v35-estimate-trailer')?.value||saved.trailerId));
+    const missing=[];if(!driverReady(driver))missing.push('Select a current Active / Verified driver record.');if(!truckReady(truck))missing.push('Select an Active / Verified truck with complete VIN, GVWR, GCWR, GAWR, tire, hitch, scale-weight, and verification-date records.');if(!trailerReady(trailer))missing.push('Select an Active / Verified trailer with complete VIN, GVWR, axle, tire, hitch, scale-weight, and verification-date records.');
+    return{ready:Boolean(driverReady(driver)&&truckReady(truck)&&trailerReady(trailer)),driver,truck,trailer,missing};
+  }
+  function updateSelectionStatus(){
+    const status=$('v35-selection-status'),fleet=fleetReadiness();if(!status)return;
+    status.textContent=fleet.ready?'VERIFIED COMBINATION':'MORE INFORMATION REQUIRED';status.className='tag '+(fleet.ready?'':'orange');
+  }
+  ['driver','truck','trailer'].forEach(kind=>$('v35-estimate-'+kind)?.addEventListener('change',saveSelection));
+  populateFleetSelection();
+
   function readSnapshots(){try{const x=JSON.parse(localStorage.getItem(snapshotKey)||'[]');return Array.isArray(x)?x:[]}catch(error){return[]}}
   function saveSnapshot(snapshot){const list=readSnapshots();list.push({...snapshot});localStorage.setItem(snapshotKey,JSON.stringify(list));return list.length}
   function updateSnapshotCount(){const el=$('v35-snapshot-count');if(el)el.textContent=readSnapshots().length+' snapshots'}
@@ -213,7 +241,11 @@
       if(driver.qualification==='Non-CDL Driver'&&combinationRating>=26001)hard.push('The '+combinationRating.toLocaleString()+' lb combined GVWR requires a CDL evaluation; the selected Non-CDL driver cannot be dispatched.');
       if(actualCombination>Number(truck.gcwr))hard.push('Estimated combination weight exceeds the selected truck manufacturer GCWR.');
       if(actualCombination>combinationRating)hard.push('Estimated combination weight exceeds the selected truck-plus-trailer GVWR limit.');
+      const estimatedTrailerWeight=Number(trailer.emptyWeight)+cargoWeight;
       if(cargoWeight>payload)hard.push('Cargo weight exceeds the calculated remaining payload for the selected verified truck and trailer.');
+      if(estimatedTrailerWeight>Number(trailer.axleCapacity))hard.push('Estimated loaded trailer weight exceeds the trailer combined axle rating.');
+      if(estimatedTrailerWeight>Number(trailer.tireCapacity))hard.push('Estimated loaded trailer weight exceeds the trailer combined tire capacity.');
+      if(estimatedTrailerWeight>Number(trailer.hitchCapacity))hard.push('Estimated loaded trailer weight exceeds the trailer hitch/coupler rating.');
       reasons.push('Reusable master records used: '+driver.name+' · '+truck.unit+' · '+trailer.unit+'.');
       reasons.push('Verified ratings used: truck GVWR '+Number(truck.gvwr).toLocaleString()+' lb · truck GCWR '+Number(truck.gcwr).toLocaleString()+' lb · trailer GVWR '+Number(trailer.gvwr).toLocaleString()+' lb.');
       if(hard.length){dispatchStatus='BLOCKED';decision='DO NOT DISPATCH';reasons.push(...hard)}
