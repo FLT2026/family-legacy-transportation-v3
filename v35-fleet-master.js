@@ -96,19 +96,25 @@
     const names=kind==='truck'?['vin','gvwr','gcwr','emptyWeight','frontGawr','rearGawr','tireCapacity','hitchCapacity','verificationDate']:kind==='trailer'?['vin','gvwr','emptyWeight','axleCapacity','tireCapacity','hitchCapacity','verificationDate']:['licenseState','expiration'];
     const missing=names.find(name=>!String(form.elements[name]?.value||'').trim());
     if(missing)return{control:form.elements[missing],message:'Complete the highlighted Active / Verified field.'};
-    const fail=(name,message)=>({control:form.elements[name],message}),n=name=>Number(form.elements[name]?.value);
+    const fail=(name,message)=>({control:form.elements[name],message}),n=name=>Number(form.elements[name]?.value),validVin=value=>/^[A-HJ-NPR-Z0-9]{17}$/i.test(String(value||'').trim()),validScaleDate=value=>{const date=new Date(String(value||'')+'T23:59:59');return Number.isFinite(date.getTime())&&date<=new Date()};
     if(kind==='driver'){
       if(!/^[A-Za-z]{2}$/.test(String(form.elements.licenseState.value).trim()))return fail('licenseState','Enter the 2-letter license state.');
       const expiration=new Date(form.elements.expiration.value+'T23:59:59');
       if(!Number.isFinite(expiration.getTime())||expiration<new Date())return fail('expiration','The driver license expiration must be current.');
     }
     if(kind==='truck'){
+      if(!validVin(form.elements.vin.value))return fail('vin','Enter the complete 17-character truck VIN. Letters I, O, and Q are not used.');
+      if(form.elements.weightBasis.value!=='scale-ticket')return fail('weightBasis','Active / Verified requires a ready-to-work scale ticket.');
+      if(!validScaleDate(form.elements.verificationDate.value))return fail('verificationDate','Enter a valid truck scale date that is not in the future.');
       if(n('emptyWeight')>=n('gvwr'))return fail('emptyWeight','Truck ready-to-work empty weight must be below truck GVWR.');
       if(n('gvwr')>n('gcwr'))return fail('gcwr','Truck GCWR cannot be lower than truck GVWR.');
       if(n('frontGawr')+n('rearGawr')<n('gvwr'))return fail('rearGawr','Combined front and rear GAWR must cover truck GVWR.');
       if(n('tireCapacity')<n('gvwr'))return fail('tireCapacity','Combined truck tire capacity must cover truck GVWR.');
     }
     if(kind==='trailer'){
+      if(!validVin(form.elements.vin.value))return fail('vin','Enter the complete 17-character trailer VIN. Letters I, O, and Q are not used.');
+      if(form.elements.weightBasis.value!=='scale-ticket')return fail('weightBasis','Active / Verified requires a ready-to-work scale ticket.');
+      if(!validScaleDate(form.elements.verificationDate.value))return fail('verificationDate','Enter a valid trailer scale date that is not in the future.');
       if(n('emptyWeight')>=n('gvwr'))return fail('emptyWeight','Trailer ready-to-work empty weight must be below trailer GVWR.');
       if(n('axleCapacity')<n('gvwr'))return fail('axleCapacity','Combined trailer axle rating must cover trailer GVWR.');
       if(n('tireCapacity')<n('gvwr'))return fail('tireCapacity','Combined trailer tire capacity must cover trailer GVWR.');
