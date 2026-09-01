@@ -9,7 +9,7 @@
     <div class="field"><label>Make / Model</label><input name="makeModel" placeholder="Ford F-250"></div>
     <div class="field"><label>Front GAWR (lb) <span class="subtle">(Active)</span></label><input name="frontGawr" type="number" min="1"></div>
     <div class="field"><label>Rear GAWR (lb) <span class="subtle">(Active)</span></label><input name="rearGawr" type="number" min="1"></div>
-    <div class="field"><label>Lowest tire capacity (lb) <span class="subtle">(Active)</span></label><input name="tireCapacity" type="number" min="1"></div>
+    <div class="field"><label>Combined tire capacity (lb) <span class="subtle">(Active)</span></label><input name="tireCapacity" type="number" min="1"></div>
     <div class="field"><label>Hitch rating (lb) <span class="subtle">(Active)</span></label><input name="hitchCapacity" type="number" min="1"></div>
     <div class="field"><label>Ready-to-work scale date <span class="subtle">(Active)</span></label><input name="verificationDate" type="date"></div>
     <div class="field"><label>Weight verification</label><select name="weightBasis"><option value="planned">Planned / estimate</option><option value="scale-ticket">Scale ticket · full fuel and normal equipment</option><option value="manufacturer">Manufacturer document</option></select></div>`;
@@ -17,7 +17,7 @@
     <div class="field"><label>Year</label><input name="year" inputmode="numeric"></div>
     <div class="field"><label>Make / Model</label><input name="makeModel"></div>
     <div class="field"><label>Combined axle rating (lb) <span class="subtle">(Active)</span></label><input name="axleCapacity" type="number" min="1"></div>
-    <div class="field"><label>Lowest tire capacity (lb) <span class="subtle">(Active)</span></label><input name="tireCapacity" type="number" min="1"></div>
+    <div class="field"><label>Combined tire capacity (lb) <span class="subtle">(Active)</span></label><input name="tireCapacity" type="number" min="1"></div>
     <div class="field"><label>Hitch / coupler rating (lb) <span class="subtle">(Active)</span></label><input name="hitchCapacity" type="number" min="1"></div>
     <div class="field"><label>Ready-to-work scale date <span class="subtle">(Active)</span></label><input name="verificationDate" type="date"></div>
     <div class="field full"><label>Weight verification</label><select name="weightBasis"><option value="planned">Planned / estimate</option><option value="scale-ticket">Scale ticket · normal equipment included</option><option value="manufacturer">Manufacturer document</option></select></div>`;
