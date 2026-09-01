@@ -76,14 +76,32 @@
     if(form.elements.status?.value!=='active')return null;
     const names=kind==='truck'?['vin','gvwr','gcwr','emptyWeight','frontGawr','rearGawr','tireCapacity','hitchCapacity','verificationDate']:kind==='trailer'?['vin','gvwr','emptyWeight','axleCapacity','tireCapacity','hitchCapacity','verificationDate']:['licenseState','expiration'];
     const missing=names.find(name=>!String(form.elements[name]?.value||'').trim());
-    if(missing)return form.elements[missing];
+    if(missing)return{control:form.elements[missing],message:'Complete the highlighted Active / Verified field.'};
+    const fail=(name,message)=>({control:form.elements[name],message}),n=name=>Number(form.elements[name]?.value);
+    if(kind==='driver'){
+      if(!/^[A-Za-z]{2}$/.test(String(form.elements.licenseState.value).trim()))return fail('licenseState','Enter the 2-letter license state.');
+      const expiration=new Date(form.elements.expiration.value+'T23:59:59');
+      if(!Number.isFinite(expiration.getTime())||expiration<new Date())return fail('expiration','The driver license expiration must be current.');
+    }
+    if(kind==='truck'){
+      if(n('emptyWeight')>=n('gvwr'))return fail('emptyWeight','Truck ready-to-work empty weight must be below truck GVWR.');
+      if(n('gvwr')>n('gcwr'))return fail('gcwr','Truck GCWR cannot be lower than truck GVWR.');
+      if(n('frontGawr')+n('rearGawr')<n('gvwr'))return fail('rearGawr','Combined front and rear GAWR must cover truck GVWR.');
+      if(n('tireCapacity')<n('gvwr'))return fail('tireCapacity','Combined truck tire capacity must cover truck GVWR.');
+    }
+    if(kind==='trailer'){
+      if(n('emptyWeight')>=n('gvwr'))return fail('emptyWeight','Trailer ready-to-work empty weight must be below trailer GVWR.');
+      if(n('axleCapacity')<n('gvwr'))return fail('axleCapacity','Combined trailer axle rating must cover trailer GVWR.');
+      if(n('tireCapacity')<n('gvwr'))return fail('tireCapacity','Combined trailer tire capacity must cover trailer GVWR.');
+      if(n('hitchCapacity')<n('gvwr'))return fail('hitchCapacity','Hitch / coupler rating must cover trailer GVWR.');
+    }
     return null;
   }
   [['driver','drivers'],['truck','trucks'],['trailer','trailers']].forEach(([kind,bucket])=>{
     const form=document.getElementById('fleet-'+kind+'-form');
     form.addEventListener('submit',event=>{
-      const missing=validateActive(form,kind);
-      if(missing){event.preventDefault();event.stopImmediatePropagation();missing.classList.add('field-error-control','guided-current-control');missing.scrollIntoView({behavior:'smooth',block:'center'});missing.focus();if(typeof toast==='function')toast('Complete the highlighted Active / Verified field.');return}
+      const problem=validateActive(form,kind);
+      if(problem){event.preventDefault();event.stopImmediatePropagation();problem.control.classList.add('field-error-control','guided-current-control');problem.control.scrollIntoView({behavior:'smooth',block:'center'});problem.control.focus();if(typeof toast==='function')toast(problem.message);return}
       if(!form.dataset.editId)return;
       event.preventDefault();event.stopImmediatePropagation();
       const data=read(),index=(data[bucket]||[]).findIndex(x=>x.id===form.dataset.editId);
