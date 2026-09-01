@@ -66,8 +66,10 @@
     const expiration=new Date(x.expiration+'T23:59:59');
     return !Number.isNaN(expiration.getTime())&&expiration>=new Date();
   }
-  function truckReady(x){return Boolean(x?.status==='active'&&x.vin&&Number(x.gvwr)>0&&Number(x.gcwr)>0&&Number(x.emptyWeight)>0&&Number(x.frontGawr)>0&&Number(x.rearGawr)>0&&Number(x.tireCapacity)>0&&Number(x.hitchCapacity)>0&&x.verificationDate&&Number(x.emptyWeight)<Number(x.gvwr)&&Number(x.gvwr)<=Number(x.gcwr))}
-  function trailerReady(x){return Boolean(x?.status==='active'&&x.vin&&Number(x.gvwr)>0&&Number(x.emptyWeight)>0&&Number(x.axleCapacity)>0&&Number(x.tireCapacity)>0&&Number(x.hitchCapacity)>0&&x.verificationDate&&Number(x.emptyWeight)<Number(x.gvwr))}
+  const validVin=value=>/^[A-HJ-NPR-Z0-9]{17}$/i.test(String(value||'').trim());
+  const validScaleDate=value=>{const date=new Date(String(value||'')+'T23:59:59');return Number.isFinite(date.getTime())&&date<=new Date()};
+  function truckReady(x){return Boolean(x?.status==='active'&&validVin(x.vin)&&x.weightBasis==='scale-ticket'&&validScaleDate(x.verificationDate)&&Number(x.gvwr)>0&&Number(x.gcwr)>0&&Number(x.emptyWeight)>0&&Number(x.frontGawr)>0&&Number(x.rearGawr)>0&&Number(x.tireCapacity)>0&&Number(x.hitchCapacity)>0&&Number(x.emptyWeight)<Number(x.gvwr)&&Number(x.gvwr)<=Number(x.gcwr))}
+  function trailerReady(x){return Boolean(x?.status==='active'&&validVin(x.vin)&&x.weightBasis==='scale-ticket'&&validScaleDate(x.verificationDate)&&Number(x.gvwr)>0&&Number(x.emptyWeight)>0&&Number(x.axleCapacity)>0&&Number(x.tireCapacity)>0&&Number(x.hitchCapacity)>0&&Number(x.emptyWeight)<Number(x.gvwr))}
   const selectionKey='flt-v35-default-fleet-selection';
   function readSelection(){try{return JSON.parse(localStorage.getItem(selectionKey)||'{}')}catch(error){return{}}}
   function saveSelection(){
