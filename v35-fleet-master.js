@@ -48,7 +48,8 @@
   function setActiveRequirements(form,kind){
     const active=form.elements.status?.value==='active';
     const names=kind==='truck'?['vin','gvwr','gcwr','emptyWeight','frontGawr','rearGawr','tireCapacity','hitchCapacity','verificationDate']:kind==='trailer'?['vin','gvwr','emptyWeight','axleCapacity','tireCapacity','hitchCapacity','verificationDate']:['licenseState','expiration'];
-    names.forEach(name=>{if(form.elements[name])form.elements[name].required=active});
+    form.noValidate=true;
+    names.forEach(name=>{if(form.elements[name]){form.elements[name].required=false;form.elements[name].setAttribute('aria-required',active?'true':'false')}});
   }
   [['driver',document.getElementById('fleet-driver-form')],['truck',truckForm],['trailer',trailerForm]].forEach(([kind,form])=>{
     form.elements.status?.addEventListener('change',()=>setActiveRequirements(form,kind));setActiveRequirements(form,kind);
