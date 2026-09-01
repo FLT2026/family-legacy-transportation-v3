@@ -8,5 +8,5 @@
     script.addEventListener('error',()=>console.error('Unable to load V3.5 module:',src),{once:true});
     document.body.appendChild(script);
   };
-  loadScript('fleet-core.js?v=20260901i',()=>loadScript('v35-proposed-load.js?v=20260901i',()=>loadScript('v35-guided-workflow.js?v=20260901i')));
+  loadScript('fleet-core.js?v=20260901j',()=>loadScript('v35-proposed-load.js?v=20260901j',()=>loadScript('v35-guided-workflow.js?v=20260901j')));
 })();
