@@ -57,10 +57,10 @@
     return !Number.isNaN(expiration.getTime())&&expiration>=new Date();
   }
   function truckReady(x){
-    return Boolean(x?.status==='active'&&x.vin&&Number(x.gvwr)>0&&Number(x.gcwr)>0&&Number(x.emptyWeight)>0&&Number(x.emptyWeight)<Number(x.gvwr)&&Number(x.gvwr)<=Number(x.gcwr));
+    return Boolean(x?.status==='active'&&x.vin&&Number(x.gvwr)>0&&Number(x.gcwr)>0&&Number(x.emptyWeight)>0&&Number(x.frontGawr)>0&&Number(x.rearGawr)>0&&Number(x.tireCapacity)>0&&Number(x.hitchCapacity)>0&&x.verificationDate&&Number(x.emptyWeight)<Number(x.gvwr)&&Number(x.gvwr)<=Number(x.gcwr));
   }
   function trailerReady(x){
-    return Boolean(x?.status==='active'&&x.vin&&Number(x.gvwr)>0&&Number(x.emptyWeight)>0&&Number(x.emptyWeight)<Number(x.gvwr));
+    return Boolean(x?.status==='active'&&x.vin&&Number(x.gvwr)>0&&Number(x.emptyWeight)>0&&Number(x.axleCapacity)>0&&Number(x.tireCapacity)>0&&Number(x.hitchCapacity)>0&&x.verificationDate&&Number(x.emptyWeight)<Number(x.gvwr));
   }
   function fleetReady(fleet){
     return Boolean(fleet?.drivers?.some(driverReady)&&fleet?.trucks?.some(truckReady)&&fleet?.trailers?.some(trailerReady));
@@ -199,8 +199,8 @@
     const form=document.getElementById(id);form?.addEventListener('submit',e=>{
       clearSummary(form);const data=new FormData(form),active=data.get('status')==='active',errors=[];
       if(active&&type==='driver'){if(!String(data.get('licenseState')||'').trim())errors.push({control:form.elements.licenseState,message:'Enter the driver license state.'});if(!data.get('expiration'))errors.push({control:form.elements.expiration,message:'Enter the driver license expiration date.'})}
-      if(active&&type==='truck'){[['vin','Enter the truck VIN.'],['gvwr','Enter the verified truck GVWR.'],['gcwr','Enter the manufacturer GCWR.'],['emptyWeight','Enter the verified truck empty weight.']].forEach(([name,message])=>{if(!data.get(name))errors.push({control:form.elements[name],message})})}
-      if(active&&type==='trailer'){[['vin','Enter the trailer VIN.'],['gvwr','Enter the verified trailer GVWR.'],['emptyWeight','Enter the verified trailer empty weight.']].forEach(([name,message])=>{if(!data.get(name))errors.push({control:form.elements[name],message})})}
+      if(active&&type==='truck'){[['vin','Enter the truck VIN.'],['gvwr','Enter the verified truck GVWR.'],['gcwr','Enter the manufacturer GCWR.'],['emptyWeight','Enter the ready-to-work truck scale weight.'],['frontGawr','Enter the manufacturer front GAWR.'],['rearGawr','Enter the manufacturer rear GAWR.'],['tireCapacity','Enter the lowest verified truck tire capacity.'],['hitchCapacity','Enter the verified truck hitch rating.'],['verificationDate','Enter the truck weight verification date.']].forEach(([name,message])=>{if(!data.get(name))errors.push({control:form.elements[name],message})})}
+      if(active&&type==='trailer'){[['vin','Enter the trailer VIN.'],['gvwr','Enter the verified trailer GVWR.'],['emptyWeight','Enter the ready-to-work trailer scale weight.'],['axleCapacity','Enter the trailer combined axle rating.'],['tireCapacity','Enter the lowest verified trailer tire capacity.'],['hitchCapacity','Enter the verified hitch/coupler rating.'],['verificationDate','Enter the trailer weight verification date.']].forEach(([name,message])=>{if(!data.get(name))errors.push({control:form.elements[name],message})})}
       if(fail(form,errors)){e.preventDefault();e.stopImmediatePropagation()}
     },true)
   });
