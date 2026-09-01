@@ -5,6 +5,10 @@
   style.textContent=`
     .field-error-control{border:2px solid var(--red)!important;background:#fff3f1!important;box-shadow:0 0 0 3px rgba(185,76,72,.12)!important}
     .field-error-text{display:block;color:var(--red);font-size:12px;font-weight:700;margin-top:5px}
+    .guided-current-control{border:3px solid #d4b900!important;background:#fffde8!important;box-shadow:0 0 0 5px rgba(207,232,106,.48)!important;animation:guidedPulse 1.2s ease-in-out infinite alternate}
+    .guided-field-banner{display:grid;gap:3px;border-left:5px solid var(--lime);background:#f7fbdc;color:var(--ink);padding:10px 12px;border-radius:6px;margin:0 0 9px}
+    .guided-field-banner strong{font-size:10px;letter-spacing:.12em;color:var(--green);text-transform:uppercase}.guided-field-banner small{color:var(--muted)}
+    @keyframes guidedPulse{from{box-shadow:0 0 0 4px rgba(207,232,106,.35)}to{box-shadow:0 0 0 8px rgba(207,232,106,.62)}}
     .validation-summary{border:1px solid #e1aaa5;border-left:5px solid var(--red);background:#fff3f1;color:#6f2926;padding:12px 14px;border-radius:7px;margin:0 0 16px}
     .validation-summary strong{display:block;margin-bottom:4px}.validation-summary button{border:0;background:transparent;color:#6f2926;text-decoration:underline;padding:2px 0;cursor:pointer;text-align:left}
     .next-action{display:flex;justify-content:space-between;gap:18px;align-items:center;border-left:5px solid var(--lime);margin:0 0 14px}
@@ -76,9 +80,10 @@
   }
   nav?.querySelector('[data-view="dashboard"]')?.addEventListener('click',()=>setTimeout(renderNext,0));
 
-  function fieldContainer(control){return control.closest('.field')||control.parentElement}
+  let guidedQueue=[],guidedTotal=0;
+  function fieldContainer(control){return control?.closest?.('.field')||control?.closest?.('.choice')||control?.parentElement}
   function clearError(control){
-    control.classList.remove('field-error-control');
+    if(!control)return;control.classList.remove('field-error-control','guided-current-control');
     const box=fieldContainer(control);box?.querySelectorAll('.field-error-text').forEach(x=>x.remove());
   }
   function markError(control,message){
@@ -87,20 +92,83 @@
     fieldContainer(control)?.appendChild(text);
   }
   function clearSummary(form){form?.querySelector(':scope > .validation-summary')?.remove()}
+  function defaultResolved(control){
+    if(!control)return false;
+    if(control.type==='checkbox'||control.type==='radio')return control.checked;
+    return String(control.value??'').trim()!=='';
+  }
+  function clearGuideVisuals(){
+    document.querySelectorAll('.guided-current-control').forEach(x=>x.classList.remove('guided-current-control'));
+    document.querySelectorAll('.guided-field-banner').forEach(x=>x.remove());
+  }
+  function showGuidedField(){
+    clearGuideVisuals();
+    const item=guidedQueue[0];if(!item)return;
+    const openAndFocus=()=>{
+      const control=item.control;if(!control||!document.body.contains(control)){guidedQueue.shift();showGuidedField();return}
+      const details=control.closest('details');if(details)details.open=true;
+      markError(control,item.message);control.classList.add('guided-current-control');
+      const box=fieldContainer(control),banner=document.createElement('div');banner.className='guided-field-banner';
+      const position=guidedTotal-guidedQueue.length+1;
+      banner.innerHTML='<strong>Next required field · '+position+' of '+guidedTotal+'</strong><span>'+item.message+'</span><small>Complete this highlighted box to move automatically to the next missing item.</small>';
+      box?.prepend(banner);box?.scrollIntoView({behavior:'smooth',block:'center'});setTimeout(()=>control.focus?.(),250);
+    };
+    if(item.view){
+      const button=nav?.querySelector('[data-view="'+item.view+'"]');
+      if(button&&!button.classList.contains('active')){button.click();setTimeout(openAndFocus,80);return}
+    }
+    openAndFocus();
+  }
+  function startGuide(errors){
+    guidedQueue=errors.filter(x=>x.control);guidedTotal=guidedQueue.length;
+    if(!guidedQueue.length)return false;showGuidedField();return true;
+  }
+  function advanceGuide(control){
+    const item=guidedQueue[0];if(!item||item.control!==control)return;
+    const resolved=item.resolved?item.resolved():defaultResolved(control);
+    if(!resolved){showGuidedField();return}
+    clearError(control);guidedQueue.shift();showGuidedField();
+  }
   function fail(form,errors){
     errors=errors.filter(x=>x.control);
     if(!errors.length)return false;
-    errors.forEach(x=>markError(x.control,x.message));clearSummary(form);
-    const summary=document.createElement('div');summary.className='validation-summary';
-    summary.innerHTML='<strong>'+errors.length+' item'+(errors.length===1?'':'s')+' require attention</strong><span>Correct the highlighted fields below.</span><div></div>';
-    const links=summary.lastElementChild;
-    errors.forEach((x,i)=>{const b=document.createElement('button');b.type='button';b.textContent=(i+1)+'. '+x.message;b.addEventListener('click',()=>{x.control.scrollIntoView({behavior:'smooth',block:'center'});x.control.focus?.()});links.appendChild(b);links.appendChild(document.createElement('br'))});
-    form.prepend(summary);errors[0].control.scrollIntoView({behavior:'smooth',block:'center'});setTimeout(()=>errors[0].control.focus?.(),250);
-    return true;
+    clearSummary(form);startGuide(errors);return true;
   }
-  document.addEventListener('input',e=>{if(e.target.matches('input,select,textarea'))clearError(e.target)},true);
-  document.addEventListener('change',e=>{if(e.target.matches('input,select,textarea'))clearError(e.target)},true);
-  document.addEventListener('invalid',e=>{markError(e.target,'This field is required.');setTimeout(()=>e.target.scrollIntoView({behavior:'smooth',block:'center'}),0)},true);
+  document.addEventListener('input',e=>{
+    if(!e.target.matches('input,select,textarea'))return;
+    if(guidedQueue[0]?.control!==e.target)clearError(e.target);
+  },true);
+  document.addEventListener('change',e=>{
+    if(!e.target.matches('input,select,textarea'))return;
+    if(guidedQueue[0]?.control===e.target)advanceGuide(e.target);else clearError(e.target);
+  },true);
+  document.addEventListener('invalid',e=>{
+    e.preventDefault();startGuide([{control:e.target,message:'This field is required.'}]);
+  },true);
+
+  function dispatchQualificationErrors(){
+    const c=read('flt-v35-classification',{}),items=[],view=viewNames.business;
+    const add=(id,message,resolved)=>{
+      const control=document.getElementById(id);
+      if(control&&!(resolved?resolved():defaultResolved(control)))items.push({control,message,view,resolved});
+    };
+    add('v35-primary-operation','Select the primary commercial operation.');
+    add('v35-company-role','Select the company role.');
+    add('v35-driver-class','Select the driver qualification.');
+    add('v35-operating-area','Select the operating area.');
+    add('v35-vehicle-config','Select the vehicle configuration.');
+    add('v35-equipment-status','Change equipment status to Active / Verified only after the actual equipment is verified.',()=>document.getElementById('v35-equipment-status')?.value==='active');
+    add('v35-truck-gvwr','Enter the verified truck GVWR.',()=>Number(document.getElementById('v35-truck-gvwr')?.value)>0);
+    add('v35-trailer-gvwr','Enter the verified trailer GVWR.',()=>Number(document.getElementById('v35-trailer-gvwr')?.value)>0);
+    add('v35-truck-empty','Enter the verified truck empty weight.',()=>Number(document.getElementById('v35-truck-empty')?.value)>0);
+    add('v35-trailer-empty','Enter the verified trailer empty weight.',()=>Number(document.getElementById('v35-trailer-empty')?.value)>0);
+    add('v35-gcwr','Enter the manufacturer GCWR.',()=>Number(document.getElementById('v35-gcwr')?.value)>0);
+    add('v35-insurance-ok','Confirm current insurance and cargo coverage.',()=>document.getElementById('v35-insurance-ok')?.checked);
+    add('v35-authority-ok','Confirm authority and operating area.',()=>document.getElementById('v35-authority-ok')?.checked);
+    add('v35-driver-ok','Confirm the driver license and qualification are current.',()=>document.getElementById('v35-driver-ok')?.checked);
+    add('v35-equipment-ok','Confirm the truck, trailer, hitch, tires, brakes, ramps, and securement are safe.',()=>document.getElementById('v35-equipment-ok')?.checked);
+    return items;
+  }
 
   const classification=document.getElementById('v35-classification-form');
   classification?.addEventListener('submit',e=>{
@@ -132,6 +200,13 @@
     }else{const x=document.getElementById('v35-mpg');if(!(Number(x?.value)>0))errors.push({control:x,message:'Enter average blended MPG.'})}
     if(fail(decision,errors)){e.preventDefault();e.stopImmediatePropagation()}
   },true);
+  decision?.addEventListener('submit',()=>setTimeout(()=>{
+    const last=read('flt-v35-last-decision');
+    if(last?.decision==='MORE INFORMATION REQUIRED'&&(last.reasons||[]).some(x=>/dispatch qualification pending/i.test(x))){
+      const missing=dispatchQualificationErrors();
+      if(missing.length)startGuide(missing);
+    }
+  },300));
 
   function canvasBlank(canvas){try{return !Array.from(canvas.getContext('2d').getImageData(0,0,canvas.width,canvas.height).data).some((v,i)=>i%4===3&&v)}catch(error){return true}}
   [['save-pickup','pickup-name','pickup-signature','Enter the person who signed at pickup.','Capture the pickup signature.'],['save-delivery','delivery-name','delivery-signature','Enter the person who received the load.','Capture the delivery signature.']].forEach(([buttonId,nameId,canvasId,nameMessage,signatureMessage])=>{
