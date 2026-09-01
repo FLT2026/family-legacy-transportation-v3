@@ -57,33 +57,59 @@
   if(actions)form.insertBefore(fields,actions);else form.appendChild(fields);
 
   function readClassification(){try{return JSON.parse(localStorage.getItem(classKey)||'null')}catch(error){return null}}
+  function readFleet(){try{return {...{drivers:[],trucks:[],trailers:[]},...JSON.parse(localStorage.getItem('flt-v35-fleet')||'{}')}}catch(error){return{drivers:[],trucks:[],trailers:[]}}}
+  function driverReady(x){
+    if(x?.status!=='active'||!x.licenseState||!x.expiration)return false;
+    const expiration=new Date(x.expiration+'T23:59:59');
+    return !Number.isNaN(expiration.getTime())&&expiration>=new Date();
+  }
+  function truckReady(x){return Boolean(x?.status==='active'&&x.vin&&Number(x.gvwr)>0&&Number(x.gcwr)>0&&Number(x.emptyWeight)>0&&Number(x.emptyWeight)<Number(x.gvwr)&&Number(x.gvwr)<=Number(x.gcwr))}
+  function trailerReady(x){return Boolean(x?.status==='active'&&x.vin&&Number(x.gvwr)>0&&Number(x.emptyWeight)>0&&Number(x.emptyWeight)<Number(x.gvwr))}
+  function fleetReadiness(){
+    const fleet=readFleet(),driver=fleet.drivers?.find(driverReady),truck=fleet.trucks?.find(truckReady),trailer=fleet.trailers?.find(trailerReady);
+    const missing=[];if(!driver)missing.push('No current Active / Verified driver record is available.');if(!truck)missing.push('No Active / Verified truck with VIN, GVWR, GCWR, and ready-to-work empty weight is available.');if(!trailer)missing.push('No Active / Verified trailer with VIN, GVWR, and ready-to-work empty weight is available.');
+    return{ready:Boolean(driver&&truck&&trailer),driver,truck,trailer,missing};
+  }
   function readSnapshots(){try{const x=JSON.parse(localStorage.getItem(snapshotKey)||'[]');return Array.isArray(x)?x:[]}catch(error){return[]}}
   function saveSnapshot(snapshot){const list=readSnapshots();list.push({...snapshot});localStorage.setItem(snapshotKey,JSON.stringify(list));return list.length}
   function updateSnapshotCount(){const el=$('v35-snapshot-count');if(el)el.textContent=readSnapshots().length+' snapshots'}
 
   function renderDecision(decision,reasons,metrics={},economicDecision=null,dispatchStatus=''){
-    const displayDecision=economicDecision||decision,card=$('v35-decision-card');
-    if(card)card.className='panel decision-card'+(displayDecision==='DO NOT DISPATCH'?' block':(['NEGOTIATE RATE','PASS ON LOAD','MORE INFORMATION REQUIRED'].includes(displayDecision)?' warn':''));
-    if($('v35-decision'))$('v35-decision').textContent=displayDecision;
+    const card=$('v35-decision-card');
+    if(card)card.className='panel decision-card'+(decision==='DO NOT DISPATCH'?' block':(['NEGOTIATE RATE','PASS ON LOAD','MORE INFORMATION REQUIRED'].includes(decision)?' warn':''));
+    if($('v35-decision'))$('v35-decision').textContent=decision;
     const summaries={
-      'ACCEPT LOAD':'The offer meets every configured profit requirement.',
-      'NEGOTIATE RATE':'The load clears the walk-away price but needs a higher rate to meet the target.',
+      'ACCEPT LOAD':'The rate is profitable and the required master driver and equipment records are verified.',
+      'NEGOTIATE RATE':'The load is eligible for consideration, but the offered rate must be increased.',
       'PASS ON LOAD':'The offer is below the minimum acceptable price.',
-      'MORE INFORMATION REQUIRED':'Complete the highlighted load information to calculate profitability.',
-      'DO NOT DISPATCH':'A non-negotiable legal, safety, insurance, driver, weight, or equipment check failed.'
+      'MORE INFORMATION REQUIRED':economicDecision?'The rate has been calculated, but this is not a final acceptance. Complete the missing master-record verification shown below.':'Complete the highlighted load information to calculate profitability.',
+      'DO NOT DISPATCH':'A non-negotiable driver, weight, insurance, authority, or equipment check failed.'
     };
-    if($('v35-decision-summary'))$('v35-decision-summary').textContent=summaries[displayDecision]||'';
+    if($('v35-decision-summary'))$('v35-decision-summary').textContent=summaries[decision]||'';
+    let profitability=$('v35-profitability-result');
+    if(!profitability&&$('v35-decision-summary')){
+      profitability=document.createElement('div');profitability.id='v35-profitability-result';
+      $('v35-decision-summary').insertAdjacentElement('afterend',profitability);
+    }
+    if(profitability){
+      profitability.hidden=!economicDecision;
+      if(economicDecision){
+        const profitLabel=economicDecision==='ACCEPT LOAD'?'PROFITABLE':(economicDecision==='NEGOTIATE RATE'?'NEGOTIATE':'UNPROFITABLE');
+        const detail=economicDecision==='ACCEPT LOAD'?'The offer meets the configured profit target.':(economicDecision==='NEGOTIATE RATE'?'The offer covers the minimum but is below the target.':'The offer is below the minimum acceptable amount.');
+        profitability.className='notice';
+        profitability.innerHTML='<strong>Rate profitability: '+profitLabel+'</strong><br>'+detail;
+      }
+    }
     let readiness=$('v35-dispatch-readiness');
-    if(!readiness&&$('v35-decision-summary')){
+    if(!readiness&&profitability){
       readiness=document.createElement('div');readiness.id='v35-dispatch-readiness';
-      $('v35-decision-summary').insertAdjacentElement('afterend',readiness);
+      profitability.insertAdjacentElement('afterend',readiness);
     }
     if(readiness){
       readiness.hidden=!economicDecision;
       if(economicDecision){
-        const label=dispatchStatus==='BLOCKED'?'DO NOT DISPATCH':(dispatchStatus==='PENDING'?'MORE INFORMATION REQUIRED':'QUALIFIED');
         readiness.className='notice'+(dispatchStatus==='BLOCKED'?' hard-stop':'');
-        readiness.innerHTML='<strong>Dispatch readiness: '+label+'</strong><br>'+(dispatchStatus==='PENDING'?'Profitability is complete. Verify driver, equipment, weight, insurance, and authority only after choosing to accept and create the load.':(dispatchStatus==='BLOCKED'?'The economic result is shown above, but this load cannot be dispatched until the non-negotiable failure is corrected.':'Required dispatch information is currently verified.'));
+        readiness.innerHTML='<strong>Final load decision: '+decision+'</strong><br>'+(dispatchStatus==='PENDING'?'Profitability alone does not authorize acceptance or dispatch. Complete the missing reusable driver, truck, trailer, rating, and compliance records.':(dispatchStatus==='BLOCKED'?'The rate result is shown above, but a non-negotiable safety or compliance failure blocks the load.':'The reusable master records and current checks support this final decision.'));
       }
     }
     const list=$('v35-decision-reasons');if(list){list.innerHTML='';reasons.forEach(reason=>{const li=document.createElement('li');li.textContent=reason;list.appendChild(li)})}
@@ -95,7 +121,7 @@
     set('v35-walkaway',metrics.walkaway!=null?cash(metrics.walkaway):'—');
     set('v35-target',metrics.target!=null?cash(metrics.target):'—');
     set('v35-ask',metrics.ask!=null?cash(metrics.ask):'—');
-    set('v35-payload',metrics.payload!=null?metrics.payload.toLocaleString()+' lb':'—');
+    set('v35-payload',metrics.payload!=null?metrics.payload.toLocaleString()+' lb':'Unavailable — verify ratings');
     set('v35-minimum-acceptable',metrics.minimumAcceptable!=null?cash(metrics.minimumAcceptable):'—');
     set('v35-counteroffer',metrics.counteroffer!=null?cash(metrics.counteroffer):'—');
     set('v35-counteroffer-rate',metrics.counterofferRate!=null?cash(metrics.counterofferRate)+' / total mile target':'—');
@@ -168,28 +194,32 @@
     else if(totalRevenue>=minimumAcceptable){economicDecision='NEGOTIATE RATE';reasons.push('Economic decision: NEGOTIATE RATE — counteroffer requires '+cash(counteroffer)+' additional revenue; target rate is '+cash(counterofferRate)+' per total mile.')}
     else{economicDecision='PASS ON LOAD';reasons.push('Economic decision: PASS ON LOAD — offer is '+cash(minimumAcceptable-totalRevenue)+' below minimum acceptable.')}
 
-    let decision=economicDecision,dispatchStatus='QUALIFIED',payload=null;
-    const classificationCore=Boolean(classification?.primaryOperation&&classification?.driverClass&&classification?.vehicleConfig);
-    const verifiedRatings=classificationCore&&[classification.truck_gvwr,classification.trailer_gvwr,classification.truck_empty,classification.trailer_empty,classification.gcwr].every(v=>Number.isFinite(v)&&v>0);
-    if(!classificationCore||classification?.equipmentStatus!=='active'||!verifiedRatings){
-      dispatchStatus='PENDING';
-      decision='MORE INFORMATION REQUIRED';
-      reasons.push('Dispatch qualification pending: complete company/driver/equipment classification and verify active truck/trailer ratings before dispatch.');
+    let decision=economicDecision,dispatchStatus='QUALIFIED',payload=null,selectedFleet=null;
+    const classificationCore=Boolean(classification?.primaryOperation&&classification?.companyRole&&classification?.operatingArea);
+    const fleet=fleetReadiness(),pending=[];
+    if(!classificationCore)pending.push('Company operation, role, and operating area must be saved in Business Setup.');
+    if(!classification?.insuranceOk)pending.push('Insurance and cargo coverage are not verified.');
+    if(!classification?.authorityOk)pending.push('Operating authority and service area are not verified.');
+    if(!classification?.equipmentOk)pending.push('Current equipment safety has not been confirmed.');
+    pending.push(...fleet.missing);
+    if(pending.length){
+      dispatchStatus='PENDING';decision='MORE INFORMATION REQUIRED';
+      reasons.push('Final acceptance is withheld. The profitability result above is preliminary only.',...pending);
     }else{
-      const actualCombination=classification.truck_empty+classification.trailer_empty+cargoWeight,combinationRating=classification.truck_gvwr+classification.trailer_gvwr,legalCapacity=Math.min(combinationRating,classification.gcwr),hard=[];
-      payload=Math.max(0,legalCapacity-classification.truck_empty-classification.trailer_empty);
-      if(classification.driverClass==='Non-CDL Driver'&&combinationRating>=26001)hard.push('The '+combinationRating.toLocaleString()+' lb combined GVWR requires a CDL evaluation; Non-CDL cannot be dispatched.');
-      if(actualCombination>classification.gcwr)hard.push('Estimated combination weight exceeds the manufacturer GCWR.');
-      if(actualCombination>combinationRating)hard.push('Estimated combination weight exceeds the truck-plus-trailer GVWR limit.');
-      if(!classification.insuranceOk)hard.push('Insurance or cargo coverage is missing, expired, inadequate, or unverified.');
-      if(!classification.authorityOk)hard.push('Operating authority or service area is not verified.');
-      if(!classification.driverOk)hard.push('Driver license, restriction, endorsement, expiration, or qualification check failed.');
-      if(!classification.equipmentOk)hard.push('Truck, trailer, hitch, tire, brake, ramp, winch, or securement condition failed.');
+      const driver=fleet.driver,truck=fleet.truck,trailer=fleet.trailer;
+      selectedFleet={driverId:driver.id,driverName:driver.name,truckId:truck.id,truckUnit:truck.unit,trailerId:trailer.id,trailerUnit:trailer.unit};
+      const actualCombination=Number(truck.emptyWeight)+Number(trailer.emptyWeight)+cargoWeight,combinationRating=Number(truck.gvwr)+Number(trailer.gvwr),legalCapacity=Math.min(combinationRating,Number(truck.gcwr)),hard=[];
+      payload=Math.max(0,legalCapacity-Number(truck.emptyWeight)-Number(trailer.emptyWeight));
+      if(driver.qualification==='Non-CDL Driver'&&combinationRating>=26001)hard.push('The '+combinationRating.toLocaleString()+' lb combined GVWR requires a CDL evaluation; the selected Non-CDL driver cannot be dispatched.');
+      if(actualCombination>Number(truck.gcwr))hard.push('Estimated combination weight exceeds the selected truck manufacturer GCWR.');
+      if(actualCombination>combinationRating)hard.push('Estimated combination weight exceeds the selected truck-plus-trailer GVWR limit.');
+      if(cargoWeight>payload)hard.push('Cargo weight exceeds the calculated remaining payload for the selected verified truck and trailer.');
+      reasons.push('Reusable master records used: '+driver.name+' · '+truck.unit+' · '+trailer.unit+'.');
+      reasons.push('Verified ratings used: truck GVWR '+Number(truck.gvwr).toLocaleString()+' lb · truck GCWR '+Number(truck.gcwr).toLocaleString()+' lb · trailer GVWR '+Number(trailer.gvwr).toLocaleString()+' lb.');
       if(hard.length){dispatchStatus='BLOCKED';decision='DO NOT DISPATCH';reasons.push(...hard)}
     }
-
     const metrics={...baseMetrics,payload};
-    const snapshot={snapshotId:'EST-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,7),version:'V3.5',createdAt:new Date().toISOString(),decision,economicDecision,dispatchStatus,reasons:[...reasons],classification:classification?{...classification}:null,inputs:{loadedMiles:loaded,deadheadToPickup,returnDeadhead,offer,cargoWeight,fuelPrice,mpgMode,blendedMpg,loadedMpg,emptyMpg,accessorialRevenue:accessorials,minimumProfit,targetProfit,targetMargin,profitMileFloor,tripHours,hourlyFloor,negotiationAllowance:negotiation},costs:{fuel,mileageCosts,baseCost,dispatchRate,factoringRate,feeRate,dispatcher,factoring,...flatCosts},metrics:{...metrics}};
+    const snapshot={snapshotId:'EST-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,7),version:'V3.5',createdAt:new Date().toISOString(),decision,economicDecision,dispatchStatus,reasons:[...reasons],classification:classification?{...classification}:null,selectedFleet:selectedFleet?{...selectedFleet}:null,inputs:{loadedMiles:loaded,deadheadToPickup,returnDeadhead,offer,cargoWeight,fuelPrice,mpgMode,blendedMpg,loadedMpg,emptyMpg,accessorialRevenue:accessorials,minimumProfit,targetProfit,targetMargin,profitMileFloor,tripHours,hourlyFloor,negotiationAllowance:negotiation},costs:{fuel,mileageCosts,baseCost,dispatchRate,factoringRate,feeRate,dispatcher,factoring,...flatCosts},metrics:{...metrics}};
     const count=saveSnapshot(snapshot);
     localStorage.setItem('flt-v35-last-decision',JSON.stringify({decision,economicDecision,dispatchStatus,reasons,metrics,at:snapshot.createdAt,snapshotId:snapshot.snapshotId}));
     renderDecision(decision,reasons,metrics,economicDecision,dispatchStatus);updateSnapshotCount();renderOfficialGate();
