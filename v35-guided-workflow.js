@@ -200,13 +200,7 @@
     }else{const x=document.getElementById('v35-mpg');if(!(Number(x?.value)>0))errors.push({control:x,message:'Enter average blended MPG.'})}
     if(fail(decision,errors)){e.preventDefault();e.stopImmediatePropagation()}
   },true);
-  decision?.addEventListener('submit',()=>setTimeout(()=>{
-    const last=read('flt-v35-last-decision');
-    if(last?.decision==='MORE INFORMATION REQUIRED'&&(last.reasons||[]).some(x=>/dispatch qualification pending/i.test(x))){
-      const missing=dispatchQualificationErrors();
-      if(missing.length)startGuide(missing);
-    }
-  },300));
+  // Dispatch qualification guidance begins only after a load is accepted and created.
 
   function canvasBlank(canvas){try{return !Array.from(canvas.getContext('2d').getImageData(0,0,canvas.width,canvas.height).data).some((v,i)=>i%4===3&&v)}catch(error){return true}}
   [['save-pickup','pickup-name','pickup-signature','Enter the person who signed at pickup.','Capture the pickup signature.'],['save-delivery','delivery-name','delivery-signature','Enter the person who received the load.','Capture the delivery signature.']].forEach(([buttonId,nameId,canvasId,nameMessage,signatureMessage])=>{
