@@ -53,6 +53,9 @@
     .choice-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
     .choice { display:flex; align-items:flex-start; gap:8px; border:1px solid var(--line); border-radius:6px; padding:9px; background:#fbfcf8; font-size:12px; font-weight:700; }
     .choice input { width:auto; margin-top:2px; }
+    .choice.compliance-status { display:grid; gap:6px; }
+    .choice.compliance-status select { width:100%; min-width:0; }
+    .choice.compliance-status span { font-size:12px; font-weight:800; }
     .decision-card { border:2px solid var(--green-2); background:#f5f9f4; }
     .decision-card.block { border-color:var(--red); background:#fff3f1; }
     .decision-card.warn { border-color:var(--orange); background:#fff7ef; }
@@ -119,11 +122,11 @@
     <div class="field"><label>Truck actual/empty weight (lb) — verify scale/record</label><input id="v35-truck-empty" type="number" min="0" placeholder="Enter when verified"></div>
     <div class="field"><label>Trailer empty weight (lb) — verify manufacturer</label><input id="v35-trailer-empty" type="number" min="0" placeholder="Enter when known"></div>
     <div class="field"><label>Manufacturer GCWR (lb) — verify truck documentation</label><input id="v35-gcwr" type="number" min="1" placeholder="Enter when verified"></div>
-    <div class="field full"><div class="notice hard-stop" style="margin-bottom:8px"><strong>Confirmation required:</strong> Check these boxes only after the current documents and equipment have actually been verified. They are intentionally unchecked by default.</div><label>Compliance confirmations</label><div class="choice-grid">
-      <label class="choice"><input id="v35-insurance-ok" type="checkbox">Insurance and cargo coverage active</label>
-      <label class="choice"><input id="v35-authority-ok" type="checkbox">Authority and operating area verified</label>
-      <label class="choice"><input id="v35-equipment-ok" type="checkbox">Truck, trailer, hitch, tires, brakes, ramps and securement safe</label>
-      <label class="choice"><input id="v35-driver-ok" type="checkbox">Driver license and qualification current</label>
+    <div class="field full"><div class="notice hard-stop" style="margin-bottom:8px"><strong>Truthful status required:</strong> Select the current status for each business item. A pending or unverified status is saved honestly and keeps final acceptance and dispatch blocked.</div><label>Compliance status</label><div class="choice-grid">
+      <label class="choice compliance-status"><span>Insurance and cargo coverage</span><select id="v35-insurance-ok"><option value="">Select status</option><option value="pending">Not active / pending</option><option value="verified">Active and verified</option></select></label>
+      <label class="choice compliance-status"><span>Authority and operating area</span><select id="v35-authority-ok"><option value="">Select status</option><option value="pending">Not active / pending</option><option value="verified">Active and verified</option></select></label>
+      <label class="choice compliance-status"><span>Truck, trailer, hitch, tires, brakes, ramps and securement</span><select id="v35-equipment-ok"><option value="">Select status</option><option value="pending">Not verified</option><option value="verified">Inspected and verified safe</option></select></label>
+      <label class="choice"><input id="v35-driver-ok" type="checkbox">Driver license and qualification current (also enforced by the reusable Driver record)</label>
     </div></div>
     <div class="form-actions field full"><button class="btn primary">Save classification</button></div>
   </form>
@@ -468,7 +471,7 @@
       let classification=null;
       try{classification=JSON.parse(localStorage.getItem(classKey)||'null')}catch(error){classification=null}
 
-      $('v35-load-flt-profile').addEventListener('click',()=>{$('v35-primary-operation').value='Hotshot Carrier';$('v35-company-role').value='Motor Carrier';document.querySelectorAll('[name="v35-secondary"]').forEach(box=>box.checked=['Auto Transporter / Car Hauler','General Freight Carrier','Courier / Last-Mile Delivery'].includes(box.value));$('v35-driver-class').value='Non-CDL Driver';$('v35-operating-area').value='Intrastate Only';$('v35-equipment-status').value='planned';$('v35-vehicle-config').value='Pickup and gooseneck trailer';$('v35-truck-gvwr').value='10000';['v35-trailer-gvwr','v35-truck-empty','v35-trailer-empty','v35-gcwr'].forEach(id=>$(id).value='');['insurance','authority','equipment','driver'].forEach(key=>$('v35-'+key+'-ok').checked=false);toast('Family Legacy planned profile loaded. Review, then save.');});function fillClassification(){
+      $('v35-load-flt-profile').addEventListener('click',()=>{$('v35-primary-operation').value='Hotshot Carrier';$('v35-company-role').value='Motor Carrier';document.querySelectorAll('[name="v35-secondary"]').forEach(box=>box.checked=['Auto Transporter / Car Hauler','General Freight Carrier','Courier / Last-Mile Delivery'].includes(box.value));$('v35-driver-class').value='Non-CDL Driver';$('v35-operating-area').value='Intrastate Only';$('v35-equipment-status').value='planned';$('v35-vehicle-config').value='Pickup and gooseneck trailer';$('v35-truck-gvwr').value='10000';['v35-trailer-gvwr','v35-truck-empty','v35-trailer-empty','v35-gcwr'].forEach(id=>$(id).value='');['insurance','authority','equipment'].forEach(key=>$('v35-'+key+'-ok').value='pending');$('v35-driver-ok').checked=false;toast('Family Legacy planned profile loaded. Review, then save.');});function fillClassification(){
         if(!classification)return;
         $('v35-primary-operation').value=classification.primaryOperation||'';
         $('v35-company-role').value=classification.companyRole||'';
@@ -477,7 +480,7 @@
         $('v35-vehicle-config').value=classification.vehicleConfig||'';$('v35-equipment-status').value=classification.equipmentStatus||'planned';
         ['truck-gvwr','trailer-gvwr','truck-empty','trailer-empty','gcwr'].forEach(key=>{const el=$('v35-'+key);if(el&&classification[key.replaceAll('-','_')]!=null)el.value=classification[key.replaceAll('-','_')]});
         document.querySelectorAll('[name="v35-secondary"]').forEach(box=>box.checked=(classification.secondary||[]).includes(box.value));
-        ['insurance','authority','equipment','driver'].forEach(key=>{const el=$('v35-'+key+'-ok');if(el)el.checked=classification[key+'Ok']===true});
+        ['insurance','authority','equipment'].forEach(key=>{const el=$('v35-'+key+'-ok');if(el)el.value=classification[key+'Status']||(classification[key+'Ok']===true?'verified':'')});const driverEl=$('v35-driver-ok');if(driverEl)driverEl.checked=classification.driverOk===true;
         $('v35-class-status').textContent='Saved';
         $('v35-class-status').className='tag';
       }
@@ -490,8 +493,10 @@
           driverClass:$('v35-driver-class').value,operatingArea:$('v35-operating-area').value,
           vehicleConfig:$('v35-vehicle-config').value,equipmentStatus:$('v35-equipment-status').value,truck_gvwr:n('v35-truck-gvwr'),trailer_gvwr:n('v35-trailer-gvwr'),
           truck_empty:n('v35-truck-empty'),trailer_empty:n('v35-trailer-empty'),gcwr:n('v35-gcwr'),
-          insuranceOk:$('v35-insurance-ok').checked,authorityOk:$('v35-authority-ok').checked,
-          equipmentOk:$('v35-equipment-ok').checked,driverOk:$('v35-driver-ok').checked,
+          insuranceStatus:$('v35-insurance-ok').value,authorityStatus:$('v35-authority-ok').value,
+          equipmentStatus:$('v35-equipment-ok').value,
+          insuranceOk:$('v35-insurance-ok').value==='verified',authorityOk:$('v35-authority-ok').value==='verified',
+          equipmentOk:$('v35-equipment-ok').value==='verified',driverOk:$('v35-driver-ok').checked,
           savedAt:new Date().toISOString()
         };
         localStorage.setItem(classKey,JSON.stringify(classification));
@@ -576,6 +581,6 @@
     })();
   </script>
 
-  <script src="fleet-module.js?v=20260901x" charset="utf-8"></script>
+  <script src="fleet-module.js?v=20260901y" charset="utf-8"></script>
 </body>
 </html>
