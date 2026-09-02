@@ -131,6 +131,7 @@
   }
   [['driver','drivers'],['truck','trucks'],['trailer','trailers']].forEach(([kind,bucket])=>{
     const form=document.getElementById('fleet-'+kind+'-form');
+    form.addEventListener('submit',()=>setTimeout(refreshRecords,0));
     form.addEventListener('submit',event=>{
       const problem=validateActive(form,kind);
       if(problem){event.preventDefault();event.stopImmediatePropagation();problem.control.classList.add('field-error-control','guided-current-control');problem.control.scrollIntoView({behavior:'smooth',block:'center'});problem.control.focus();if(typeof toast==='function')toast(problem.message);return}
