@@ -65,12 +65,30 @@
   function fleetReady(fleet){
     return Boolean(fleet?.drivers?.some(driverReady)&&fleet?.trucks?.some(truckReady)&&fleet?.trailers?.some(trailerReady));
   }
+  function complianceReady(classification){
+    return Boolean(classification?.insuranceOk&&classification?.authorityOk&&classification?.equipmentOk);
+  }
+  function businessComplianceErrors(){
+    const view=viewNames.business,items=[];
+    [
+      ['v35-insurance-ok','Confirm current insurance and cargo coverage.'],
+      ['v35-authority-ok','Confirm operating authority and service area.'],
+      ['v35-equipment-ok','Confirm current equipment safety.']
+    ].forEach(([id,message])=>{
+      const control=document.getElementById(id);
+      if(control&&!control.checked)items.push({control,message,view,resolved:()=>control.checked});
+    });
+    return items;
+  }
   function nextAction(){
     const s=workflowState();
     if(!s.profile)return{title:'Complete Business Setup',detail:'Save the company identity and operating state once so later records can auto-fill.',view:viewNames.business,step:1};
     if(!s.classification)return{title:'Save Operation Classification',detail:'Choose the company role, operating area, driver class, and planned equipment.',view:viewNames.business,step:2};
     if(s.isOperational&&s.delivery&&(!s.invoice||s.balance>0))return{title:s.invoice?'Record Payment or Review Balance':'Generate the Invoice',detail:'Delivery is complete. Finish billing, expenses, payments, and final profit without reopening earlier stages.',view:viewNames.finance,step:9};
-    if(s.isOperational&&s.delivery)return{title:'Evaluate the Next Proposed Load',detail:'This load is complete. Start the next cycle with miles, offer, fuel, expenses, and profit requirements.',view:viewNames.intelligence,step:4};
+    if(s.isOperational&&s.delivery&&!s.snapshots.length)return{title:'Evaluate the Next Proposed Load',detail:'This load is complete. Start the next cycle with miles, offer, fuel, expenses, and profit requirements.',view:viewNames.intelligence,step:4};
+    if(s.isOperational&&s.delivery&&!complianceReady(s.classification))return{title:'Verify Business Compliance',detail:'The rate is calculated. Confirm insurance, operating authority, and current equipment safety only after each item is truly verified.',view:viewNames.business,step:2,guide:'compliance'};
+    if(s.isOperational&&s.delivery&&!fleetReady(s.fleet))return{title:'Verify Fleet Before Final Acceptance',detail:'Complete one current driver and Active / Verified truck and trailer record. Missing ratings keep final acceptance blocked.',view:viewNames.fleet,step:3};
+    if(s.isOperational&&s.delivery)return{title:'Accept & Create the Load',detail:'The estimate is saved and all required reusable records are verified. Review the final decision before creating the load.',view:viewNames.load,step:5};
     if(s.isOperational&&s.pickup&&!s.delivery)return{title:'Capture Delivery Proof',detail:'Pickup is complete. Record the receiver and signature to close the chain of custody.',view:viewNames.delivery,step:8};
     if(s.isOperational&&!s.lock)return{title:'Verify and Lock the Dispatch Assignment',detail:'Select an eligible driver, truck, and trailer before pickup. Planned or incomplete records remain blocked.',view:viewNames.fleet,step:6};
     if(s.isOperational&&!s.pickup)return{title:'Capture Pickup Proof',detail:'Dispatch is locked. Record the signer and signature before leaving the pickup location.',view:viewNames.pickup,step:7};
@@ -86,13 +104,17 @@
   }
   function renderNext(){
     const next=nextAction(),s=workflowState(),steps=['Business','Classification','Fleet','Evaluate','Create Load','Dispatch','Pickup','Delivery','Invoice'];
-    const complete={dashboard:false,'business-setup':Boolean(s.profile&&s.classification),fleet:fleetReady(s.fleet),intelligence:Boolean(s.snapshots.length),load:s.isOperational,pickup:s.pickup,delivery:s.delivery,finance:Boolean(s.invoice&&s.balance===0),test:false};
+    const complete={dashboard:false,'business-setup':Boolean(s.profile&&s.classification&&complianceReady(s.classification)),fleet:fleetReady(s.fleet),intelligence:Boolean(s.snapshots.length),load:s.isOperational,pickup:s.pickup,delivery:s.delivery,finance:Boolean(s.invoice&&s.balance===0),test:false};
     nav?.querySelectorAll('button').forEach(button=>{const required=button.dataset.view===next.view;button.classList.toggle('nav-required',required);button.classList.toggle('nav-complete',Boolean(complete[button.dataset.view]));button.classList.toggle('nav-waiting',!required&&!complete[button.dataset.view]&&button.dataset.view!=='dashboard'&&button.dataset.view!=='test')});
     const card=document.getElementById('v35-next-action');if(!card)return;
     card.innerHTML='<div><div class="eyebrow">Next required action</div><h2>'+next.title+'</h2><p class="subtle" style="margin-top:5px">'+next.detail+'</p><div class="workflow-map">'+steps.map((s,i)=>'<span class="'+(i+1===next.step?'current':'')+'">'+(i+1)+' · '+s+'</span>').join('')+'</div></div><button class="btn primary" id="v35-next-button">Continue →</button>';
-    card.querySelector('#v35-next-button').addEventListener('click',()=>nav?.querySelector('[data-view="'+next.view+'"]')?.click());
+    card.querySelector('#v35-next-button').addEventListener('click',()=>{
+      nav?.querySelector('[data-view="'+next.view+'"]')?.click();
+      if(next.guide==='compliance')setTimeout(()=>startGuide(businessComplianceErrors()),120);
+    });
   }
   nav?.querySelector('[data-view="dashboard"]')?.addEventListener('click',()=>setTimeout(renderNext,0));
+  document.getElementById('v35-decision-form')?.addEventListener('submit',()=>setTimeout(renderNext,0));
 
   const validVin=value=>/^[A-HJ-NPR-Z0-9]{17}$/i.test(String(value||'').trim());
   const validScaleDate=value=>{const date=new Date(String(value||'')+'T23:59:59');return Number.isFinite(date.getTime())&&date<=new Date()};
