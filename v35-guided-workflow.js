@@ -108,13 +108,16 @@
     nav?.querySelectorAll('button').forEach(button=>{const required=button.dataset.view===next.view;button.classList.toggle('nav-required',required);button.classList.toggle('nav-complete',Boolean(complete[button.dataset.view]));button.classList.toggle('nav-waiting',!required&&!complete[button.dataset.view]&&button.dataset.view!=='dashboard'&&button.dataset.view!=='test')});
     const card=document.getElementById('v35-next-action');if(!card)return;
     card.innerHTML='<div><div class="eyebrow">Next required action</div><h2>'+next.title+'</h2><p class="subtle" style="margin-top:5px">'+next.detail+'</p><div class="workflow-map">'+steps.map((s,i)=>'<span class="'+(i+1===next.step?'current':'')+'">'+(i+1)+' · '+s+'</span>').join('')+'</div></div><button class="btn primary" id="v35-next-button">Continue →</button>';
-    card.querySelector('#v35-next-button').addEventListener('click',()=>{
-      nav?.querySelector('[data-view="'+next.view+'"]')?.click();
-      if(next.guide==='compliance')setTimeout(()=>startGuide(businessComplianceErrors()),120);
-    });
+    card.querySelector('#v35-next-button').addEventListener('click',()=>nav?.querySelector('[data-view="'+next.view+'"]')?.click());
   }
   nav?.querySelector('[data-view="dashboard"]')?.addEventListener('click',()=>setTimeout(renderNext,0));
   document.getElementById('v35-decision-form')?.addEventListener('submit',()=>setTimeout(renderNext,0));
+  nav?.addEventListener('click',event=>{
+    const button=event.target.closest('button[data-view]');
+    if(!button)return;
+    const next=nextAction();
+    if(button.dataset.view===next.view&&next.guide==='compliance')setTimeout(()=>startGuide(businessComplianceErrors()),120);
+  });
 
   const validVin=value=>/^[A-HJ-NPR-Z0-9]{17}$/i.test(String(value||'').trim());
   const validScaleDate=value=>{const date=new Date(String(value||'')+'T23:59:59');return Number.isFinite(date.getTime())&&date<=new Date()};
