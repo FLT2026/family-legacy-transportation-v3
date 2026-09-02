@@ -192,7 +192,7 @@
   },true);
 
   function dispatchQualificationErrors(){
-    const c=read('flt-v35-classification',{}),items=[],view=viewNames.business;
+    const items=[],view=viewNames.business;
     const add=(id,message,resolved)=>{
       const control=document.getElementById(id);
       if(control&&!(resolved?resolved():defaultResolved(control)))items.push({control,message,view,resolved});
@@ -202,27 +202,17 @@
     add('v35-driver-class','Select the driver qualification.');
     add('v35-operating-area','Select the operating area.');
     add('v35-vehicle-config','Select the vehicle configuration.');
-    add('v35-equipment-status','Change equipment status to Active / Verified only after the actual equipment is verified.',()=>document.getElementById('v35-equipment-status')?.value==='active');
-    add('v35-truck-gvwr','Enter the verified truck GVWR.',()=>Number(document.getElementById('v35-truck-gvwr')?.value)>0);
-    add('v35-trailer-gvwr','Enter the verified trailer GVWR.',()=>Number(document.getElementById('v35-trailer-gvwr')?.value)>0);
-    add('v35-truck-empty','Enter the verified truck empty weight.',()=>Number(document.getElementById('v35-truck-empty')?.value)>0);
-    add('v35-trailer-empty','Enter the verified trailer empty weight.',()=>Number(document.getElementById('v35-trailer-empty')?.value)>0);
-    add('v35-gcwr','Enter the manufacturer GCWR.',()=>Number(document.getElementById('v35-gcwr')?.value)>0);
-    add('v35-insurance-ok','Confirm current insurance and cargo coverage.',()=>document.getElementById('v35-insurance-ok')?.checked);
-    add('v35-authority-ok','Confirm authority and operating area.',()=>document.getElementById('v35-authority-ok')?.checked);
-    add('v35-driver-ok','Confirm the driver license and qualification are current.',()=>document.getElementById('v35-driver-ok')?.checked);
-    add('v35-equipment-ok','Confirm the truck, trailer, hitch, tires, brakes, ramps, and securement are safe.',()=>document.getElementById('v35-equipment-ok')?.checked);
+    add('v35-insurance-ok','Select the current insurance and cargo coverage status.');
+    add('v35-authority-ok','Select the current authority and operating-area status.');
+    add('v35-equipment-ok','Select the current equipment safety-verification status.');
     return items;
   }
 
   const classification=document.getElementById('v35-classification-form');
   classification?.addEventListener('submit',e=>{
-    clearSummary(classification);const errors=[],status=document.getElementById('v35-equipment-status')?.value;
+    clearSummary(classification);const errors=[];
     classification.querySelectorAll('[required]').forEach(x=>{if(!x.value)errors.push({control:x,message:'Select or enter '+(x.closest('.field')?.querySelector('label')?.textContent.trim()||'this required item')+'.'})});
-    if(status==='active'){
-      [['v35-trailer-gvwr','Enter the verified trailer GVWR.'],['v35-truck-empty','Enter the verified truck empty weight.'],['v35-trailer-empty','Enter the verified trailer empty weight.'],['v35-gcwr','Enter the manufacturer GCWR.']].forEach(([id,message])=>{const x=document.getElementById(id);if(!Number(x?.value))errors.push({control:x,message})});
-      [['v35-insurance-ok','Confirm insurance and cargo coverage.'],['v35-authority-ok','Confirm operating authority.'],['v35-driver-ok','Confirm driver qualification.'],['v35-equipment-ok','Confirm equipment safety.']].forEach(([id,message])=>{const x=document.getElementById(id);if(!x?.checked)errors.push({control:x,message})});
-    }
+    [['v35-insurance-ok','Select the current insurance and cargo coverage status.'],['v35-authority-ok','Select the current authority and operating-area status.'],['v35-equipment-ok','Select the current equipment safety-verification status.']].forEach(([id,message])=>{const x=document.getElementById(id);if(!x?.value)errors.push({control:x,message})});
     if(fail(classification,errors)){e.preventDefault();e.stopImmediatePropagation()}
   },true);
 
