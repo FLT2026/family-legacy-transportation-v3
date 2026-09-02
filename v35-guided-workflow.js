@@ -87,6 +87,8 @@
     const s=workflowState();
     if(!s.profile)return{title:'Complete Business Setup',detail:'Save the company identity and operating state once so later records can auto-fill.',view:viewNames.business,step:1};
     if(!s.classification)return{title:'Save Operation Classification',detail:'Choose the company role, operating area, driver class, and planned equipment.',view:viewNames.business,step:2};
+    if(!complianceReviewed(s.classification))return{title:'Record Current Business Compliance',detail:'Select the truthful current status for insurance, operating authority, and equipment safety. Pending statuses remain blocked.',view:viewNames.business,step:2,guide:'compliance'};
+    if(!fleetReady(s.fleet))return{title:'Build the Reusable Fleet Records',detail:'Complete one driver, truck, and trailer record before evaluating or dispatching a load. Planned or incomplete records remain blocked.',view:viewNames.fleet,step:3};
     if(s.isOperational&&s.delivery&&(!s.invoice||s.balance>0))return{title:s.invoice?'Record Payment or Review Balance':'Generate the Invoice',detail:'Delivery is complete. Finish billing, expenses, payments, and final profit without reopening earlier stages.',view:viewNames.finance,step:9};
     if(s.isOperational&&s.delivery&&!s.snapshots.length)return{title:'Evaluate the Next Proposed Load',detail:'This load is complete. Start the next cycle with miles, offer, fuel, expenses, and profit requirements.',view:viewNames.intelligence,step:4};
     if(s.isOperational&&s.delivery&&!complianceReviewed(s.classification))return{title:'Record Current Business Compliance',detail:'Select the truthful current status for insurance, operating authority, and equipment safety. Pending statuses remain blocked.',view:viewNames.business,step:2,guide:'compliance'};
@@ -115,6 +117,9 @@
     card.querySelector('#v35-next-button').addEventListener('click',()=>nav?.querySelector('[data-view="'+next.view+'"]')?.click());
   }
   nav?.querySelector('[data-view="dashboard"]')?.addEventListener('click',()=>setTimeout(renderNext,0));
+  document.getElementById('business-profile-form')?.addEventListener('submit',()=>setTimeout(renderNext,0));
+  document.getElementById('v35-classification-form')?.addEventListener('submit',()=>setTimeout(renderNext,0));
+  ['fleet-driver-form','fleet-truck-form','fleet-trailer-form','fleet-lock-form'].forEach(id=>document.getElementById(id)?.addEventListener('submit',()=>setTimeout(renderNext,0)));
   document.getElementById('v35-decision-form')?.addEventListener('submit',()=>setTimeout(renderNext,0));
   nav?.addEventListener('click',event=>{
     const button=event.target.closest('button[data-view]');
