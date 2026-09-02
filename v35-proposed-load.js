@@ -82,7 +82,7 @@
     pairs.forEach(([kind,items,ready])=>{
       const select=$('v35-estimate-'+kind);if(!select)return;
       select.innerHTML='<option value="">Select '+kind+'</option>'+items.map(item=>'<option value="'+String(item.id).replaceAll('"','&quot;')+'">'+optionLabel(item,ready(item))+'</option>').join('');
-      const savedId=saved[kind+'Id'],fallback=items.find(ready)?.id||'';
+      const savedId=saved[kind+'Id'],fallback=items.find(ready)?.id||items.at(-1)?.id||'';
       select.value=items.some(item=>item.id===savedId)?savedId:fallback;
     });
     saveSelection();
