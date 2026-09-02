@@ -103,15 +103,13 @@
   <div class="section-head"><div><h2>Operation & Equipment Classification</h2><p class="subtle" style="margin-top:5px">One company can support multiple operations, drivers, trucks, and trailers.</p></div><span class="tag gray" id="v35-class-status">Not saved</span></div><div class="notice"><strong>Family Legacy setup:</strong> Load the approved planned profile, then review it before saving.<div style="margin-top:10px"><button type="button" class="btn primary" id="v35-load-flt-profile">Load Family Legacy Planned Profile</button></div></div>
   <form id="v35-classification-form" class="form-grid">
     <div class="field"><label>Primary commercial operation</label><select id="v35-primary-operation" required>
-      <option value="">Select operation</option><option>Hotshot Carrier / Non-CDL</option><option>Hotshot Carrier / CDL</option><option>Hotshot Carrier / Mixed CDL &amp; Non-CDL Fleet</option><option>Box Truck / Straight Truck Carrier</option><option>Cargo Van / Sprinter Van</option><option>Auto Transporter / Car Hauler</option><option>Flatbed Carrier</option><option>Step-Deck Carrier</option><option>Dry Van Carrier</option><option>Refrigerated Carrier</option><option>Tanker Carrier</option><option>Dump Truck Carrier</option><option>Tow and Recovery Company</option><option>Heavy-Haul / Equipment Transport</option><option>Household Goods / Moving Company</option><option>Courier / Last-Mile Delivery</option><option>Construction / Building-Material Delivery</option><option>Agricultural / Livestock Transport</option><option>Intermodal / Drayage Carrier</option><option>Private Fleet</option><option>General Freight Carrier</option><option>Passenger Transportation</option><option>Dispatch Service</option><option>Freight Broker / 3PL</option><option>Other Commercial Operation</option>
+      <option value="">Select operation</option><option>Hotshot Carrier / Non-CDL</option><option>Hotshot Carrier / CDL</option><option>Box Truck / Straight Truck Carrier</option><option>Cargo Van / Sprinter Van</option><option>Auto Transporter / Car Hauler</option><option>Flatbed Carrier</option><option>Step-Deck Carrier</option><option>Dry Van Carrier</option><option>Refrigerated Carrier</option><option>Tanker Carrier</option><option>Dump Truck Carrier</option><option>Tow and Recovery Company</option><option>Heavy-Haul / Equipment Transport</option><option>Household Goods / Moving Company</option><option>Courier / Last-Mile Delivery</option><option>Construction / Building-Material Delivery</option><option>Agricultural / Livestock Transport</option><option>Intermodal / Drayage Carrier</option><option>Private Fleet</option><option>General Freight Carrier</option><option>Passenger Transportation</option><option>Dispatch Service</option><option>Freight Broker / 3PL</option><option>Other Commercial Operation</option>
     </select></div>
     <div class="field"><label>Company role</label><select id="v35-company-role" required><option value="">Select role</option><option>Motor Carrier</option><option>Private Carrier</option><option>Dispatch Service</option><option>Freight Broker / 3PL</option></select></div>
     <div class="field full"><label>Secondary operations</label><div class="choice-grid">
       <label class="choice"><input type="checkbox" name="v35-secondary" value="Auto Transporter / Car Hauler">Auto Transporter / Car Hauler</label>
       <label class="choice"><input type="checkbox" name="v35-secondary" value="General Freight Carrier">General Freight Carrier</label>
       <label class="choice"><input type="checkbox" name="v35-secondary" value="Courier / Last-Mile Delivery">Courier / Last-Mile Delivery</label>
-      <label class="choice"><input type="checkbox" name="v35-secondary" value="Hotshot Carrier / Non-CDL">Hotshot Carrier / Non-CDL</label>
-      <label class="choice"><input type="checkbox" name="v35-secondary" value="Hotshot Carrier / CDL">Hotshot Carrier / CDL</label>
     </div></div>
     <div class="subhead"><h3>Driver profile</h3></div>
     <div class="field"><label>Driver qualification</label><select id="v35-driver-class" required><option value="">Select qualification</option><option>Non-CDL Driver</option><option>CDL Class A</option><option>CDL Class B</option><option>CDL Class C</option><option>Commercial Learner's Permit</option><option>Intrastate-Only Driver</option><option>Interstate-Qualified Driver</option><option>Not Applicable — Non-Driving User</option></select></div>
@@ -495,6 +493,13 @@
       let classification=null;
       try{classification=JSON.parse(localStorage.getItem(classKey)||'null')}catch(error){classification=null}
 
+      const syncHotshotDriverPath=()=>{
+        const operation=$('v35-primary-operation').value;
+        if(operation==='Hotshot Carrier / Non-CDL')$('v35-driver-class').value='Non-CDL Driver';
+        if(operation==='Hotshot Carrier / CDL'&&!String($('v35-driver-class').value).startsWith('CDL'))$('v35-driver-class').value='CDL Class A';
+      };
+      $('v35-primary-operation').addEventListener('change',syncHotshotDriverPath);
+
       $('v35-load-flt-profile').addEventListener('click',()=>{$('v35-primary-operation').value='Hotshot Carrier / Non-CDL';$('v35-company-role').value='Motor Carrier';document.querySelectorAll('[name="v35-secondary"]').forEach(box=>box.checked=['Auto Transporter / Car Hauler','General Freight Carrier','Courier / Last-Mile Delivery'].includes(box.value));$('v35-driver-class').value='Non-CDL Driver';$('v35-operating-area').value='Intrastate Only';$('v35-equipment-status').value='planned';$('v35-vehicle-config').value='Pickup and gooseneck trailer';$('v35-truck-gvwr').value='10000';['v35-trailer-gvwr','v35-truck-empty','v35-trailer-empty','v35-gcwr'].forEach(id=>$(id).value='');['insurance','authority','equipment'].forEach(key=>$('v35-'+key+'-ok').value='pending');$('v35-driver-ok').checked=false;toast('Family Legacy Non-CDL planned profile loaded. Review, then save.');});function fillClassification(){
         if(!classification)return;
         const legacyPrimary=classification.primaryOperation==='Hotshot Carrier'?(String(classification.driverClass||'').startsWith('CDL')?'Hotshot Carrier / CDL':'Hotshot Carrier / Non-CDL'):classification.primaryOperation;
@@ -502,9 +507,10 @@
         $('v35-company-role').value=classification.companyRole||'';
         $('v35-driver-class').value=classification.driverClass||'';
         $('v35-operating-area').value=classification.operatingArea||'';
-        $('v35-vehicle-config').value=classification.vehicleConfig||'';$('v35-equipment-status').value=classification.equipmentStatus||'planned';
+        $('v35-vehicle-config').value=classification.vehicleConfig||'';
+        $('v35-equipment-status').value=['planned','active'].includes(classification.equipmentRecordStatus)?classification.equipmentRecordStatus:'planned';
         ['truck-gvwr','trailer-gvwr','truck-empty','trailer-empty','gcwr'].forEach(key=>{const el=$('v35-'+key);if(el&&classification[key.replaceAll('-','_')]!=null)el.value=classification[key.replaceAll('-','_')]});
-        const savedSecondary=(classification.secondary||[]).map(value=>value==='Hotshot Carrier'?(String(classification.driverClass||'').startsWith('CDL')?'Hotshot Carrier / CDL':'Hotshot Carrier / Non-CDL'):value);
+        const savedSecondary=(classification.secondary||[]).filter(value=>!String(value).startsWith('Hotshot Carrier'));
         document.querySelectorAll('[name="v35-secondary"]').forEach(box=>box.checked=savedSecondary.includes(box.value));
         ['insurance','authority','equipment'].forEach(key=>{const el=$('v35-'+key+'-ok');if(el)el.value=classification[key+'Status']||(classification[key+'Ok']===true?'verified':'')});const driverEl=$('v35-driver-ok');if(driverEl)driverEl.checked=classification.driverOk===true;
         $('v35-class-status').textContent='Saved';
@@ -513,11 +519,14 @@
 
       $('v35-classification-form').addEventListener('submit',event=>{
         event.preventDefault();
+        const operation=$('v35-primary-operation').value,driverClass=$('v35-driver-class').value;
+        if(operation==='Hotshot Carrier / Non-CDL'&&driverClass!=='Non-CDL Driver'){toast('Hotshot Carrier / Non-CDL requires the Non-CDL Driver path.');$('v35-driver-class').focus();return}
+        if(operation==='Hotshot Carrier / CDL'&&!String(driverClass).startsWith('CDL')){toast('Hotshot Carrier / CDL requires a CDL driver qualification.');$('v35-driver-class').focus();return}
         classification={
-          primaryOperation:$('v35-primary-operation').value,companyRole:$('v35-company-role').value,
+          primaryOperation:operation,companyRole:$('v35-company-role').value,
           secondary:[...document.querySelectorAll('[name="v35-secondary"]:checked')].map(box=>box.value),
-          driverClass:$('v35-driver-class').value,operatingArea:$('v35-operating-area').value,
-          vehicleConfig:$('v35-vehicle-config').value,equipmentStatus:$('v35-equipment-status').value,truck_gvwr:n('v35-truck-gvwr'),trailer_gvwr:n('v35-trailer-gvwr'),
+          driverClass,operatingArea:$('v35-operating-area').value,
+          vehicleConfig:$('v35-vehicle-config').value,equipmentRecordStatus:$('v35-equipment-status').value,truck_gvwr:n('v35-truck-gvwr'),trailer_gvwr:n('v35-trailer-gvwr'),
           truck_empty:n('v35-truck-empty'),trailer_empty:n('v35-trailer-empty'),gcwr:n('v35-gcwr'),
           insuranceStatus:$('v35-insurance-ok').value,authorityStatus:$('v35-authority-ok').value,
           equipmentStatus:$('v35-equipment-ok').value,
@@ -568,7 +577,7 @@
         const dispatcher=totalRevenue*n('v35-dispatch-percent')/100;
         const totalCost=fuel+mileageCosts+n('v35-tolls')+n('v35-driver-pay')+dispatcher;
         const targetProfit=n('v35-target-profit'),walkaway=totalCost,target=totalCost+targetProfit,ask=target*1.05;
-        if(classification.equipmentStatus!=='active'||![classification.truck_gvwr,classification.trailer_gvwr,classification.truck_empty,classification.trailer_empty,classification.gcwr].every(value=>Number.isFinite(value)&&value>0)){setDecision('MORE INFORMATION REQUIRED',['The saved equipment record is planned or has unverified weight ratings.','Enter the exact trailer GVWR, truck empty weight, trailer empty weight, and manufacturer GCWR before dispatch evaluation.','Do not check compliance confirmations until the documents and equipment have actually been verified.'],{totalMiles,cpm:totalMiles?totalCost/totalMiles:null,rpm:totalMiles?totalRevenue/totalMiles:null,profit:totalRevenue-totalCost,walkaway,target,ask});return;}const actualCombination=classification.truck_empty+classification.trailer_empty+n('v35-cargo-weight');
+        if(classification.equipmentRecordStatus!=='active'||![classification.truck_gvwr,classification.trailer_gvwr,classification.truck_empty,classification.trailer_empty,classification.gcwr].every(value=>Number.isFinite(value)&&value>0)){setDecision('MORE INFORMATION REQUIRED',['The saved equipment record is planned or has unverified weight ratings.','Enter the exact trailer GVWR, truck empty weight, trailer empty weight, and manufacturer GCWR before dispatch evaluation.','Do not check compliance confirmations until the documents and equipment have actually been verified.'],{totalMiles,cpm:totalMiles?totalCost/totalMiles:null,rpm:totalMiles?totalRevenue/totalMiles:null,profit:totalRevenue-totalCost,walkaway,target,ask});return;}const actualCombination=classification.truck_empty+classification.trailer_empty+n('v35-cargo-weight');
         const combinationRating=classification.truck_gvwr+classification.trailer_gvwr;
         const legalCapacity=Math.min(combinationRating,classification.gcwr);
         const payload=Math.max(0,legalCapacity-classification.truck_empty-classification.trailer_empty);
