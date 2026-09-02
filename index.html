@@ -117,11 +117,12 @@
     <div class="field"><label>Operating area</label><select id="v35-operating-area" required><option value="">Select area</option><option>Intrastate Only</option><option>Interstate</option></select></div>
     <div class="subhead"><h3>Assigned equipment</h3></div><div class="field"><label>Equipment record status</label><select id="v35-equipment-status" required><option value="planned">Planned / Not Yet Verified</option><option value="active">Active / Verified Equipment</option></select></div>
     <div class="field"><label>Vehicle configuration</label><select id="v35-vehicle-config" required><option value="">Select configuration</option><option>Pickup and bumper-pull trailer</option><option>Pickup and gooseneck trailer</option><option>Pickup and fifth-wheel trailer</option><option>Box truck</option><option>Straight truck</option><option>Cargo van</option><option>Tractor and semi-trailer</option><option>Flatbed</option><option>Step deck</option><option>Dry van</option><option>Refrigerated trailer</option><option>Auto-hauler trailer</option><option>Enclosed trailer</option><option>Dump truck or dump trailer</option><option>Tow truck</option><option>Specialized equipment</option><option>Vehicle without trailer</option><option>Other configuration</option></select></div>
-    <div class="field"><label>Truck GVWR (lb)</label><input id="v35-truck-gvwr" type="number" min="1" value="10000" required></div>
-    <div class="field"><label>Trailer GVWR (lb) — verify rating plate</label><input id="v35-trailer-gvwr" type="number" min="0" placeholder="Enter when known"></div>
-    <div class="field"><label>Truck actual/empty weight (lb) — verify scale/record</label><input id="v35-truck-empty" type="number" min="0" placeholder="Enter when verified"></div>
-    <div class="field"><label>Trailer empty weight (lb) — verify manufacturer</label><input id="v35-trailer-empty" type="number" min="0" placeholder="Enter when known"></div>
-    <div class="field"><label>Manufacturer GCWR (lb) — verify truck documentation</label><input id="v35-gcwr" type="number" min="1" placeholder="Enter when verified"></div>
+    <div class="field full"><div class="notice"><strong>Planning reference only:</strong> Final truck and trailer ratings, VINs, axle/tire limits, hitch ratings, and ready-to-work scale weights are entered once in <strong>Drivers &amp; Equipment</strong>. Those reusable master records—not the optional references below—control load acceptance and dispatch.</div></div>
+    <div class="field"><label>Truck GVWR (lb) — optional planning reference</label><input id="v35-truck-gvwr" type="number" min="0" value="10000"></div>
+    <div class="field"><label>Trailer GVWR (lb) — optional planning reference</label><input id="v35-trailer-gvwr" type="number" min="0" placeholder="Stored in trailer master record"></div>
+    <div class="field"><label>Truck actual/empty weight (lb) — optional planning reference</label><input id="v35-truck-empty" type="number" min="0" placeholder="Stored in truck master record"></div>
+    <div class="field"><label>Trailer empty weight (lb) — optional planning reference</label><input id="v35-trailer-empty" type="number" min="0" placeholder="Stored in trailer master record"></div>
+    <div class="field"><label>Manufacturer GCWR (lb) — optional planning reference</label><input id="v35-gcwr" type="number" min="0" placeholder="Stored in truck master record"></div>
     <div class="field full"><div class="notice hard-stop" style="margin-bottom:8px"><strong>Truthful status required:</strong> Select the current status for each business item. A pending or unverified status is saved honestly and keeps final acceptance and dispatch blocked.</div><label>Compliance status</label><div class="choice-grid">
       <label class="choice compliance-status"><span>Insurance and cargo coverage</span><select id="v35-insurance-ok"><option value="">Select status</option><option value="pending">Not active / pending</option><option value="verified">Active and verified</option></select></label>
       <label class="choice compliance-status"><span>Authority and operating area</span><select id="v35-authority-ok"><option value="">Select status</option><option value="pending">Not active / pending</option><option value="verified">Active and verified</option></select></label>
@@ -581,6 +582,6 @@
     })();
   </script>
 
-  <script src="fleet-module.js?v=20260901y" charset="utf-8"></script>
+  <script src="fleet-module.js?v=20260901z" charset="utf-8"></script>
 </body>
 </html>
