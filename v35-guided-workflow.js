@@ -212,7 +212,7 @@
 
   const decision=document.getElementById('v35-decision-form');
   decision?.addEventListener('submit',e=>{
-    clearSummary(decision);const errors=[],req=[['v35-loaded-miles','Enter loaded miles.'],['v35-deadhead-miles','Enter deadhead-to-pickup miles.'],['v35-offer','Enter the offered rate.'],['v35-cargo-weight','Enter cargo/load weight.'],['v35-fuel-price','Enter fuel price per gallon.']];
+    clearSummary(decision);const errors=[],req=[['v35-estimate-driver','Select the saved driver for this estimate.'],['v35-estimate-truck','Select the saved truck for this estimate.'],['v35-estimate-trailer','Select the saved trailer for this estimate.'],['v35-loaded-miles','Enter loaded miles.'],['v35-deadhead-miles','Enter deadhead-to-pickup miles.'],['v35-offer','Enter the offered rate.'],['v35-cargo-weight','Enter cargo/load weight.'],['v35-fuel-price','Enter fuel price per gallon.']];
     req.forEach(([id,message])=>{const x=document.getElementById(id);if(x?.value===''||!Number.isFinite(Number(x?.value)))errors.push({control:x,message})});
     if(document.getElementById('v35-mpg-mode')?.value==='separate'){
       [['v35-loaded-mpg','Enter loaded MPG.'],['v35-empty-mpg','Enter empty/deadhead MPG.']].forEach(([id,message])=>{const x=document.getElementById(id);if(!(Number(x?.value)>0))errors.push({control:x,message})})
