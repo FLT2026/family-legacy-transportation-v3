@@ -351,7 +351,29 @@
       addAutocomplete(customerNameInput, () => customerRecords().map(customer => customer.name), name => { const found=customerRecords().find(customer=>customer.name.toLowerCase()===name.toLowerCase()); if(found&&!billingSame.checked){enhancedForm.querySelector('#billing-street').value=found.street||'';enhancedForm.querySelector('#billing-city').value=found.city||'';enhancedForm.querySelector('#billing-state').value=found.state||'';enhancedForm.querySelector('#billing-zip').value=found.zip||'';} copyDeliveryToBilling(); });
       addAutocomplete(enhancedForm.querySelector('#billing-city'), () => customers().map(customer => customer.city).filter(Boolean), value => { const found=customers().find(customer=>customer.city&&customer.city.toLowerCase()===value.toLowerCase()); if(found){enhancedForm.querySelector('#billing-state').value=found.state||'';enhancedForm.querySelector('#billing-zip').value=found.zip||'';} });
       addAutocomplete(enhancedForm.querySelector('#billing-state'), () => customers().map(customer => customer.state).filter(Boolean), () => {});
-      ['pickup','delivery'].forEach(type => addAutocomplete(enhancedForm.querySelector('#'+type+'-city'), () => [...new Set(store.loads.flatMap(load => load[type+'Address']?.city || load[type] || '').filter(Boolean))], () => {}));
+      const savedLocations = type => {
+        const locations = [];
+        store.loads.forEach(load => {
+          const address = load[type+'Address'] || {};
+          const facility = String(address.facility || '').trim();
+          if (!facility) return;
+          const existing = locations.find(item => item.facility.toLowerCase() === facility.toLowerCase());
+          const record = {facility,street:address.street||'',zip:address.zip||'',city:address.city||'',state:address.state||''};
+          if (existing) Object.assign(existing,record); else locations.push(record);
+        });
+        return locations;
+      };
+      ['pickup','delivery'].forEach(type => {
+        const facilityInput = enhancedForm.querySelector('#'+type+'-facility');
+        addAutocomplete(facilityInput, () => savedLocations(type).map(location => location.facility), facility => {
+          const found = savedLocations(type).find(location => location.facility.toLowerCase() === facility.toLowerCase());
+          if (!found) return;
+          ['street','zip','city','state'].forEach(part => { enhancedForm.querySelector('#'+type+'-'+part).value = found[part] || ''; });
+          if (typeof toast === 'function') toast(found.facility+' address filled automatically.');
+          if (type === 'delivery') copyDeliveryToBilling();
+        });
+        addAutocomplete(enhancedForm.querySelector('#'+type+'-city'), () => [...new Set(savedLocations(type).map(location => location.city).filter(Boolean))], () => {});
+      });
       billingSame.addEventListener('change',copyDeliveryToBilling);
       deliveryAddressFields.forEach(field=>enhancedForm.querySelector('#delivery-'+field).addEventListener('input',copyDeliveryToBilling));
       enhancedForm.addEventListener('submit', event => {
