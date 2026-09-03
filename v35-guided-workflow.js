@@ -110,7 +110,11 @@
   }
   function renderNext(){
     const next=nextAction(),s=workflowState(),steps=['Business','Classification','Fleet','Evaluate','Create Load','Dispatch','Pickup','Delivery','Invoice'];
-    const complete={dashboard:false,'business-setup':Boolean(s.profile&&s.classification&&complianceReady(s.classification)),fleet:fleetReady(s.fleet),intelligence:Boolean(s.snapshots.length),load:s.isOperational,pickup:s.pickup,delivery:s.delivery,finance:Boolean(s.invoice&&s.balance===0),test:false};
+    const selectedLoadComplete=Boolean(s.load?.id&&s.load.customer&&s.load.pickup&&s.load.delivery&&s.load.date&&Number.isFinite(Number(s.load.revenue)));
+    const selectedPickupComplete=Boolean(s.load?.pickupProof?.signature);
+    const selectedDeliveryComplete=Boolean(s.load?.deliveryProof?.signature);
+    const selectedInvoiceComplete=Boolean(s.load?.invoice?.number&&Array.isArray(s.load.expenses)&&s.load.expenses.every(item=>Number.isFinite(Number(item.amount))));
+    const complete={dashboard:false,'business-setup':Boolean(s.profile&&s.classification&&complianceReady(s.classification)),fleet:fleetReady(s.fleet),intelligence:Boolean(s.snapshots.length),load:selectedLoadComplete,pickup:selectedPickupComplete,delivery:selectedDeliveryComplete,finance:selectedInvoiceComplete,test:false};
     nav?.querySelectorAll('button').forEach(button=>{const required=button.dataset.view===next.view;button.classList.toggle('nav-required',required);button.classList.toggle('nav-complete',Boolean(complete[button.dataset.view]));button.classList.toggle('nav-waiting',!required&&!complete[button.dataset.view]&&button.dataset.view!=='dashboard'&&button.dataset.view!=='test')});
     const card=document.getElementById('v35-next-action');if(!card)return;
     card.innerHTML='<div><div class="eyebrow">Next required action</div><h2>'+next.title+'</h2><p class="subtle" style="margin-top:5px">'+next.detail+'</p><div class="workflow-map">'+steps.map((s,i)=>'<span class="'+(i+1===next.step?'current':'')+'">'+(i+1)+' · '+s+'</span>').join('')+'</div></div><button class="btn primary" id="v35-next-button">Continue →</button>';
