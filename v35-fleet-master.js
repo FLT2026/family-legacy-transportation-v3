@@ -102,7 +102,7 @@
     const names=kind==='truck'?['vin','gvwr','gcwr','emptyWeight','frontGawr','rearGawr','frontTireCapacity','rearTireCapacity','hitchCapacity','verificationDate']:kind==='trailer'?['vin','gvwr','emptyWeight','axleCapacity','tireCapacity','hitchCapacity','verificationDate']:['licenseState','expiration'];
     const missing=names.find(name=>!String(form.elements[name]?.value||'').trim());
     if(missing)return{control:form.elements[missing],message:'Complete the highlighted Active / Verified field.'};
-    const fail=(name,message)=>({control:form.elements[name],message}),n=name=>Number(form.elements[name]?.value),validVin=value=>/^[A-HJ-NPR-Z0-9]{17}$/i.test(String(value||'').trim()),validScaleDate=value=>{const raw=String(value||'').trim(),iso=raw.match(/^(\d{4})-(\d{2})-(\d{2})$/),us=raw.match(/^(\d{2})\/(\d{2})\/(\d{4})$/),parts=iso?[Number(iso[1]),Number(iso[2]),Number(iso[3])]:us?[Number(us[3]),Number(us[1]),Number(us[2])]:null;if(!parts)return false;const [year,month,day]=parts,parsed=new Date(year,month-1,day),today=new Date();if(parsed.getFullYear()!==year||parsed.getMonth()!==month-1||parsed.getDate()!==day)return false;return year*10000+month*100+day<=today.getFullYear()*10000+(today.getMonth()+1)*100+today.getDate()};
+    const fail=(name,message)=>({control:form.elements[name],message}),n=name=>Number(form.elements[name]?.value),validVin=value=>/^[A-HJ-NPR-Z0-9]{17}$/i.test(String(value||'').trim()),validScaleDate=value=>window.FLTDate.isNotFuture(value);
     if(kind==='driver'){
       if(!/^[A-Za-z]{2}$/.test(String(form.elements.licenseState.value).trim()))return fail('licenseState','Enter the 2-letter license state.');
       const expiration=new Date(form.elements.expiration.value+'T23:59:59');
