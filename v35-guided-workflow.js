@@ -133,7 +133,7 @@
   });
 
   const validVin=value=>/^[A-HJ-NPR-Z0-9]{17}$/i.test(String(value||'').trim());
-  const validScaleDate=value=>{const date=new Date(String(value||'')+'T23:59:59');return Number.isFinite(date.getTime())&&date<=new Date()};
+  const validScaleDate=value=>{const date=new Date(String(value||'')+'T00:00:00'),today=new Date();today.setHours(0,0,0,0);return Number.isFinite(date.getTime())&&date<=today};
   let guidedQueue=[],guidedTotal=0;
   function fieldContainer(control){return control?.closest?.('.field')||control?.closest?.('.choice')||control?.parentElement}
   function clearError(control){
