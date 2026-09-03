@@ -133,7 +133,7 @@
   });
 
   const validVin=value=>/^[A-HJ-NPR-Z0-9]{17}$/i.test(String(value||'').trim());
-  const validScaleDate=value=>{const date=new Date(String(value||'')+'T00:00:00'),today=new Date();today.setHours(0,0,0,0);return Number.isFinite(date.getTime())&&date<=today};
+  const validScaleDate=value=>{const raw=String(value||'').trim(),iso=raw.match(/^(\d{4})-(\d{2})-(\d{2})$/),us=raw.match(/^(\d{2})\/(\d{2})\/(\d{4})$/),parts=iso?[Number(iso[1]),Number(iso[2]),Number(iso[3])]:us?[Number(us[3]),Number(us[1]),Number(us[2])]:null;if(!parts)return false;const [year,month,day]=parts,parsed=new Date(year,month-1,day),today=new Date();if(parsed.getFullYear()!==year||parsed.getMonth()!==month-1||parsed.getDate()!==day)return false;return year*10000+month*100+day<=today.getFullYear()*10000+(today.getMonth()+1)*100+today.getDate()};
   let guidedQueue=[],guidedTotal=0;
   function fieldContainer(control){return control?.closest?.('.field')||control?.closest?.('.choice')||control?.parentElement}
   function clearError(control){
