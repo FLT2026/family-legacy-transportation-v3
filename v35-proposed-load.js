@@ -45,7 +45,7 @@
     </div>
     <div class="grid three" style="margin-top:14px">
       <div class="panel"><div class="eyebrow">Minimum acceptable</div><h3 id="v35-minimum-acceptable">—</h3><p class="subtle">Walk-away plus minimum required profit</p></div>
-      <div class="panel"><div class="eyebrow">Counteroffer</div><h3 id="v35-counteroffer">—</h3><p class="subtle" id="v35-counteroffer-rate">—</p></div>
+      <div class="panel"><div class="eyebrow">Additional needed</div><h3 id="v35-counteroffer">—</h3><p class="subtle" id="v35-counteroffer-rate">—</p></div>
       <div class="panel"><div class="eyebrow">Estimate history</div><h3 id="v35-snapshot-count">0 snapshots</h3><p class="subtle">Append-only browser prototype history</p></div>
     </div>
     <div class="grid two" style="margin-top:14px">
@@ -154,7 +154,7 @@
     set('v35-payload',metrics.payload!=null?metrics.payload.toLocaleString()+' lb':'Unavailable — verify ratings');
     set('v35-minimum-acceptable',metrics.minimumAcceptable!=null?cash(metrics.minimumAcceptable):'—');
     set('v35-counteroffer',metrics.counteroffer!=null?cash(metrics.counteroffer):'—');
-    set('v35-counteroffer-rate',metrics.counterofferRate!=null?cash(metrics.counterofferRate)+' / total mile target':'—');
+    set('v35-counteroffer-rate',metrics.counterofferRate!=null?(Number(metrics.counteroffer)===0?'No increase needed · ':'Additional revenue needed · ')+cash(metrics.counterofferRate)+' / total mile target':'—');
     set('v35-profit-floor-result',metrics.margin!=null?percent(metrics.margin)+' margin · '+cash(metrics.profitPerMile)+'/mi':'—');
     set('v35-hourly-result',metrics.profitPerHour!=null?cash(metrics.profitPerHour)+'/hr':'No hourly floor configured');
   }
