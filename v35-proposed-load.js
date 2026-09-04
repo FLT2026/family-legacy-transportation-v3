@@ -70,22 +70,21 @@
   const validScaleDate=value=>window.FLTDate.isNotFuture(value);
   function truckReady(x){return Boolean(x?.status==='active'&&validVin(x.vin)&&x.weightBasis==='scale-ticket'&&validScaleDate(x.verificationDate)&&Number(x.gvwr)>0&&Number(x.gcwr)>0&&Number(x.emptyWeight)>0&&Number(x.frontGawr)>0&&Number(x.rearGawr)>0&&Number(x.frontTireCapacity)>=Number(x.frontGawr)&&Number(x.rearTireCapacity)>=Number(x.rearGawr)&&Number(x.hitchCapacity)>0&&Number(x.emptyWeight)<Number(x.gvwr)&&Number(x.gvwr)<=Number(x.gcwr))}
   function trailerReady(x){return Boolean(x?.status==='active'&&validVin(x.vin)&&x.weightBasis==='scale-ticket'&&validScaleDate(x.verificationDate)&&Number(x.gvwr)>0&&Number(x.emptyWeight)>0&&Number(x.axleCapacity)>0&&Number(x.tireCapacity)>0&&Number(x.hitchCapacity)>0&&Number(x.emptyWeight)<Number(x.gvwr))}
-  const selectionKey='flt-v35-default-fleet-selection';
-  function readSelection(){try{return JSON.parse(localStorage.getItem(selectionKey)||'{}')}catch(error){return{}}}
+  const selectionKey='flt-v36-regular-rig',legacySelectionKey='flt-v35-default-fleet-selection';
+  function readSelection(){try{return JSON.parse(localStorage.getItem(selectionKey)||localStorage.getItem(legacySelectionKey)||'{}')}catch(error){return{}}}
   function saveSelection(){
-    const selected={driverId:$('v35-estimate-driver')?.value||'',truckId:$('v35-estimate-truck')?.value||'',trailerId:$('v35-estimate-trailer')?.value||''};
-    localStorage.setItem(selectionKey,JSON.stringify(selected));updateSelectionStatus();
+    updateSelectionStatus();
   }
   function optionLabel(record,ready){return (record.name||record.unit||'Unnamed')+' · '+(ready?'VERIFIED':(record.status==='active'?'INCOMPLETE':'PLANNED'))}
   function populateFleetSelection(){
-    const fleet=readFleet(),saved=readSelection(),pairs=[['driver',fleet.drivers||[],driverReady],['truck',fleet.trucks||[],truckReady],['trailer',fleet.trailers||[],trailerReady]];
+    const fleet=readFleet(),saved=readSelection(),pairs=[['driver',(fleet.drivers||[]).filter(x=>x.status!=='cancelled'),driverReady],['truck',(fleet.trucks||[]).filter(x=>x.status!=='cancelled'),truckReady],['trailer',(fleet.trailers||[]).filter(x=>x.status!=='cancelled'),trailerReady]];
     pairs.forEach(([kind,items,ready])=>{
       const select=$('v35-estimate-'+kind);if(!select)return;
       select.innerHTML='<option value="">Select '+kind+'</option>'+items.map(item=>'<option value="'+String(item.id).replaceAll('"','&quot;')+'">'+optionLabel(item,ready(item))+'</option>').join('');
       const savedId=saved[kind+'Id'],fallback=items.find(ready)?.id||items.at(-1)?.id||'';
       select.value=items.some(item=>item.id===savedId)?savedId:fallback;
     });
-    saveSelection();
+    updateSelectionStatus();
   }
   function fleetReadiness(){
     const fleet=readFleet(),saved=readSelection();
