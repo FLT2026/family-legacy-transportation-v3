@@ -39,7 +39,7 @@
       <div class="field"><label>Saved record</label><select id="v35-master-record"></select></div>
       <div class="field full"><label>Authorized change reason</label><select id="v35-master-reason"></select></div>
       <div class="field full" id="v35-master-reason-detail-field" hidden><label>Brief explanation</label><input id="v35-master-reason-detail" maxlength="120" placeholder="Describe the authorized change"></div>
-      <div class="form-actions field full"><button class="btn primary" id="v35-master-edit" type="button">Load Record for Editing</button><button class="btn" id="v35-master-cancel" type="button" hidden>Cancel Edit</button></div>
+      <div class="form-actions field full"><button class="btn primary" id="v35-master-edit" type="button">Load Record for Editing</button><button class="btn danger" id="v35-master-remove" type="button">Cancel Selected Record</button><button class="btn" id="v35-master-cancel" type="button" hidden>Cancel Edit</button></div>
     </div>
     <div class="notice" id="v35-master-notice" style="margin-bottom:0">Planned records may be completed here after the actual ratings and ready-to-work scale weight are verified.</div>`;
   firstGrid.insertAdjacentElement('afterend',manager);
@@ -51,20 +51,27 @@
     trucks:['Complete planned record with verified information','Correct a data-entry mistake','Add or update scale ticket','Update manufacturer ratings','Update tires, wheels, or pressures','Update hitch or installed equipment','Change truck status'],
     trailers:['Complete planned record with verified information','Correct a data-entry mistake','Add or update scale ticket','Update manufacturer ratings','Update tires, axles, or suspension','Update hitch or coupler','Change trailer status']
   };
+  const cancelReasons={
+    drivers:['Duplicate or test record','Record entered by mistake','Driver no longer with company','Driver no longer operating','License or qualification no longer valid'],
+    trucks:['Duplicate or test record','Record entered by mistake','Truck sold or transferred','Truck permanently removed from service','Truck replaced in fleet'],
+    trailers:['Duplicate or test record','Record entered by mistake','Trailer sold or transferred','Trailer permanently removed from service','Trailer replaced in fleet']
+  };
   function refreshRecords(){
-    const data=read(),items=data[type.value]||[];
+    const data=read(),items=(data[type.value]||[]).filter(x=>x.status!=='cancelled');
     recordSelect.innerHTML='<option value="">Select saved '+bucketLabel[type.value]+'</option>'+items.map(x=>'<option value="'+esc(x.id)+'">'+esc(x.name||x.unit)+' · '+(x.status==='active'?'Active / Verified':'Planned')+'</option>').join('');
   }
   function refreshReasons(){
-    reason.innerHTML='<option value="">Select change reason</option>'+changeReasons[type.value].map(value=>'<option value="'+esc(value)+'">'+esc(value)+'</option>').join('')+'<option value="other">Other authorized change</option>';
+    reason.innerHTML='<option value="">Select reason</option><optgroup label="Edit record">'+changeReasons[type.value].map(value=>'<option value="edit|'+esc(value)+'">'+esc(value)+'</option>').join('')+'<option value="edit|other">Other authorized change</option></optgroup><optgroup label="Cancel record">'+cancelReasons[type.value].map(value=>'<option value="cancel|'+esc(value)+'">'+esc(value)+'</option>').join('')+'<option value="cancel|other">Other cancellation reason</option></optgroup>';
     reasonDetail.value='';reasonDetailField.hidden=true;
   }
-  function authorizedReason(){
-    if(reason.value!=='other')return reason.value;
-    return reasonDetail.value.trim()?'Other authorized change — '+reasonDetail.value.trim():'';
+  function authorizedReason(action){
+    const [selectedAction,...selectedParts]=reason.value.split('|'),selected=selectedParts.join('|');
+    if(selectedAction!==action)return'';
+    if(selected!=='other')return selected;
+    return reasonDetail.value.trim()?(action==='cancel'?'Other cancellation reason — ':'Other authorized change — ')+reasonDetail.value.trim():'';
   }
   type.addEventListener('change',()=>{refreshRecords();refreshReasons()});
-  reason.addEventListener('change',()=>{reasonDetailField.hidden=reason.value!=='other';if(reason.value==='other')reasonDetail.focus();else reasonDetail.value=''});
+  reason.addEventListener('change',()=>{const other=reason.value.endsWith('|other');reasonDetailField.hidden=!other;if(other)reasonDetail.focus();else reasonDetail.value=''});
   refreshRecords();refreshReasons();
 
   function setActiveRequirements(form,kind){
@@ -102,8 +109,8 @@
     const data=read(),bucket=type.value,record=(data[bucket]||[]).find(x=>x.id===recordSelect.value);
     if(!record){notice.innerHTML='<strong>Select a saved record first.</strong>';recordSelect.focus();return}
     if(!reason.value){notice.innerHTML='<strong>Select the authorized change reason first.</strong>';reason.focus();return}
-    const selectedReason=authorizedReason();
-    if(!selectedReason){notice.innerHTML='<strong>Enter a brief explanation for the other authorized change.</strong>';reasonDetail.focus();return}
+    const selectedReason=authorizedReason('edit');
+    if(!selectedReason){notice.innerHTML='<strong>Select an Edit record reason. Use a Cancel record reason only with Cancel Selected Record.</strong>';reason.focus();return}
     clearEditState(true,false);
     const kind=bucketLabel[bucket],form=document.getElementById('fleet-'+kind+'-form');
     Object.entries(record).forEach(([name,value])=>{if(form.elements[name])form.elements[name].value=value??''});
@@ -112,6 +119,20 @@
     document.getElementById('v35-master-cancel').hidden=false;
     notice.innerHTML='<strong>Editing '+esc(record.name||record.unit)+'.</strong><br>Review every highlighted Active / Verified field, then press Update '+kind+'.';
     form.scrollIntoView({behavior:'smooth',block:'start'});form.querySelector('input,select')?.focus();
+  });
+  document.getElementById('v35-master-remove').addEventListener('click',()=>{
+    const data=read(),bucket=type.value,index=(data[bucket]||[]).findIndex(x=>x.id===recordSelect.value),record=data[bucket]?.[index];
+    if(!record){notice.innerHTML='<strong>Select a saved record first.</strong>';recordSelect.focus();return}
+    if(!reason.value){notice.innerHTML='<strong>Select a cancellation reason first.</strong>';reason.focus();return}
+    const selectedReason=authorizedReason('cancel');
+    if(!selectedReason){notice.innerHTML='<strong>Select a Cancel record reason. Use an Edit record reason only when loading a record for editing.</strong>';reason.focus();return}
+    const label=record.name||record.unit;
+    if(!confirm('Cancel '+label+'?\n\nIt will be removed from future dispatch choices. Existing trip history will remain unchanged.'))return;
+    const before={...record},cancelledAt=new Date().toISOString(),after={...record,status:'cancelled',cancelledAt,cancelReason:selectedReason};
+    data[bucket][index]=after;data.audit=data.audit||[];data.audit.push({action:'master_record_cancelled',entityId:record.id,entityType:bucketLabel[bucket],timestamp:cancelledAt,reason:selectedReason,reasons:[selectedReason],before,after:{...after}});
+    localStorage.setItem(key,JSON.stringify(data));localStorage.setItem('flt-v35-resume-view','fleet');
+    if(typeof toast==='function')toast(label+' cancelled and recorded in the audit trail.');
+    setTimeout(()=>location.reload(),250);
   });
 
   function validateActive(form,kind){
