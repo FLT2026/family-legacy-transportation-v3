@@ -155,6 +155,11 @@
     document.querySelectorAll('.guided-current-control').forEach(x=>x.classList.remove('guided-current-control'));
     document.querySelectorAll('.guided-field-banner').forEach(x=>x.remove());
   }
+  document.addEventListener('flt:reset-validation',event=>{
+    const form=event.detail?.formId?document.getElementById(event.detail.formId):null;
+    guidedQueue=[];guidedTotal=0;clearGuideVisuals();clearSummary(form);
+    (form||document).querySelectorAll('.field-error-control').forEach(clearError);
+  });
   function showGuidedField(){
     clearGuideVisuals();
     const item=guidedQueue[0];if(!item)return;
@@ -196,8 +201,19 @@
     if(!e.target.matches('input,select,textarea'))return;
     if(guidedQueue[0]?.control===e.target)advanceGuide(e.target);else clearError(e.target);
   },true);
+  let invalidBatch=[],invalidBatchScheduled=false;
   document.addEventListener('invalid',e=>{
-    e.preventDefault();startGuide([{control:e.target,message:'This field is required.'}]);
+    e.preventDefault();
+    if(!invalidBatch.includes(e.target))invalidBatch.push(e.target);
+    if(invalidBatchScheduled)return;
+    invalidBatchScheduled=true;
+    setTimeout(()=>{
+      const controls=invalidBatch.filter(control=>document.body.contains(control)&&!control.validity.valid);
+      invalidBatch=[];invalidBatchScheduled=false;
+      const form=controls[0]?.form;
+      (form||document).querySelectorAll('.field-error-control').forEach(clearError);
+      startGuide(controls.map(control=>({control,message:'This field is required.'})));
+    },0);
   },true);
 
   function dispatchQualificationErrors(){
