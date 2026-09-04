@@ -8,5 +8,5 @@
     script.addEventListener('error',()=>console.error('Unable to load Commercial Command module:',src),{once:true});
     document.body.appendChild(script);
   };
-  loadScript('v36-date-utils.js?v=20260903d',()=>loadScript('fleet-core.js?v=20260903d',()=>loadScript('v35-guided-workflow.js?v=20260903d',()=>loadScript('v35-fleet-master.js?v=20260903d',()=>loadScript('v35-proposed-load.js?v=20260903d',()=>loadScript('v35-data-controls.js?v=20260903a',()=>loadScript('v36-actual-trip.js?v=20260903a')))))));
+  loadScript('v36-date-utils.js?v=20260903d',()=>loadScript('fleet-core.js?v=20260903d',()=>loadScript('v35-guided-workflow.js?v=20260903d',()=>loadScript('v35-fleet-master.js?v=20260904a',()=>loadScript('v35-proposed-load.js?v=20260903d',()=>loadScript('v35-data-controls.js?v=20260903a',()=>loadScript('v36-actual-trip.js?v=20260903a')))))));
 })();
