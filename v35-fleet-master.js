@@ -37,19 +37,35 @@
     <div class="form-grid" style="margin-top:14px">
       <div class="field"><label>Record type</label><select id="v35-master-type"><option value="drivers">Driver</option><option value="trucks">Truck</option><option value="trailers">Trailer</option></select></div>
       <div class="field"><label>Saved record</label><select id="v35-master-record"></select></div>
-      <div class="field full"><label>Authorized change reason</label><input id="v35-master-reason" placeholder="Example: Verified scale ticket and manufacturer ratings"></div>
+      <div class="field full"><label>Authorized change reason</label><select id="v35-master-reason"></select></div>
+      <div class="field full" id="v35-master-reason-detail-field" hidden><label>Brief explanation</label><input id="v35-master-reason-detail" maxlength="120" placeholder="Describe the authorized change"></div>
       <div class="form-actions field full"><button class="btn primary" id="v35-master-edit" type="button">Load Record for Editing</button><button class="btn" id="v35-master-cancel" type="button" hidden>Cancel Edit</button></div>
     </div>
     <div class="notice" id="v35-master-notice" style="margin-bottom:0">Planned records may be completed here after the actual ratings and ready-to-work scale weight are verified.</div>`;
   firstGrid.insertAdjacentElement('afterend',manager);
 
-  const type=document.getElementById('v35-master-type'),recordSelect=document.getElementById('v35-master-record'),reason=document.getElementById('v35-master-reason'),notice=document.getElementById('v35-master-notice');
+  const type=document.getElementById('v35-master-type'),recordSelect=document.getElementById('v35-master-record'),reason=document.getElementById('v35-master-reason'),reasonDetail=document.getElementById('v35-master-reason-detail'),reasonDetailField=document.getElementById('v35-master-reason-detail-field'),notice=document.getElementById('v35-master-notice');
   const bucketLabel={drivers:'driver',trucks:'truck',trailers:'trailer'};
+  const changeReasons={
+    drivers:['Complete planned record with verified information','Correct a data-entry mistake','Renew driver license','Update qualification, endorsement, or restriction','Change operating area','Change driver status'],
+    trucks:['Complete planned record with verified information','Correct a data-entry mistake','Add or update scale ticket','Update manufacturer ratings','Update tires, wheels, or pressures','Update hitch or installed equipment','Change truck status'],
+    trailers:['Complete planned record with verified information','Correct a data-entry mistake','Add or update scale ticket','Update manufacturer ratings','Update tires, axles, or suspension','Update hitch or coupler','Change trailer status']
+  };
   function refreshRecords(){
     const data=read(),items=data[type.value]||[];
     recordSelect.innerHTML='<option value="">Select saved '+bucketLabel[type.value]+'</option>'+items.map(x=>'<option value="'+esc(x.id)+'">'+esc(x.name||x.unit)+' · '+(x.status==='active'?'Active / Verified':'Planned')+'</option>').join('');
   }
-  type.addEventListener('change',refreshRecords);refreshRecords();
+  function refreshReasons(){
+    reason.innerHTML='<option value="">Select change reason</option>'+changeReasons[type.value].map(value=>'<option value="'+esc(value)+'">'+esc(value)+'</option>').join('')+'<option value="other">Other authorized change</option>';
+    reasonDetail.value='';reasonDetailField.hidden=true;
+  }
+  function authorizedReason(){
+    if(reason.value!=='other')return reason.value;
+    return reasonDetail.value.trim()?'Other authorized change — '+reasonDetail.value.trim():'';
+  }
+  type.addEventListener('change',()=>{refreshRecords();refreshReasons()});
+  reason.addEventListener('change',()=>{reasonDetailField.hidden=reason.value!=='other';if(reason.value==='other')reasonDetail.focus();else reasonDetail.value=''});
+  refreshRecords();refreshReasons();
 
   function setActiveRequirements(form,kind){
     const active=form.elements.status?.value==='active';
@@ -76,7 +92,7 @@
       form.querySelectorAll('.field-error-control,.guided-current-control').forEach(control=>control.classList.remove('field-error-control','guided-current-control'));
     });
     document.getElementById('v35-master-cancel').hidden=true;
-    if(clearReason)reason.value='';
+    if(clearReason){reason.value='';reasonDetail.value='';reasonDetailField.hidden=true}
   }
   function cancelEdit(){
     clearEditState(true,true);notice.textContent='Edit cancelled. No saved record was changed.';
@@ -85,12 +101,13 @@
   document.getElementById('v35-master-edit').addEventListener('click',()=>{
     const data=read(),bucket=type.value,record=(data[bucket]||[]).find(x=>x.id===recordSelect.value);
     if(!record){notice.innerHTML='<strong>Select a saved record first.</strong>';recordSelect.focus();return}
-    if(!reason.value.trim()){notice.innerHTML='<strong>Enter the authorized change reason first.</strong>';reason.focus();return}
-    const authorizedReason=reason.value.trim();
+    if(!reason.value){notice.innerHTML='<strong>Select the authorized change reason first.</strong>';reason.focus();return}
+    const selectedReason=authorizedReason();
+    if(!selectedReason){notice.innerHTML='<strong>Enter a brief explanation for the other authorized change.</strong>';reasonDetail.focus();return}
     clearEditState(true,false);
     const kind=bucketLabel[bucket],form=document.getElementById('fleet-'+kind+'-form');
     Object.entries(record).forEach(([name,value])=>{if(form.elements[name])form.elements[name].value=value??''});
-    form.dataset.editId=record.id;form.dataset.editReason=authorizedReason;setActiveRequirements(form,kind);
+    form.dataset.editId=record.id;form.dataset.editReason=selectedReason;setActiveRequirements(form,kind);
     form.querySelector('button[type="submit"],button:not([type])').textContent='Update '+kind;
     document.getElementById('v35-master-cancel').hidden=false;
     notice.innerHTML='<strong>Editing '+esc(record.name||record.unit)+'.</strong><br>Review every highlighted Active / Verified field, then press Update '+kind+'.';
