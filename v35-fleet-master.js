@@ -44,8 +44,20 @@
     <div class="notice" id="v35-master-notice" style="margin-bottom:0">Planned records may be completed here after the actual ratings and ready-to-work scale weight are verified.</div>`;
   firstGrid.insertAdjacentElement('afterend',manager);
 
+  const regularRig=document.createElement('div');regularRig.id='v36-regular-rig';regularRig.className='panel';regularRig.style.marginTop='14px';
+  regularRig.innerHTML=`<div class="section-head"><div><div class="eyebrow">One-click owner-operator setup</div><h2>My Regular Rig</h2><p class="subtle" style="margin-top:5px">Save the driver, truck, and trailer normally used together. This verified combination will be selected automatically for estimates and dispatch.</p></div><span class="tag orange" id="v36-rig-status">NOT SAVED</span></div>
+    <div class="form-grid" style="margin-top:14px"><div class="field"><label>Driver</label><select id="v36-rig-driver"></select></div><div class="field"><label>Truck</label><select id="v36-rig-truck"></select></div><div class="field"><label>Trailer</label><select id="v36-rig-trailer"></select></div>
+      <div class="form-actions field full"><button class="btn primary" id="v36-rig-save" type="button">Save My Regular Rig</button><button class="btn" id="v36-rig-clear" type="button">Clear Regular Rig</button></div></div>
+    <div class="notice" id="v36-rig-notice" style="margin-bottom:0">Only Active / Verified records can be saved as the regular rig.</div>`;
+  manager.insertAdjacentElement('afterend',regularRig);
+
   const type=document.getElementById('v35-master-type'),recordSelect=document.getElementById('v35-master-record'),reason=document.getElementById('v35-master-reason'),reasonDetail=document.getElementById('v35-master-reason-detail'),reasonDetailField=document.getElementById('v35-master-reason-detail-field'),notice=document.getElementById('v35-master-notice');
   const bucketLabel={drivers:'driver',trucks:'truck',trailers:'trailer'};
+  const regularRigKey='flt-v36-regular-rig',legacyRigKey='flt-v35-default-fleet-selection';
+  const validVin=value=>/^[A-HJ-NPR-Z0-9]{17}$/i.test(String(value||'').trim());
+  const driverReady=x=>{if(x?.status!=='active'||!x.licenseState||!x.expiration)return false;const expiration=new Date(x.expiration+'T23:59:59');return Number.isFinite(expiration.getTime())&&expiration>=new Date()};
+  const truckReady=x=>Boolean(x?.status==='active'&&validVin(x.vin)&&x.weightBasis==='scale-ticket'&&window.FLTDate.isNotFuture(x.verificationDate)&&Number(x.gvwr)>0&&Number(x.gcwr)>=Number(x.gvwr)&&Number(x.emptyWeight)>0&&Number(x.emptyWeight)<Number(x.gvwr)&&Number(x.frontGawr)+Number(x.rearGawr)>=Number(x.gvwr)&&Number(x.frontTireCapacity)>=Number(x.frontGawr)&&Number(x.rearTireCapacity)>=Number(x.rearGawr)&&Number(x.hitchCapacity)>0);
+  const trailerReady=x=>Boolean(x?.status==='active'&&validVin(x.vin)&&x.weightBasis==='scale-ticket'&&window.FLTDate.isNotFuture(x.verificationDate)&&Number(x.gvwr)>0&&Number(x.emptyWeight)>0&&Number(x.emptyWeight)<Number(x.gvwr)&&Number(x.axleCapacity)>=Number(x.gvwr)&&Number(x.tireCapacity)>=Number(x.gvwr)&&Number(x.hitchCapacity)>=Number(x.gvwr));
   const changeReasons={
     drivers:['Complete planned record with verified information','Correct a data-entry mistake','Renew driver license','Update qualification, endorsement, or restriction','Change operating area','Change driver status'],
     trucks:['Complete planned record with verified information','Correct a data-entry mistake','Add or update scale ticket','Update manufacturer ratings','Update tires, wheels, or pressures','Update hitch or installed equipment','Change truck status'],
@@ -73,6 +85,24 @@
   type.addEventListener('change',()=>{refreshRecords();refreshReasons()});
   reason.addEventListener('change',()=>{const other=reason.value.endsWith('|other');reasonDetailField.hidden=!other;if(other)reasonDetail.focus();else reasonDetail.value=''});
   refreshRecords();refreshReasons();
+
+  const rigSelect={driver:document.getElementById('v36-rig-driver'),truck:document.getElementById('v36-rig-truck'),trailer:document.getElementById('v36-rig-trailer')};
+  function readRegularRig(){try{return JSON.parse(localStorage.getItem(regularRigKey)||localStorage.getItem(legacyRigKey)||'{}')}catch(error){return{}}}
+  function applyRigToDispatch(rig){
+    ['driver','truck','trailer'].forEach(kind=>{const select=document.getElementById('fleet-lock-'+kind),id=rig[kind+'Id'];if(select&&[...select.options].some(option=>option.value===id))select.value=id});
+  }
+  function populateRegularRig(){
+    const data=read(),saved=readRegularRig(),groups={driver:[data.drivers,driverReady],truck:[data.trucks,truckReady],trailer:[data.trailers,trailerReady]};
+    Object.entries(groups).forEach(([kind,[items,ready]])=>{const verified=items.filter(ready),select=rigSelect[kind];select.innerHTML='<option value="">Select verified '+kind+'</option>'+verified.map(item=>'<option value="'+esc(item.id)+'">'+esc(item.name||item.unit)+'</option>').join('');const savedId=saved[kind+'Id'];select.value=verified.some(item=>item.id===savedId)?savedId:(verified.length===1?verified[0].id:'')});
+    const selected=['driver','truck','trailer'].every(kind=>rigSelect[kind].value),savedMatches=selected&&['driver','truck','trailer'].every(kind=>rigSelect[kind].value===saved[kind+'Id']);
+    const status=document.getElementById('v36-rig-status'),notice=document.getElementById('v36-rig-notice');status.textContent=savedMatches?'READY':'NOT SAVED';status.className='tag '+(savedMatches?'':'orange');
+    notice.textContent=savedMatches?'Regular rig is ready and will be selected automatically.':selected?'Verified records found. Save this combination once for automatic selection.':'Complete one verified driver, truck, and trailer before saving a regular rig.';
+    if(savedMatches)applyRigToDispatch(saved);
+  }
+  document.getElementById('v36-rig-save').addEventListener('click',()=>{const rig={driverId:rigSelect.driver.value,truckId:rigSelect.truck.value,trailerId:rigSelect.trailer.value,savedAt:new Date().toISOString()};if(!rig.driverId||!rig.truckId||!rig.trailerId){document.getElementById('v36-rig-notice').innerHTML='<strong>Select one verified driver, truck, and trailer.</strong>';return}localStorage.setItem(regularRigKey,JSON.stringify(rig));localStorage.setItem(legacyRigKey,JSON.stringify(rig));applyRigToDispatch(rig);populateRegularRig();if(typeof toast==='function')toast('My Regular Rig saved and selected for dispatch.')});
+  document.getElementById('v36-rig-clear').addEventListener('click',()=>{localStorage.removeItem(regularRigKey);localStorage.removeItem(legacyRigKey);['driver','truck','trailer'].forEach(kind=>rigSelect[kind].value='');populateRegularRig();if(typeof toast==='function')toast('Regular rig selection cleared. Master records were not changed.')});
+  ['fleet-driver-form','fleet-truck-form','fleet-trailer-form'].forEach(id=>document.getElementById(id)?.addEventListener('submit',()=>setTimeout(populateRegularRig,0)));
+  populateRegularRig();
 
   function setActiveRequirements(form,kind){
     const active=form.elements.status?.value==='active';
@@ -130,6 +160,7 @@
     if(!confirm('Cancel '+label+'?\n\nIt will be removed from future dispatch choices. Existing trip history will remain unchanged.'))return;
     const before={...record},cancelledAt=new Date().toISOString(),after={...record,status:'cancelled',cancelledAt,cancelReason:selectedReason};
     data[bucket][index]=after;data.audit=data.audit||[];data.audit.push({action:'master_record_cancelled',entityId:record.id,entityType:bucketLabel[bucket],timestamp:cancelledAt,reason:selectedReason,reasons:[selectedReason],before,after:{...after}});
+    [regularRigKey,legacyRigKey].forEach(key=>{try{const rig=JSON.parse(localStorage.getItem(key)||'{}');if(Object.values(rig).includes(record.id))localStorage.removeItem(key)}catch(error){}});
     localStorage.setItem(key,JSON.stringify(data));localStorage.setItem('flt-v35-resume-view','fleet');
     if(typeof toast==='function')toast(label+' cancelled and recorded in the audit trail.');
     setTimeout(()=>location.reload(),250);
