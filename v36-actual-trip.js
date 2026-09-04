@@ -17,7 +17,8 @@
     return{
       cost:explicit!==undefined?Number(explicit):(Number.isFinite(Number(snapshot?.metrics?.totalCost))?Number(snapshot.metrics.totalCost):null),
       miles:Number.isFinite(Number(snapshot?.metrics?.totalMiles))?Number(snapshot.metrics.totalMiles):number(load.totalMiles??load.mileage),
-      gallons:Number.isFinite(Number(snapshot?.metrics?.fuelGallons))?Number(snapshot.metrics.fuelGallons):number(load.estimatedFuelGallons)
+      gallons:Number.isFinite(Number(snapshot?.metrics?.fuelGallons))?Number(snapshot.metrics.fuelGallons):number(load.estimatedFuelGallons),
+      fuelPrice:Number.isFinite(Number(snapshot?.inputs?.fuelPrice))?Number(snapshot.inputs.fuelPrice):number(load.fuelPricePerGallon)
     };
   };
   const assignedTruck=load=>{
@@ -31,18 +32,18 @@
   if(!finance)return;
   const anchor=finance.querySelector('.grid.two');
   const panel=document.createElement('div');
-  panel.id='v36-actual-trip';panel.className='panel';panel.style.marginBottom='14px';
+  panel.id='v36-actual-trip';panel.className='panel';panel.style.cssText='margin-bottom:14px;position:relative;z-index:2';
   panel.innerHTML=`
     <div class="section-head"><div><div class="eyebrow">V3.6 · Actual Trip Cost</div><h2>Close the trip with actual operating facts</h2><p class="subtle" style="margin-top:5px">Save an immutable mileage and fuel snapshot. Tolls, other expenses, and receipt evidence come from this load's ledger.</p></div><span class="tag orange" id="v36-record-status">NOT RECORDED</span></div>
     <form id="v36-actual-form" class="form-grid">
-      <div class="field"><label>Odometer start</label><input name="odometerStart" type="number" min="0" step="0.1" placeholder="Optional"></div>
-      <div class="field"><label>Odometer end</label><input name="odometerEnd" type="number" min="0" step="0.1" placeholder="Optional"></div>
-      <div class="field"><label>Actual total business miles</label><input name="actualMiles" type="number" min="0.1" step="0.1" required></div>
-      <div class="field"><label>Actual fuel gallons</label><input name="actualGallons" type="number" min="0.01" step="0.01" required></div>
-      <div class="field"><label>Average fuel price / gallon</label><input name="averageFuelPrice" type="number" min="0.001" step="0.001" required></div>
-      <div class="field"><label>Fuel receipt total</label><input name="fuelCost" type="number" min="0" step="0.01" required></div>
-      <div class="field full"><label>Trip close note</label><input name="note" maxlength="240" placeholder="Route changes, idle time, fuel variance, or exceptions"></div>
-      <div class="form-actions field full"><button class="btn primary">Save Actual Trip Snapshot</button></div>
+      <div class="field"><label for="v36-odometer-start">Odometer start</label><input id="v36-odometer-start" name="odometerStart" type="number" min="0" step="0.1" inputmode="decimal" placeholder="Optional"></div>
+      <div class="field"><label for="v36-odometer-end">Odometer end</label><input id="v36-odometer-end" name="odometerEnd" type="number" min="0" step="0.1" inputmode="decimal" placeholder="Optional"></div>
+      <div class="field"><label for="v36-actual-miles-input">Actual total business miles</label><input id="v36-actual-miles-input" name="actualMiles" type="number" min="0.1" step="0.1" inputmode="decimal" required></div>
+      <div class="field"><label for="v36-actual-gallons-input">Actual fuel gallons</label><input id="v36-actual-gallons-input" name="actualGallons" type="number" min="0.01" step="0.01" inputmode="decimal" required></div>
+      <div class="field"><label for="v36-average-fuel-price-input">Average fuel price / gallon</label><input id="v36-average-fuel-price-input" name="averageFuelPrice" type="number" min="0.001" step="0.001" inputmode="decimal" required></div>
+      <div class="field"><label for="v36-fuel-cost-input">Fuel receipt total</label><input id="v36-fuel-cost-input" name="fuelCost" type="number" min="0" step="0.01" inputmode="decimal" required></div>
+      <div class="field full"><label for="v36-trip-note-input">Trip close note</label><input id="v36-trip-note-input" name="note" maxlength="240" placeholder="Route changes, idle time, fuel variance, or exceptions"></div>
+      <div class="form-actions field full"><button class="btn" id="v36-use-estimate" type="button">Use Approved Estimate</button><button class="btn primary">Save Actual Trip Snapshot</button></div>
     </form>
     <div class="grid three" style="margin-top:14px">
       <div class="panel stat"><span class="label">Actual MPG</span><div class="value" id="v36-actual-mpg">—</div><span class="subtle" id="v36-truck-label">No assigned truck</span></div>
@@ -66,6 +67,17 @@
   function setVariance(id,value,kind){
     const el=$(id);el.textContent=value;el.style.color=kind==='bad'?'var(--red)':kind==='good'?'var(--green)':'var(--ink)';
   }
+  function fillApprovedEstimate(notify=true){
+    const form=$('v36-actual-form'),load=current(),estimate=estimateFor(load);
+    if(!(estimate.miles>0&&estimate.gallons>0&&estimate.fuelPrice>0)){if(notify)toast('The approved estimate is missing miles, gallons, or fuel price.');return false}
+    form.elements.actualMiles.value=estimate.miles.toFixed(1);
+    form.elements.actualGallons.value=estimate.gallons.toFixed(2);
+    form.elements.averageFuelPrice.value=estimate.fuelPrice.toFixed(3);
+    form.elements.fuelCost.value=(estimate.gallons*estimate.fuelPrice).toFixed(2);
+    if(!form.elements.note.value)form.elements.note.value='Actual trip matched approved estimate.';
+    if(notify){form.elements.actualMiles.focus();toast('Approved estimate copied. Review the actual values before saving.');}
+    return true;
+  }
   function render(){
     const load=current(),record=latest(load),estimate=estimateFor(load),actualCost=ledgerTotal(load),assignment=assignedTruck(load),truckId=record?.truckId||assignment?.truckId||null,history=allVehicleRecords(truckId);
     $('v36-record-status').textContent=record?'SNAPSHOT SAVED':'NOT RECORDED';$('v36-record-status').className='tag '+(record?'':'orange');
@@ -78,6 +90,8 @@
     const evidencePass=evidence.every(item=>item[1]);$('v36-evidence-status').textContent=evidencePass?'COMPLETE':'INCOMPLETE';$('v36-evidence-status').className='tag '+(evidencePass?'':'gray');
     $('v36-history-count').textContent=history.length+' trip'+(history.length===1?'':'s');
     $('v36-mpg-history').className=history.length?'':'empty';$('v36-mpg-history').innerHTML=history.length?history.slice(0,8).map(item=>'<div class="metric-row"><span><strong>'+esc(item.loadId)+'</strong><br><small class="subtle">'+new Date(item.createdAt).toLocaleDateString()+' · '+esc(item.truckUnit||'Unassigned truck')+'</small></span><strong>'+item.actualMpg.toFixed(2)+' MPG</strong></div>').join(''):'No actual trip snapshots recorded.';
+    const form=$('v36-actual-form'),required=['actualMiles','actualGallons','averageFuelPrice','fuelCost'];
+    if(!record&&required.every(name=>String(form.elements[name].value).trim()===''))fillApprovedEstimate(false);
     renderGate();
   }
   function renderGate(){
@@ -96,6 +110,7 @@
     const form=event.currentTarget,gallons=number(form.elements.actualGallons.value),price=number(form.elements.averageFuelPrice.value);
     if(event.target.name!=='fuelCost'&&gallons!==null&&price!==null)form.elements.fuelCost.value=(gallons*price).toFixed(2);
   });
+  $('v36-use-estimate').addEventListener('click',()=>fillApprovedEstimate(true));
   $('v36-actual-form').addEventListener('submit',event=>{
     event.preventDefault();const form=event.currentTarget,data=new FormData(form),start=number(data.get('odometerStart')),end=number(data.get('odometerEnd')),actualMiles=number(data.get('actualMiles')),actualGallons=number(data.get('actualGallons')),averageFuelPrice=number(data.get('averageFuelPrice')),fuelCost=number(data.get('fuelCost'));
     if(!(actualMiles>0&&actualGallons>0&&averageFuelPrice>0&&fuelCost>=0)){toast('Enter valid actual miles, gallons, fuel price, and fuel receipt total.');return}
