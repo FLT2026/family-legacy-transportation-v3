@@ -2,6 +2,7 @@
   'use strict';
   const $=id=>document.getElementById(id);
   const cash=value=>Number(value||0).toLocaleString('en-US',{style:'currency',currency:'USD'});
+  const cents=value=>Math.round((Number(value)+Number.EPSILON)*100)/100;
   const number=value=>{if(value===null||value===undefined||String(value).trim()==='')return null;const parsed=Number(value);return Number.isFinite(parsed)?parsed:null};
   const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
   const records=load=>Array.isArray(load.actualTripRecords)?load.actualTripRecords:[];
@@ -84,8 +85,8 @@
       ['Other trip costs',['parking','permits','lodging','meals','scales','washout','loading','securement','other'].some(key=>number(costs[key])!==null)?['parking','permits','lodging','meals','scales','washout','loading','securement','other'].reduce((sum,key)=>sum+Number(costs[key]||0),0):null,actualFor(load,['Parking','Permits','Lodging','Meals','Scales','Washout','Loading / Unloading','Securement','Other'])],
       ['Dispatch and factoring fees',['dispatcher','factoring'].some(key=>number(costs[key])!==null)?Number(costs.dispatcher||0)+Number(costs.factoring||0):null,actualFor(load,['Dispatch fee','Factoring / Payment fee'])]
     ];
-    const totalEstimate=estimate.cost,totalActual=ledgerTotal(load),body=rows.map(([label,planned,actual])=>'<tr><td>'+esc(label)+'</td><td>'+(planned===null?'—':cash(planned))+'</td><td>'+cash(actual)+'</td><td>'+(planned===null?'—':((actual-planned)>0?'+':'')+cash(actual-planned))+'</td></tr>').join('');
-    $('v36-reconciliation').innerHTML='<table><thead><tr><th>Cost group</th><th>Estimated</th><th>Actual</th><th>Variance</th></tr></thead><tbody>'+body+'<tr><td><strong>Total operating cost</strong></td><td><strong>'+(totalEstimate===null?'—':cash(totalEstimate))+'</strong></td><td><strong>'+cash(totalActual)+'</strong></td><td><strong>'+(totalEstimate===null?'—':((totalActual-totalEstimate)>0?'+':'')+cash(totalActual-totalEstimate))+'</strong></td></tr></tbody></table>';
+    const totalEstimate=estimate.cost,totalActual=ledgerTotal(load),body=rows.map(([label,planned,actual])=>{const variance=planned===null?null:cents(actual)-cents(planned);return '<tr><td>'+esc(label)+'</td><td>'+(planned===null?'—':cash(planned))+'</td><td>'+cash(actual)+'</td><td>'+(variance===null?'—':(variance>0?'+':'')+cash(variance))+'</td></tr>'}).join(''),totalVariance=totalEstimate===null?null:cents(totalActual)-cents(totalEstimate);
+    $('v36-reconciliation').innerHTML='<table><thead><tr><th>Cost group</th><th>Estimated</th><th>Actual</th><th>Variance</th></tr></thead><tbody>'+body+'<tr><td><strong>Total operating cost</strong></td><td><strong>'+(totalEstimate===null?'—':cash(totalEstimate))+'</strong></td><td><strong>'+cash(totalActual)+'</strong></td><td><strong>'+(totalVariance===null?'—':(totalVariance>0?'+':'')+cash(totalVariance))+'</strong></td></tr></tbody></table>';
     $('v36-reconciliation-status').textContent=totalEstimate===null?'NO ESTIMATE':(totalActual>0?'LINKED':'AWAITING ACTUALS');$('v36-reconciliation-status').className='tag '+(totalActual>0?'':'gray');
   }
   function fillApprovedEstimate(notify=true){
@@ -104,7 +105,7 @@
     $('v36-record-status').textContent=record?'SNAPSHOT SAVED':'NOT RECORDED';$('v36-record-status').className='tag '+(record?'':'orange');
     $('v36-actual-mpg').textContent=record?record.actualMpg.toFixed(2):'—';
     $('v36-truck-label').textContent=record?.truckUnit||assignment?.truckUnit||'No assigned truck';
-    if(record&&estimate.cost!==null){const variance=actualCost-estimate.cost;setVariance('v36-cost-variance',(variance>0?'+':'')+cash(variance),variance>0?'bad':'good');$('v36-cost-detail').textContent=cash(estimate.cost)+' estimated · '+cash(actualCost)+' ledger actual'}else{setVariance('v36-cost-variance','—','');$('v36-cost-detail').textContent=record?'No saved V3.5 cost estimate':'Record the actual trip'}
+    if(record&&estimate.cost!==null){const variance=cents(actualCost)-cents(estimate.cost);setVariance('v36-cost-variance',(variance>0?'+':'')+cash(variance),variance>0?'bad':'good');$('v36-cost-detail').textContent=cash(estimate.cost)+' estimated · '+cash(actualCost)+' ledger actual'}else{setVariance('v36-cost-variance','—','');$('v36-cost-detail').textContent=record?'No saved V3.5 cost estimate':'Record the actual trip'}
     if(record&&estimate.miles!==null){const variance=record.actualMiles-estimate.miles;setVariance('v36-mile-variance',(variance>0?'+':'')+variance.toFixed(1)+' mi',variance>0?'bad':'good');$('v36-mile-detail').textContent=estimate.miles.toFixed(1)+' estimated · '+record.actualMiles.toFixed(1)+' actual'}else{setVariance('v36-mile-variance','—','');$('v36-mile-detail').textContent='Estimated versus actual'}
     const postFuel=$('v36-post-fuel'),fuelEntry=(load.expenses||[]).find(item=>item.source==='actual-trip-fuel');postFuel.hidden=!record;postFuel.textContent=fuelEntry?'Update Fuel Ledger':'Post Fuel to Ledger';
     const evidence=[['Actual mileage',Boolean(record?.actualMiles)],['Gallons and average price',Boolean(record?.actualGallons&&record?.averageFuelPrice)],['Fuel receipt total',Boolean(record&&Number.isFinite(record.fuelCost))],['Dispatched truck linked',Boolean(record?.truckId)],['Toll status',tollsComplete],['Expense ledger',actualCost>0],['Receipt attached',receiptCount(load)>0]];
