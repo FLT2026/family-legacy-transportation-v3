@@ -183,8 +183,8 @@
     Object.entries(checks).forEach(([label,pass])=>{const row=document.createElement('div');row.className='metric-row';const text=document.createElement('span');text.textContent=label;const tag=document.createElement('span');tag.className='tag '+(pass?'':'gray');tag.textContent=pass?'PASS':'PENDING';row.append(text,tag);box.appendChild(row)});
     const pass=Object.values(checks).every(Boolean),status=$('v35-official-status');
     if(status){status.textContent=pass?'PASS':'PENDING';status.className='tag '+(pass?'':'orange')}
-    const legacy=$('v35-gate-status');if(legacy){legacy.textContent=pass?'PASS':'V3.5 COMPLETION PENDING';legacy.className='tag '+(pass?'':'orange')}
     updateSnapshotCount();
+    window.FLTUpdateOverallGate?.();
   }
 
   function handleSubmit(event){
