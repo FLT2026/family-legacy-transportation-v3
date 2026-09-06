@@ -11,6 +11,7 @@
   const percent=n=>Number.isFinite(n)?(n*100).toFixed(1)+'%':'—';
   const classKey='flt-v35-classification';
   const snapshotKey='flt-v35-estimate-snapshots';
+  const evidenceKey='flt-v36-test-evidence';
   const requiredCostKeys=['fuel','mileageCosts','baseCost','dispatchRate','factoringRate','feeRate','dispatcher','factoring','tolls','driverPay','parking','permits','lodging','meals','scales','washout','loading','securement','insuranceAllocation','other'];
 
   const fields=document.createElement('div');
@@ -60,6 +61,14 @@
   form.insertBefore(selection,form.firstElementChild);
 
   function readClassification(){try{return JSON.parse(localStorage.getItem(classKey)||'null')}catch(error){return null}}
+  function recordGateEvidence(decision,reasons,driverQualification){
+    const safetyFailure=Array.isArray(reasons)&&reasons.some(reason=>/Non-CDL|GVWR|GCWR|weight|payload|axle|tire|hitch|coupler|equipment/i.test(reason));
+    const nonCdlBlocked=decision==='DO NOT DISPATCH'&&driverQualification==='Non-CDL Driver'&&safetyFailure;
+    const missingVerificationBlocked=decision==='MORE INFORMATION REQUIRED';
+    if(!nonCdlBlocked&&!missingVerificationBlocked)return;
+    let evidence={};try{evidence=JSON.parse(localStorage.getItem(evidenceKey)||'{}')}catch(error){}
+    localStorage.setItem(evidenceKey,JSON.stringify({...evidence,nonCdlBlocked:Boolean(evidence.nonCdlBlocked||nonCdlBlocked),missingVerificationBlocked:Boolean(evidence.missingVerificationBlocked||missingVerificationBlocked),updatedAt:new Date().toISOString()}));
+  }
   function readFleet(){try{return {...{drivers:[],trucks:[],trailers:[]},...JSON.parse(localStorage.getItem('flt-v35-fleet')||'{}')}}catch(error){return{drivers:[],trucks:[],trailers:[]}}}
   function driverReady(x){
     if(x?.status!=='active'||!x.licenseState||!x.expiration)return false;
@@ -255,6 +264,7 @@
     const snapshot={snapshotId:'EST-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,7),version:'V3.5',createdAt:new Date().toISOString(),decision,economicDecision,dispatchStatus,reasons:[...reasons],classification:classification?{...classification}:null,selectedFleet:selectedFleet?{...selectedFleet}:null,inputs:{loadedMiles:loaded,deadheadToPickup,returnDeadhead,offer,cargoWeight,fuelPrice,mpgMode,blendedMpg,loadedMpg,emptyMpg,accessorialRevenue:accessorials,minimumProfit,targetProfit,targetMargin,profitMileFloor,tripHours,hourlyFloor,negotiationAllowance:negotiation},costs:{fuel,mileageCosts,baseCost,dispatchRate,factoringRate,feeRate,dispatcher,factoring,...flatCosts},metrics:{...metrics}};
     const count=saveSnapshot(snapshot);
     localStorage.setItem('flt-v35-last-decision',JSON.stringify({decision,economicDecision,dispatchStatus,reasons,metrics,at:snapshot.createdAt,snapshotId:snapshot.snapshotId}));
+    recordGateEvidence(decision,reasons,fleet.driver?.qualification);
     renderDecision(decision,reasons,metrics,economicDecision,dispatchStatus);updateSnapshotCount();renderOfficialGate();
     if(typeof toast==='function')toast('V3.5 estimate snapshot saved · '+count+' total.');
   }
