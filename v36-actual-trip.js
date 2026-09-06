@@ -128,11 +128,11 @@
       'Vehicle MPG history created':Boolean(record?.truckId&&Number.isFinite(record.actualMpg))
     };
     $('v36-gate-checks').innerHTML=Object.entries(checks).map(([label,pass])=>'<div class="metric-row"><span>'+label+'</span><span class="tag '+(pass?'':'gray')+'">'+(pass?'PASS':'PENDING')+'</span></div>').join('');
-    const pass=Object.values(checks).every(Boolean);$('v36-gate-status').textContent=pass?'PASS':'PENDING';$('v36-gate-status').className='tag '+(pass?'':'orange');
+    const pass=Object.values(checks).every(Boolean);$('v36-gate-status').textContent=pass?'PASS':'PENDING';$('v36-gate-status').className='tag '+(pass?'':'orange');window.FLTUpdateOverallGate?.();
   }
   $('v36-actual-form').addEventListener('input',event=>{
     const form=event.currentTarget,gallons=number(form.elements.actualGallons.value),price=number(form.elements.averageFuelPrice.value);
-    if(event.target.name!=='fuelCost'&&gallons!==null&&price!==null)form.elements.fuelCost.value=(gallons*price).toFixed(2);
+    if(['actualGallons','averageFuelPrice'].includes(event.target.name)&&gallons!==null&&price!==null)form.elements.fuelCost.value=(gallons*price).toFixed(2);
   });
   $('v36-use-estimate').addEventListener('click',()=>fillApprovedEstimate(true));
   $('v36-post-fuel').addEventListener('click',()=>openFuelExpense(latest(current())));
