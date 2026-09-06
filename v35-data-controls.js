@@ -17,11 +17,11 @@
   const status=document.getElementById('v35-data-control-status');
   const fltData=()=>{const data={};for(let i=0;i<localStorage.length;i++){const key=localStorage.key(i);if(key?.startsWith('flt-'))data[key]=localStorage.getItem(key)}return data};
   function downloadBackup(label='test-backup'){
-    const payload={schema:'FLT-V3.5-BROWSER-BACKUP-1',exportedAt:new Date().toISOString(),data:fltData()};
+    const payload={schema:'FLT-V3.6-BROWSER-BACKUP-1',exportedAt:new Date().toISOString(),data:fltData()};
     const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');
-    a.href=url;a.download='FLT-V3.5-'+label+'-'+new Date().toISOString().slice(0,19).replaceAll(':','-')+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+    a.href=url;a.download='FLT-V3.6-'+label+'-'+new Date().toISOString().slice(0,19).replaceAll(':','-')+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
     status.innerHTML='<strong>Backup exported.</strong><br>Keep the JSON file until controlled testing is complete.';
-    if(typeof toast==='function')toast('V3.5 browser-data backup downloaded.');
+    if(typeof toast==='function')toast('V3.6 browser-data backup downloaded.');
   }
   document.getElementById('v35-export-data').addEventListener('click',()=>downloadBackup());
 
@@ -31,10 +31,10 @@
     const file=fileInput.files?.[0];fileInput.value='';if(!file)return;
     try{
       const payload=JSON.parse(await file.text());
-      if(payload?.schema!=='FLT-V3.5-BROWSER-BACKUP-1'||!payload.data||typeof payload.data!=='object')throw new Error('This is not a valid FLT V3.5 backup.');
+      if(!['FLT-V3.5-BROWSER-BACKUP-1','FLT-V3.6-BROWSER-BACKUP-1'].includes(payload?.schema)||!payload.data||typeof payload.data!=='object')throw new Error('This is not a valid FLT V3.5 or V3.6 backup.');
       const entries=Object.entries(payload.data);
       if(!entries.length||entries.some(([key,value])=>!key.startsWith('flt-')||typeof value!=='string'))throw new Error('The backup contains invalid records.');
-      if(!confirm('Restore this FLT V3.5 backup? Current browser data will be exported first, then replaced.'))return;
+      if(!confirm('Restore this FLT browser backup? Current browser data will be exported first, then replaced.'))return;
       downloadBackup('automatic-pre-restore');
       Object.keys(localStorage).filter(key=>key.startsWith('flt-')).forEach(key=>localStorage.removeItem(key));
       entries.forEach(([key,value])=>localStorage.setItem(key,value));
@@ -58,7 +58,7 @@
     const loads=parsed('flt-v32-loads',[]),kept=loads.filter(load=>!testName(load.id));
     localStorage.setItem('flt-v32-loads',JSON.stringify(kept));
     const selected=localStorage.getItem('flt-v32-loads-selected');if(testName(selected))localStorage.removeItem('flt-v32-loads-selected');
-    localStorage.removeItem('flt-v35-estimate-snapshots');localStorage.removeItem('flt-v35-last-decision');
+    localStorage.removeItem('flt-v35-estimate-snapshots');localStorage.removeItem('flt-v35-last-decision');localStorage.removeItem('flt-v36-test-evidence');
     status.innerHTML='<strong>Test records reset.</strong><br>Business Setup, classification, audit history, and completed FLT loads were preserved. Refresh to begin the controlled test.';
     if(typeof toast==='function')toast('Test records reset. FLT loads and Business Setup preserved.');
   });
