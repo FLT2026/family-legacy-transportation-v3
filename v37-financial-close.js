@@ -1,4 +1,9 @@
 (() => {
+  document.title='Family Legacy Commercial Command™ V3.7';
+  const header=document.querySelector('header .eyebrow');if(header)header.textContent='Family Legacy Commercial Command™ / V3.7';
+  const footer=document.getElementById('clock')?.parentElement;if(footer)footer.childNodes[0].textContent='V3.7 COMMERCIAL COMMAND · ';
+  const testTitle=document.querySelector('#test > .panel > .section-head h2');if(testTitle)testTitle.textContent='V3.7 Test Gate';
+  const testNav=document.querySelector('[data-view="test"] .nav-label');if(testNav)testNav.textContent='V3.7 Test Gate';
   const cents=value=>Math.round((Number(value)||0)*100);
   const sum=(items,pick)=>items.reduce((total,item)=>total+cents(pick(item)),0);
   const invoiceAmount=load=>cents(load?.invoice?.total ?? (typeof actualRevenue==='function'?actualRevenue(load):load?.actualRevenue ?? load?.revenue));
