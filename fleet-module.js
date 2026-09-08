@@ -22,7 +22,8 @@
     'v38-pickup-delivery-ui.js?v=20260908b',
     'v38-fast-load-workflow.js?v=20260908a',
     'v38-nav-next-hardfix.js?v=20260908a',
-    'v38-process-training-hardfix.js?v=20260908a'
+    'v38-process-training-hardfix.js?v=20260908a',
+    'v38-proposed-load-layout-hardfix.js?v=20260908a'
   ];
 
   // HARD DEV CACHE RULE:
