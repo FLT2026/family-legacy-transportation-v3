@@ -15,6 +15,28 @@ const tests=[
   'v38-autopopulate-audit.test.js',
   'v38-acceptance-gate.test.js'
 ];
+const runtimeFiles=[
+  'v37-finance-ledger.js',
+  'v38-assignment-integrity.js',
+  'v38-assignment-ui.js',
+  'v38-weight-equipment-fit.js',
+  'v38-weight-equipment-ui.js',
+  'v38-document-compliance.js',
+  'v38-document-compliance-ui.js',
+  'v38-pickup-delivery-integrity.js',
+  'v38-pickup-delivery-ui.js'
+];
+const preflight=[...new Set([...runtimeFiles,...tests])];
+console.log('=== V3.8 SYNTAX PREFLIGHT ===');
+for(const file of preflight){
+  const result=spawnSync(process.execPath,['--check',file],{encoding:'utf8'});
+  if(result.status!==0){
+    console.error('PREFLIGHT FAILED: '+file);
+    if(result.stderr) console.error(result.stderr.trim());
+    process.exit(1);
+  }
+}
+console.log('Syntax preflight passed: '+preflight.length+' files.');
 let failed=[];
 for(const test of tests){
   console.log('\n=== '+test+' ===');
