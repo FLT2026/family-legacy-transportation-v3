@@ -19,7 +19,8 @@
     'v38-assignment-ui.js?v=20260908b',
     'v38-weight-equipment-ui.js?v=20260908b',
     'v38-document-compliance-ui.js?v=20260908b',
-    'v38-pickup-delivery-ui.js?v=20260908b'
+    'v38-pickup-delivery-ui.js?v=20260908b',
+    'v38-fast-load-workflow.js?v=20260908a'
   ];
   const load=src=>new Promise(resolve=>{
     const script=document.createElement('script');
