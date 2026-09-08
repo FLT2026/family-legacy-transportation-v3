@@ -16,11 +16,11 @@
   }
 
   function summary(load){
-    const invoiceNumber=load?.invoice?.number||'',invoice=cents(load?.invoice?.total??load?.revenue),records=Array.isArray(load?.payments)?load.payments:[];
-    const allocated=records.filter(record=>record?.allocation?.invoiceNumber===invoiceNumber),paid=allocated.reduce((sum,record)=>sum+cents(record.amount),0),receivable=invoice-paid;
+    const invoiceNumber=load?.invoice?.number||'',invoice=cents(load?.invoice?.total??load?.revenue),records=Array.isArray(load?.payments)?load.payments:[],adjustments=(load?.financialAdjustments||[]).filter(item=>!item.invoiceNumber||item.invoiceNumber===invoiceNumber).reduce((sum,item)=>sum+cents(item.amount),0);
+    const allocated=records.filter(record=>record?.allocation?.invoiceNumber===invoiceNumber),paid=allocated.reduce((sum,record)=>sum+cents(record.amount),0),receivable=invoice+adjustments-paid;
     const allocationsMatch=records.every(record=>record?.allocation?.invoiceNumber===invoiceNumber&&cents(record.allocation?.amount)===cents(record.amount));
-    const status=!load?.invoice?.finalizedAt&&load?.invoice?.status!=='Finalized'?'NOT FINALIZED':paid===0?'OPEN':paid<invoice?'PARTIALLY PAID':paid===invoice?'PAID':'OVERPAID';
-    return {invoiceNumber,invoice,payments:paid,receivable,status,allocationsMatch,records};
+    const chargeTotal=invoice+adjustments,status=!load?.invoice?.finalizedAt&&load?.invoice?.status!=='Finalized'?'NOT FINALIZED':paid===0?'OPEN':paid<chargeTotal?'PARTIALLY PAID':paid===chargeTotal?'PAID':'OVERPAID';
+    return {invoiceNumber,invoice,adjustments,payments:paid,receivable,status,allocationsMatch,records};
   }
 
   function recordPayment(load,input,options={}){
