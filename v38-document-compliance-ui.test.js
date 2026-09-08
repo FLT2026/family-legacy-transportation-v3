@@ -6,10 +6,26 @@ const elements = new Map();
 let panelHost;
 let actions;
 
+function registerHtmlIds(owner, html) {
+  const seen = new Set();
+  const re = /id=["']([^"']+)["']/g;
+  let match;
+  while ((match = re.exec(String(html || '')))) {
+    const id = match[1];
+    if (seen.has(id)) continue;
+    seen.add(id);
+    if (!elements.has(id)) {
+      const child = el(id);
+      child.parentElement = owner;
+      elements.set(id, child);
+    }
+  }
+}
+
 function el(id = '') {
-  return {
+  let html = '';
+  const node = {
     id,
-    innerHTML: '',
     textContent: '',
     value: '',
     files: null,
@@ -40,6 +56,14 @@ function el(id = '') {
       return null;
     }
   };
+  Object.defineProperty(node, 'innerHTML', {
+    get() { return html; },
+    set(value) {
+      html = String(value ?? '');
+      registerHtmlIds(node, html);
+    }
+  });
+  return node;
 }
 
 panelHost = el('panel-host');
@@ -131,6 +155,10 @@ vm.runInContext(fs.readFileSync('v38-document-compliance-ui.js', 'utf8'), sandbo
 const ui = sandbox.window.FLTDocumentComplianceUI;
 
 assert.ok(elements.get('v38-load-source-fields'));
+assert.ok(elements.get('v38-load-source-type'));
+assert.ok(elements.get('v38-load-source-name'));
+assert.ok(elements.get('v38-load-source-reference'));
+assert.ok(elements.get('v38-transportation-type'));
 elements.get('v38-load-source-type').value = 'Load App';
 elements.get('v38-load-source-name').value = 'Central Dispatch';
 elements.get('v38-load-source-reference').value = 'CD-4455';
