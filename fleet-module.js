@@ -7,7 +7,7 @@
     'v38-document-compliance.js?v=20260908b',
     'v38-pickup-delivery-integrity.js?v=20260908b',
     'fleet-core.js?v=20260906a',
-    'v35-guided-workflow.js?v=20260904f',
+    'v35-guided-workflow.js?v=20260908g',
     'v35-fleet-master.js?v=20260904c',
     'v35-proposed-load.js?v=20260906b',
     'v35-data-controls.js?v=20260906a',
