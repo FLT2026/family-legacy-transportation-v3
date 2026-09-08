@@ -1,5 +1,6 @@
 (() => {
   const modules=[
+    'v38-version-ui.js?v=20260908b',
     'v36-date-utils.js?v=20260903d',
     'v38-assignment-integrity.js?v=20260908b',
     'v38-weight-equipment-fit.js?v=20260908b',
@@ -18,21 +19,16 @@
     'v38-assignment-ui.js?v=20260908b',
     'v38-weight-equipment-ui.js?v=20260908b',
     'v38-document-compliance-ui.js?v=20260908b',
-    'v38-pickup-delivery-ui.js?v=20260908b',
-    'v38-version-ui.js?v=20260908a'
+    'v38-pickup-delivery-ui.js?v=20260908b'
   ];
-  const load=src=>new Promise((resolve,reject)=>{
+  const load=src=>new Promise(resolve=>{
     const script=document.createElement('script');
     script.src=src;
     script.charset='utf-8';
     script.async=false;
-    script.addEventListener('load',()=>resolve(src),{once:true});
-    script.addEventListener('error',()=>reject(new Error('Unable to load Commercial Command module: '+src)),{once:true});
+    script.addEventListener('load',()=>resolve({src,ok:true}),{once:true});
+    script.addEventListener('error',()=>{console.error('Unable to load Commercial Command module:',src);resolve({src,ok:false})},{once:true});
     document.body.appendChild(script);
   });
-  (async()=>{
-    for(const src of modules){
-      try{await load(src)}catch(error){console.error(error);break}
-    }
-  })();
+  (async()=>{for(const src of modules)await load(src)})();
 })();
