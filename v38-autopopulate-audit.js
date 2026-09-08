@@ -1,5 +1,5 @@
 (() => {
-  const num=value=>{const n=Number(value);return Number.isFinite(n)?n:null};
+  const num=value=>{if(value===null||value===undefined||value==='')return null;const n=Number(value);return Number.isFinite(n)?n:null};
   const first=(...values)=>values.find(value=>value!==undefined&&value!==null&&value!=='')??null;
   function resolve(input={}){
     const load=input.load||{},business=input.business||{},assignment=input.assignment||null,fleet=input.fleet||{},actualTrip=input.actualTrip||load.actualTrip||null;
