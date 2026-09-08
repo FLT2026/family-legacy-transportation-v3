@@ -14,6 +14,7 @@
   const style=document.createElement('style');
   style.id='v38-proposed-load-layout-hardfix-style';
   style.textContent=`
+    #v35-master-selection,
     #v38-core-load-decision-fields{
       margin:14px 0!important;
       width:100%!important;
@@ -22,6 +23,19 @@
       box-sizing:border-box!important;
       overflow:visible!important;
       grid-column:span 2!important;
+    }
+    #v35-master-selection .form-grid,
+    #v35-master-selection .grid,
+    #v35-master-selection .fields{
+      width:100%!important;
+      max-width:none!important;
+      box-sizing:border-box!important;
+    }
+    #v35-master-selection select{
+      min-width:0!important;
+      width:100%!important;
+      max-width:100%!important;
+      box-sizing:border-box!important;
     }
     #v38-core-load-decision-fields .v38-core-grid{
       display:grid!important;
@@ -64,6 +78,7 @@
       width:100%!important;
     }
     @media(max-width:980px){
+      #v35-master-selection,
       #v38-core-load-decision-fields{min-width:0!important;grid-column:1/-1!important}
       #v38-core-load-decision-fields .v38-core-grid{grid-template-columns:minmax(180px,1fr) minmax(160px,1fr)!important;column-gap:18px!important}
     }
