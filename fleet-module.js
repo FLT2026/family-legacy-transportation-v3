@@ -1,12 +1,38 @@
 (() => {
-  const loadScript=(src,next)=>{
+  const modules=[
+    'v36-date-utils.js?v=20260903d',
+    'v38-assignment-integrity.js?v=20260908b',
+    'v38-weight-equipment-fit.js?v=20260908b',
+    'v38-document-compliance.js?v=20260908b',
+    'v38-pickup-delivery-integrity.js?v=20260908b',
+    'fleet-core.js?v=20260906a',
+    'v35-guided-workflow.js?v=20260904f',
+    'v35-fleet-master.js?v=20260904c',
+    'v35-proposed-load.js?v=20260906b',
+    'v35-data-controls.js?v=20260906a',
+    'v36-actual-trip.js?v=20260906a',
+    'v37-financial-close.js?v=20260908d',
+    'v37-itemized-invoice.js?v=20260908a',
+    'v37-payments-receivables.js?v=20260908b',
+    'v37-double-entry-ledger.js?v=20260908a',
+    'v38-assignment-ui.js?v=20260908b',
+    'v38-weight-equipment-ui.js?v=20260908b',
+    'v38-document-compliance-ui.js?v=20260908b',
+    'v38-pickup-delivery-ui.js?v=20260908b',
+    'v38-version-ui.js?v=20260908a'
+  ];
+  const load=src=>new Promise((resolve,reject)=>{
     const script=document.createElement('script');
     script.src=src;
     script.charset='utf-8';
     script.async=false;
-    if(next)script.addEventListener('load',next,{once:true});
-    script.addEventListener('error',()=>console.error('Unable to load Commercial Command module:',src),{once:true});
+    script.addEventListener('load',()=>resolve(src),{once:true});
+    script.addEventListener('error',()=>reject(new Error('Unable to load Commercial Command module: '+src)),{once:true});
     document.body.appendChild(script);
-  };
-  loadScript('v36-date-utils.js?v=20260903d',()=>loadScript('v38-assignment-integrity.js?v=20260908a',()=>loadScript('v38-weight-equipment-fit.js?v=20260908a',()=>loadScript('v38-document-compliance.js?v=20260908a',()=>loadScript('v38-pickup-delivery-integrity.js?v=20260908a',()=>loadScript('fleet-core.js?v=20260906a',()=>loadScript('v35-guided-workflow.js?v=20260904f',()=>loadScript('v35-fleet-master.js?v=20260904c',()=>loadScript('v35-proposed-load.js?v=20260906b',()=>loadScript('v35-data-controls.js?v=20260906a',()=>loadScript('v36-actual-trip.js?v=20260906a',()=>loadScript('v37-financial-close.js?v=20260908d',()=>loadScript('v37-itemized-invoice.js?v=20260908a',()=>loadScript('v37-payments-receivables.js?v=20260908b',()=>loadScript('v37-double-entry-ledger.js?v=20260908a',()=>loadScript('v38-assignment-ui.js?v=20260908a',()=>loadScript('v38-weight-equipment-ui.js?v=20260908a',()=>loadScript('v38-document-compliance-ui.js?v=20260908a',()=>loadScript('v38-pickup-delivery-ui.js?v=20260908a'))))))))))))))))))));
+  });
+  (async()=>{
+    for(const src of modules){
+      try{await load(src)}catch(error){console.error(error);break}
+    }
+  })();
 })();
