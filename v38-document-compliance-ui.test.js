@@ -233,6 +233,7 @@ sandbox.window.FLTDocumentCompliance.addDocument(load, {
 }, { id: 'DOC-OWN' });
 result = ui.evaluate();
 assert.equal(result.status, 'PASS');
+ui.render();
 assert.match(elements.get('v38-document-compliance-panel').innerHTML, /Internal \/ Own Customer/);
 
-console.log('V3.8 owner-operator load source persistence, live document gate blocking, audit, evidence attachment, and self-customer PASS checks passed.');
+console.log('V3.8 owner-operator load source persistence, live document gate blocking, audit, evidence attachment, rerender, and self-customer PASS checks passed.');
