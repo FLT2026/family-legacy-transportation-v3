@@ -10,6 +10,7 @@ Current development milestone: **V3.7 — Financial Close foundation**
 - Actual MPG history follows the truck assigned by the audited dispatch lock.
 - V3.7 reconciles POD, itemized invoices, payments, receivable, journal totals, and earned profit by Load ID.
 - Invoice drafts separate transportation, approved accessorials, and approved credits/adjustments; confirmation freezes the billing snapshot before finalization.
+- Payments receive stable IDs and invoice allocations; partial, paid, and overpaid receivables remain visible, while corrections append linked reversals.
 - V3.7 requires an explicit multi-load finance-isolation check before close actions are enabled.
 
 The application is a browser-based prototype that persists its working records in local storage. See `V3.7_FINANCIAL_CLOSE_PLAN.md` for the release contract and `V3.7_FINANCIAL_CLOSE_SMOKE_TEST.md` for verification.
