@@ -14,15 +14,23 @@
   const style=document.createElement('style');
   style.id='v38-proposed-load-layout-hardfix-style';
   style.textContent=`
-    #v38-core-load-decision-fields{margin:14px 0;width:100%;min-width:0;overflow:visible}
+    #v38-core-load-decision-fields{
+      margin:14px 0!important;
+      width:100%!important;
+      max-width:none!important;
+      min-width:520px!important;
+      box-sizing:border-box!important;
+      overflow:visible!important;
+      grid-column:span 2!important;
+    }
     #v38-core-load-decision-fields .v38-core-grid{
-      display:grid;
-      grid-template-columns:minmax(0,1fr) minmax(0,1fr);
-      column-gap:28px;
-      row-gap:18px;
-      width:100%;
-      min-width:0;
-      align-items:start;
+      display:grid!important;
+      grid-template-columns:minmax(220px,1fr) minmax(180px,1fr)!important;
+      column-gap:24px!important;
+      row-gap:18px!important;
+      width:100%!important;
+      min-width:0!important;
+      align-items:start!important;
     }
     #v38-core-load-decision-fields .v38-core-grid>.field{
       margin:0!important;
@@ -34,13 +42,14 @@
       display:block!important;
       width:100%!important;
       min-width:0!important;
-      min-height:44px;
+      min-height:46px!important;
       margin:0 0 8px!important;
       font-weight:800!important;
       line-height:1.2!important;
       white-space:normal!important;
-      overflow-wrap:break-word!important;
+      overflow-wrap:normal!important;
       word-break:normal!important;
+      hyphens:none!important;
     }
     #v38-core-load-decision-fields .v38-core-grid input,
     #v38-core-load-decision-fields .v38-core-grid select,
@@ -54,11 +63,17 @@
       min-width:0!important;
       width:100%!important;
     }
-    @media(max-width:760px){
-      #v38-core-load-decision-fields .v38-core-grid{grid-template-columns:1fr;column-gap:0;row-gap:16px}
-      #v38-core-load-decision-fields .v38-core-grid label{min-height:0}
+    @media(max-width:980px){
+      #v38-core-load-decision-fields{min-width:0!important;grid-column:1/-1!important}
+      #v38-core-load-decision-fields .v38-core-grid{grid-template-columns:minmax(180px,1fr) minmax(160px,1fr)!important;column-gap:18px!important}
+    }
+    @media(max-width:700px){
+      #v38-core-load-decision-fields .v38-core-grid{grid-template-columns:1fr!important;column-gap:0!important;row-gap:16px!important}
+      #v38-core-load-decision-fields .v38-core-grid label{min-height:0!important}
     }
   `;
+  const old=document.getElementById(style.id);
+  if(old)old.remove();
   document.head.appendChild(style);
 
   let panel=document.getElementById('v38-core-load-decision-fields');
