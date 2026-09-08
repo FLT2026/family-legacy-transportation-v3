@@ -22,14 +22,30 @@
     'v38-pickup-delivery-ui.js?v=20260908b',
     'v38-fast-load-workflow.js?v=20260908a'
   ];
+
+  // HARD DEV CACHE RULE:
+  // Every page refresh must execute the branch's current module files.
+  // Codespaces/browser caches previously masked fixes even after git pull.
+  // One page-load token is shared by every module so dependencies stay on
+  // the same code generation while stale copies are never reused.
+  const pageBuildToken=Date.now().toString(36);
+  const freshSrc=src=>src+(src.includes('?')?'&':'?')+'devbuild='+pageBuildToken;
+
   const load=src=>new Promise(resolve=>{
     const script=document.createElement('script');
-    script.src=src;
+    script.src=freshSrc(src);
     script.charset='utf-8';
     script.async=false;
+    script.dataset.commercialCommandModule=src.split('?')[0];
     script.addEventListener('load',()=>resolve({src,ok:true}),{once:true});
     script.addEventListener('error',()=>{console.error('Unable to load Commercial Command module:',src);resolve({src,ok:false})},{once:true});
     document.body.appendChild(script);
   });
-  (async()=>{for(const src of modules)await load(src)})();
+
+  (async()=>{
+    const results=[];
+    for(const src of modules)results.push(await load(src));
+    window.FLTModuleLoadStatus={pageBuildToken,results,allLoaded:results.every(item=>item.ok)};
+    window.dispatchEvent(new CustomEvent('flt:modules-loaded',{detail:window.FLTModuleLoadStatus}));
+  })();
 })();
