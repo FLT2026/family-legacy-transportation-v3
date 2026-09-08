@@ -12,3 +12,5 @@ Current development milestone: **V3.7 — Financial Close foundation**
 - V3.7 requires an explicit multi-load finance-isolation check before close actions are enabled.
 
 The application is a browser-based prototype that persists its working records in local storage. See `V3.7_FINANCIAL_CLOSE_PLAN.md` for the release contract and `V3.7_FINANCIAL_CLOSE_SMOKE_TEST.md` for verification.
+
+Run `node v37-financial-close.test.js` before updating or merging the V3.7 financial-close module.
