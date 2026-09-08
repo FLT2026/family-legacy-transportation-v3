@@ -12,7 +12,7 @@
 
   const style=document.createElement('style');style.id='v38-fast-load-workflow-style';style.textContent=`
   .v38-quick-section{grid-column:1/-1;border:2px solid var(--green-2);background:#f5f9f4;border-radius:8px;padding:14px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.v38-quick-section .full{grid-column:1/-1}.v38-quick-title{grid-column:1/-1}.v38-quick-title h3{font-size:17px}.v38-quick-title p{margin-top:4px}
-  .v38-training-next{border:4px solid #d4b900!important;background:#fff9b8!important;box-shadow:0 0 0 6px rgba(207,232,106,.62)!important}.v38-training-note{display:block;margin-top:6px;color:#315c16;font-size:12px;font-weight:900}.v38-nav-next{background:#214f48!important;border-left:5px solid #d4d72f!important;box-shadow:inset 0 0 0 2px rgba(212,215,47,.45)!important}.v38-nav-next .nav-label{font-weight:900!important}.v38-nav-next::after{content:'NEXT';margin-left:auto;background:#d4d72f;color:#173f39;font-size:9px;font-weight:900;padding:4px 7px;border-radius:999px}
+  .v38-training-next{border:4px solid #d4b900!important;background:#fff9b8!important;box-shadow:0 0 0 6px rgba(207,232,106,.62)!important}.v38-training-note{display:block;margin-top:6px;color:#315c16;font-size:12px;font-weight:900}.v38-nav-next{background:#214f48!important;color:#fff!important;border-left:5px solid #d4d72f!important;box-shadow:inset 0 0 0 2px rgba(212,215,47,.65),0 0 0 2px rgba(212,215,47,.2)!important}.v38-nav-next .nav-label{font-weight:900!important}.v38-nav-next::after{content:'NEXT';margin-left:auto;background:#d4d72f;color:#173f39;font-size:9px;font-weight:900;padding:4px 7px;border-radius:999px}
   .v38-accepted-banner{grid-column:1/-1;border-left:5px solid var(--lime);background:#f4f7e5;padding:12px 14px;border-radius:6px}.v38-source-note{font-size:11px;color:var(--green-2);font-weight:800;margin-top:4px}.v38-decision-actions{display:grid;gap:8px;margin-top:12px}.v38-decision-actions .btn{width:100%}@media(max-width:700px){.v38-quick-section{grid-template-columns:1fr}}`;document.head.appendChild(style);
 
   const loadNav=nav.querySelector('[data-view="load"]'),decisionNav=nav.querySelector('[data-view="intelligence"]');
@@ -22,14 +22,17 @@
 
   function workflowNavHighlight(){
     nav.querySelectorAll('.v38-nav-next').forEach(item=>item.classList.remove('v38-nav-next'));
-    const active=document.querySelector('.view.active')?.id||'';
-    if(active==='dashboard'){decisionNav?.classList.add('v38-nav-next');return}
-    if(active==='intelligence'){
+    const activeView=nav.querySelector('button.active')?.dataset.view||'';
+    if(activeView==='dashboard'){
+      decisionNav?.classList.add('v38-nav-next');
+      return;
+    }
+    if(activeView==='intelligence'){
       const decision=read(lastDecisionKey,null);
       if(decisionAccepted(decision)&&quickReady())loadNav?.classList.add('v38-nav-next');
       return;
     }
-    if(active==='load')return;
+    if(activeView==='load')return;
     if(!canCompleteLoad())decisionNav?.classList.add('v38-nav-next');
   }
 
