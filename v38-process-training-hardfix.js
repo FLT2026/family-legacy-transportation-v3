@@ -13,10 +13,6 @@
   `;
   document.head.appendChild(style);
 
-  // Training state is intentionally page-local, not sessionStorage-backed.
-  // A fresh page load must train again. Once Run Load Decision is performed
-  // on the current page, the large yellow banner stays hidden until an input
-  // that affects the decision is changed.
   let decisionRunThisPage=false;
   const decisionInputIds=new Set(['v38-quick-source','v38-quick-pickup-zip','v38-quick-delivery-zip','v35-offer','v35-loaded-miles','v35-cargo-weight','v35-deadhead-miles']);
   const steps={intelligence:[
@@ -49,15 +45,15 @@
   function explicit(){for(const raw of steps[activeView()]||[]){const s=normalize(raw),c=document.getElementById(s.id);if(usable(c)){let ok=false;try{ok=!!s.valid(c)}catch(e){}if(!ok)return{...s,control:c}}}return null}
   function generic(){const view=activeView();if(!['intelligence','load'].includes(view))return null;const root=document.getElementById(view)||document.querySelector('.view.active');if(!root)return null;const c=[...root.querySelectorAll('input,select,textarea')].filter(usable).find(x=>x.type!=='hidden'&&x.type!=='button'&&x.type!=='submit'&&((/zip/i.test(x.id||'')&&String(x.value||'').trim()&&!/^\d{5}$/.test(String(x.value||'').trim()))||(x.required&&String(x.value||'').trim()==='')));if(c)return{id:c.id,control:c,label:'Complete this required field',instruction:'Commercial Command found the next required item on this screen.'};if(view==='intelligence'&&!decisionRunThisPage){const a=root.querySelector('button[type="submit"],.form-actions .btn,#v35-run-decision,[data-run-decision]');if(usable(a))return{control:a,label:'Run Load Decision',instruction:'Owner operator / fleet driver: required profitability inputs are present. Run the decision now.',action:true}}return null}
   function clear(){document.querySelectorAll('.v38-hard-field-next,.v38-hard-action-next').forEach(e=>e.classList.remove('v38-hard-field-next','v38-hard-action-next'));document.querySelectorAll('.v38-hard-field-wrap').forEach(e=>e.classList.remove('v38-hard-field-wrap'));document.getElementById('v38-hard-training-banner')?.remove()}
-  function apply(scroll=false){scheduled=false;rename();clear();const view=activeView();if(!['intelligence','load'].includes(view)){lastKey='';return}const s=explicit()||generic();if(!s?.control)return;const c=s.control;c.classList.add(s.action?'v38-hard-action-next':'v38-hard-field-next');if(!s.action)(c.closest('.field')||c.parentElement)?.classList.add('v38-hard-field-wrap');const root=c.closest('form')||document.getElementById(view)||c.parentElement;if(root){const b=document.createElement('div');b.id='v38-hard-training-banner';b.innerHTML='OWNER OPERATOR / FLEET DRIVER — NEXT: '+s.label+'<small>'+s.instruction+'</small>';root.insertBefore(b,root.firstElementChild)}const key=s.id||s.label;if(scroll||key!==lastKey)setTimeout(()=>c.scrollIntoView({behavior:'smooth',block:'center'}),60);lastKey=key}
+  function apply(scroll=false){scheduled=false;rename();clear();const view=activeView();if(!['intelligence','load'].includes(view)){lastKey='';return}const s=explicit()||generic();if(!s?.control)return;const c=s.control;c.classList.add(s.action?'v38-hard-action-next':'v38-hard-field-next');if(!s.action)(c.closest('.field')||c.parentElement)?.classList.add('v38-hard-field-wrap');const root=c.closest('form')||document.getElementById(view)||c.parentElement;if(root){const b=document.createElement('div');b.id='v38-hard-training-banner';b.innerHTML='OWNER OPERATOR / FLEET DRIVER — NEXT: '+s.label+'<small>'+s.instruction+'</small>';root.insertBefore(b,root.firstElementChild)}const key=s.id||s.label;if(scroll)setTimeout(()=>c.scrollIntoView({behavior:'smooth',block:'center'}),60);lastKey=key}
   function schedule(scroll=false){if(scheduled)return;scheduled=true;setTimeout(()=>apply(scroll),40)}
   document.addEventListener('input',e=>{if(e.target.matches('input,select,textarea')){if(decisionInputIds.has(e.target.id))decisionRunThisPage=false;schedule(false)}},true);
-  document.addEventListener('change',e=>{if(e.target.matches('input,select,textarea')){if(decisionInputIds.has(e.target.id))decisionRunThisPage=false;schedule(true)}},true);
+  document.addEventListener('change',e=>{if(e.target.matches('input,select,textarea')){if(decisionInputIds.has(e.target.id))decisionRunThisPage=false;schedule(false)}},true);
   document.addEventListener('submit',e=>{if(e.target.id==='v35-decision-form'){decisionRunThisPage=true;setTimeout(()=>schedule(false),80)}},true);
   nav.addEventListener('click',()=>schedule(true),true);
-  window.addEventListener('flt:modules-loaded',()=>schedule(true));
-  window.addEventListener('flt:proposed-load-layout-ready',()=>schedule(true));
+  window.addEventListener('flt:modules-loaded',()=>schedule(false));
+  window.addEventListener('flt:proposed-load-layout-ready',()=>schedule(false));
   window.addEventListener('flt:unit-affixes-ready',()=>schedule(false));
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)schedule(false)});
-  setTimeout(()=>apply(true),150);
+  setTimeout(()=>apply(false),150);
 })();
