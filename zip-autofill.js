@@ -21,16 +21,21 @@
     }catch(error){return null}finally{clearTimeout(timer)}
   }
   function readBook(){try{return JSON.parse(localStorage.getItem(addressBookKey)||'[]')||[]}catch(error){return[]}}
-  function saveBook(book){try{localStorage.setItem(addressBookKey,JSON.stringify(book.slice(-100)))}catch(error){}}
+  function saveBook(book){try{localStorage.setItem(addressBookKey,JSON.stringify(book.slice(-150)))}catch(error){}}
   function normalizedAddress(item={},type='saved'){
-    return{type,facility:String(item.facility||item.name||'').trim(),street:String(item.street||item.address||'').trim(),zip:String(item.zip||item.postalCode||'').trim(),city:String(item.city||'').trim(),state:String(item.state||'').trim().toUpperCase()};
+    return{type,customer:String(item.customer||item.customerName||item.company||'').trim(),facility:String(item.facility||item.name||'').trim(),street:String(item.street||item.address||'').trim(),zip:String(item.zip||item.postalCode||'').trim(),city:String(item.city||'').trim(),state:String(item.state||'').trim().toUpperCase()};
   }
   function remember(address){
     const item=normalizedAddress(address,address.type||'saved');
     if(!item.street||!fiveDigitZip(item.zip)||!item.city||!item.state)return;
     const book=readBook(),key=[item.street,fiveDigitZip(item.zip),item.city,item.state].join('|').toLowerCase();
     const existing=book.findIndex(x=>[x.street,fiveDigitZip(x.zip),x.city,x.state].join('|').toLowerCase()===key);
-    if(existing>=0)book.splice(existing,1);
+    if(existing>=0){
+      const prior=book[existing]||{};
+      item.customer=item.customer||prior.customer||'';
+      item.facility=item.facility||prior.facility||'';
+      book.splice(existing,1);
+    }
     book.push({...item,zip:fiveDigitZip(item.zip),savedAt:new Date().toISOString()});saveBook(book);
   }
   function loadHistory(){
@@ -38,19 +43,23 @@
     const items=[];
     loads.forEach(load=>['billing','pickup','delivery'].forEach(type=>{
       const raw=type==='billing'?(load.billingAddress||load.customerAddress||{}):(load[type+'Address']||{});
-      const item=normalizedAddress(raw,type);if(item.street&&fiveDigitZip(item.zip)&&item.city&&item.state)items.push(item);
+      const item=normalizedAddress({...raw,customer:raw.customer||load.customer||''},type);
+      if(item.street&&fiveDigitZip(item.zip)&&item.city&&item.state)items.push(item);
     }));
     return items;
   }
   function savedAddresses(type,zip){
     const all=[...readBook(),...loadHistory()].map(item=>normalizedAddress(item,item.type||'saved'));
-    const seen=new Set(),matches=[];
+    const byKey=new Map();
     all.forEach(item=>{
       if(fiveDigitZip(item.zip)!==zip||!item.street)return;
-      const key=[item.street,zip,item.city,item.state].join('|').toLowerCase();if(seen.has(key))return;seen.add(key);matches.push(item);
+      const key=[item.street,zip,item.city,item.state].join('|').toLowerCase(),prior=byKey.get(key);
+      if(!prior)byKey.set(key,item);
+      else byKey.set(key,{...prior,...item,customer:item.customer||prior.customer||'',facility:item.facility||prior.facility||''});
     });
-    return matches.sort((a,b)=>Number(b.type===type)-Number(a.type===type));
+    return [...byKey.values()].sort((a,b)=>Number(b.type===type)-Number(a.type===type));
   }
+  function currentCustomer(){return String(document.getElementById('customer-name')?.value||'').trim()}
   function rememberFromForm(type){
     const prefix=type+'-';
     const facility=document.getElementById(prefix+'facility');
@@ -59,7 +68,7 @@
     const city=document.getElementById(prefix+'city');
     const state=document.getElementById(prefix+'state');
     if(!street||!zip||!city||!state)return;
-    remember({type,facility:facility?.value||'',street:street.value,zip:zip.value,city:city.value,state:state.value});
+    remember({type,customer:currentCustomer(),facility:facility?.value||'',street:street.value,zip:zip.value,city:city.value,state:state.value});
   }
   function connect(zipId,cityId,stateId,type){
     const zip=document.getElementById(zipId),city=document.getElementById(cityId),state=document.getElementById(stateId);if(!zip||!city||!state)return;
@@ -70,12 +79,13 @@
       const matches=savedAddresses(type,normalized);suggestions.innerHTML='';
       matches.forEach(address=>{
         const button=document.createElement('button');button.type='button';button.style.cssText='display:block;width:100%;text-align:left;border:0;background:#fff;padding:9px 10px;border-radius:6px;cursor:pointer';
-        const label=[address.facility,address.street,address.city+', '+address.state,address.zip].filter(Boolean).join(' · ');button.textContent=(address.type===type?'Recent '+type+': ':'Saved address: ')+label;
+        const identity=[address.customer,address.facility].filter(Boolean).join(' / '),label=[identity,address.street,address.city+', '+address.state,address.zip].filter(Boolean).join(' · ');button.textContent=(address.type===type?'Recent '+type+': ':'Saved address: ')+label;
         button.addEventListener('mousedown',event=>event.preventDefault());button.addEventListener('click',()=>{
-          const prefix=type+'-',facility=document.getElementById(prefix+'facility'),street=document.getElementById(prefix+'street');
+          const prefix=type+'-',facility=document.getElementById(prefix+'facility'),street=document.getElementById(prefix+'street'),customer=document.getElementById('customer-name');
+          if(type==='billing'&&customer&&address.customer)customer.value=address.customer;
           if(facility&&address.facility)facility.value=address.facility;if(street)street.value=address.street;zip.value=fiveDigitZip(address.zip);city.value=address.city;state.value=address.state;
-          [facility,street,zip,city,state].filter(Boolean).forEach(control=>control.dispatchEvent(new Event('change',{bubbles:true})));
-          remember({...address,type});status.textContent='Saved address selected: '+address.city+', '+address.state+'.';hideSuggestions();
+          [type==='billing'?customer:null,facility,street,zip,city,state].filter(Boolean).forEach(control=>control.dispatchEvent(new Event('change',{bubbles:true})));
+          remember({...address,type,customer:address.customer||currentCustomer()});status.textContent='Saved address selected: '+address.city+', '+address.state+'.';hideSuggestions();
         });suggestions.appendChild(button);
       });suggestions.style.display=matches.length?'block':'none';
     };
@@ -90,6 +100,7 @@
     zip.addEventListener('change',()=>{update();rememberFromForm(type)});zip.addEventListener('blur',()=>{update();rememberFromForm(type);setTimeout(hideSuggestions,220)});zip.addEventListener('focus',()=>{const normalized=fiveDigitZip(zip.value);if(normalized)renderSuggestions(normalized)});
     const prefix=type+'-';['facility','street','city','state'].forEach(part=>document.getElementById(prefix+part)?.addEventListener('change',()=>rememberFromForm(type)));
   }
+  document.getElementById('customer-name')?.addEventListener('change',()=>['billing','pickup','delivery'].forEach(rememberFromForm));
   connect('business-zip','business-city','business-state','business');
   connect('billing-zip','billing-city','billing-state','billing');
   connect('pickup-zip','pickup-city','pickup-state','pickup');
