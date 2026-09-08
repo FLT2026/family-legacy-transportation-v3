@@ -11,6 +11,7 @@ let result=api.recordPayment(load,{amount:400,date:'2026-09-08',method:'ACH',ref
 assert.equal(result.ok,true);assert.equal(result.payment.allocation.invoiceNumber,'INV-1');assert.equal(result.summary.status,'PARTIALLY PAID');assert.equal(result.summary.receivable,60000);
 result=api.recordPayment(load,{amount:700,date:'2026-09-09',method:'Check',reference:'1001'},{id:'PAY-2'});assert.equal(result.summary.status,'OVERPAID');assert.equal(result.summary.receivable,-10000);
 assert.equal(api.summary({...load,payments:[{id:'FULL',amount:1000,allocation:{invoiceNumber:'INV-1',amount:1000}}]}).status,'PAID');
+const adjusted=api.summary({...load,payments:[{id:'FULL',amount:1000,allocation:{invoiceNumber:'INV-1',amount:1000}}],financialAdjustments:[{invoiceNumber:'INV-1',amount:-50}]});assert.equal(adjusted.receivable,-5000);assert.equal(adjusted.status,'OVERPAID');
 result=api.reversePayment(load,'PAY-1','Wrong payment',{id:'REV-1',confirm:()=>true,date:'2026-09-10'});assert.equal(result.ok,true);assert.equal(result.reversal.amount,-400);assert.equal(result.summary.status,'PARTIALLY PAID');assert.equal(result.summary.receivable,30000);
 assert.equal(api.reversePayment(load,'PAY-1','Again',{confirm:()=>true}).reason,'This payment has already been reversed.');
 assert.equal(api.reversePayment(load,'PAY-2','Cancel',{confirm:()=>false}).reason,'Reversal cancelled.');
