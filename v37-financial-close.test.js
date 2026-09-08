@@ -39,4 +39,7 @@ assert.equal(itemized.linesEqualInvoice,true);
 assert.equal(itemized.journal.find(row=>row.account==='Accessorial Revenue').credit,12500);
 const credited=api.reconcile({...load,invoice:{number:'INV-C',total:975,lineItems:[{type:'transportation',amount:1000},{type:'credit',amount:-25}]}});
 assert.equal(credited.balanced,true);assert.equal(credited.journal.find(row=>row.account==='Revenue Adjustments').debit,2500);
+const reversed=api.reconcile({...load,invoice:{number:'INV-1',total:1000},payments:[{amount:400,allocation:{invoiceNumber:'INV-1',amount:400}},{amount:-400,type:'Reversal',allocation:{invoiceNumber:'INV-1',amount:-400}}]});
+assert.equal(reversed.payments,0);assert.equal(reversed.receivable,100000);assert.equal(reversed.balanced,true);assert.equal(reversed.allocationsMatch,true);
+const misallocated=api.reconcile({...load,invoice:{number:'INV-1',total:1000},payments:[{amount:10,allocation:{invoiceNumber:'INV-X',amount:10}}]});assert.equal(misallocated.allocationsMatch,false);assert.equal(misallocated.payments,0);
 console.log('V3.7 render, reconciliation, journal, overpayment, and isolation checks passed.');
