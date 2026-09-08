@@ -1,0 +1,32 @@
+const assert=require('node:assert');
+const fs=require('node:fs');
+const vm=require('node:vm');
+
+const elements=new Map();
+const element=(id='')=>({id,innerHTML:'',className:'',parentElement:null,addEventListener(){},appendChild(child){child.parentElement=this;elements.set(child.id,child)},insertBefore(child){child.parentElement=this;elements.set(child.id,child)}});
+const finance=element('finance'),close=element('v37-financial-close');close.parentElement=finance;elements.set(close.id,close);
+const document={createElement:()=>element(),getElementById:id=>elements.get(id)||null,querySelector:selector=>selector==='#finance'?finance:null};
+const load={id:'FLT-42',customer:'Acme',billingAddress:{city:'Raleigh'},pickup:'Durham',delivery:'Charlotte',revenue:1000,paymentTerms:'Net 15',pod:true,deliveryProof:{signature:'signed'},accessorialEvents:[{id:'A1',type:'Detention',amount:125,status:'Approved'},{id:'A2',type:'Tarping',amount:75,status:'Denied'}],credits:[{id:'C1',type:'Credit',description:'Service credit',amount:25,status:'Approved'}],payments:[],expenses:[]};
+const sandbox={document,window:{},store:{loads:[load]},current:()=>load,money:value=>'$'+value.toFixed(2),persist(){},toast(){},confirm:()=>true,Date};
+vm.createContext(sandbox);vm.runInContext(fs.readFileSync('v37-itemized-invoice.js','utf8'),sandbox);
+const api=sandbox.window.FLTItemizedInvoice;
+const draft=api.draft(load,'2026-09-08');
+assert.equal(draft.total,1100);
+assert.equal(draft.lineItems.length,3);
+assert.equal(draft.dueDate,'2026-09-23');
+assert.equal(draft.billToSnapshot.customer,'Acme');
+assert.match(elements.get('v37-itemized-invoice').innerHTML,/NOT PREPARED/);
+
+api.prepare(load,sandbox.store.loads,'2026-09-08');
+assert.equal(load.invoice.number,'INV-000001');
+const result=api.finalize(load,{confirm:()=>true,now:new Date('2026-09-08T12:00:00Z')});
+assert.equal(result.ok,true);assert.equal(load.invoice.status,'Finalized');
+const frozen=JSON.stringify(load.invoice);load.customer='Changed';load.revenue=50;load.accessorialEvents[0].amount=500;
+api.prepare(load,sandbox.store.loads,'2026-09-09');
+assert.equal(JSON.stringify(load.invoice),frozen);
+let printed='';sandbox.window.open=()=>({document:{write:value=>{printed+=value},close(){}},focus(){},print(){}});
+assert.equal(api.printInvoice(load),true);assert.match(printed,/Acme/);assert.doesNotMatch(printed,/Changed/);assert.match(printed,/\$1100\.00/);
+assert.equal(api.finalize({...load,invoice:{...load.invoice,status:'Draft'},pod:false},{confirm:()=>true}).reason,'Signed POD is required before finalization.');
+assert.equal(api.finalize({...load,invoice:{...load.invoice,status:'Draft'}},{confirm:()=>false}).reason,'Finalization cancelled.');
+assert.equal(api.finalize({...load,invoice:{...load.invoice,status:'Draft',total:999}},{confirm:()=>true}).reason,'Invoice lines do not equal the invoice total.');
+console.log('V3.7 itemized invoice math, accessorial approval, confirmation, POD, render, and immutability checks passed.');
