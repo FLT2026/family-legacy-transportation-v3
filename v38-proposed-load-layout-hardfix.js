@@ -14,13 +14,50 @@
   const style=document.createElement('style');
   style.id='v38-proposed-load-layout-hardfix-style';
   style.textContent=`
-    #v38-core-load-decision-fields{margin:14px 0;}
+    #v38-core-load-decision-fields{margin:14px 0;width:100%;min-width:0;overflow:visible}
     #v38-core-load-decision-fields .v38-core-grid{
-      display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 18px;
+      display:grid;
+      grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+      column-gap:28px;
+      row-gap:18px;
+      width:100%;
+      min-width:0;
+      align-items:start;
     }
-    #v38-core-load-decision-fields .v38-core-grid>.field{margin:0!important;min-width:0}
-    #v38-core-load-decision-fields .v38-core-grid label{font-weight:800}
-    @media(max-width:760px){#v38-core-load-decision-fields .v38-core-grid{grid-template-columns:1fr}}
+    #v38-core-load-decision-fields .v38-core-grid>.field{
+      margin:0!important;
+      min-width:0!important;
+      width:100%!important;
+      overflow:visible!important;
+    }
+    #v38-core-load-decision-fields .v38-core-grid label{
+      display:block!important;
+      width:100%!important;
+      min-width:0!important;
+      min-height:44px;
+      margin:0 0 8px!important;
+      font-weight:800!important;
+      line-height:1.2!important;
+      white-space:normal!important;
+      overflow-wrap:break-word!important;
+      word-break:normal!important;
+    }
+    #v38-core-load-decision-fields .v38-core-grid input,
+    #v38-core-load-decision-fields .v38-core-grid select,
+    #v38-core-load-decision-fields .flt-unit-input{
+      width:100%!important;
+      min-width:0!important;
+      max-width:100%!important;
+      box-sizing:border-box!important;
+    }
+    #v38-core-load-decision-fields .flt-unit-input>input{
+      min-width:0!important;
+      width:100%!important;
+    }
+    @media(max-width:760px){
+      #v38-core-load-decision-fields .v38-core-grid{grid-template-columns:1fr;column-gap:0;row-gap:16px}
+      #v38-core-load-decision-fields .v38-core-grid label{min-height:0}
+    }
   `;
   document.head.appendChild(style);
 
