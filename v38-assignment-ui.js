@@ -11,6 +11,26 @@
   const loadSelect=document.getElementById('fleet-lock-load'),driver=document.getElementById('fleet-lock-driver'),truck=document.getElementById('fleet-lock-truck'),trailer=document.getElementById('fleet-lock-trailer'),reason=document.getElementById('fleet-lock-reason'),detail=document.getElementById('fleet-lock-reason-detail'),detailField=document.getElementById('fleet-lock-reason-detail-field'),submit=document.getElementById('fleet-lock-submit');
   const active=loadId=>api.activeForLoad(readAssignments(),loadId);
   const optionLabel=(fleet,bucket,id)=>{const item=(fleet[bucket]||[]).find(x=>x.id===id);return item?.name||item?.unit||id||'—'};
+
+  function currentLoadId(){
+    try{const load=typeof current==='function'?current():null;if(load?.id)return String(load.id)}catch(error){}
+    const saved=localStorage.getItem('flt-selected-load-id');
+    return saved?String(saved):'';
+  }
+  function hasLoadOption(loadId){return Boolean(loadId&&[...loadSelect.options].some(option=>String(option.value)===String(loadId)))}
+  function autoSelectCurrentLoad(force=false){
+    const loadId=currentLoadId();
+    if(!hasLoadOption(loadId))return false;
+    if(!force&&loadSelect.value)return false;
+    if(loadSelect.value===loadId)return true;
+    loadSelect.value=loadId;
+    loadSelect.dataset.autoSelected='true';
+    migrateLegacy(loadId);
+    reasonOptions();
+    render();
+    return true;
+  }
+
   function ensureControls(){
     if(document.getElementById('v38-assignment-state'))return;
     const status=document.createElement('div');status.id='v38-assignment-state';status.className='notice';status.style.marginBottom='12px';form.insertAdjacentElement('beforebegin',status);
@@ -56,8 +76,12 @@
     if(!globalThis.confirm?.('Cancel the verified assignment for '+loadId+'? The assignment will remain in audit history.'))return;
     saveAssignments(data);const fleet=readFleet(),before=(fleet.locks||[]).filter(lock=>lock.loadId===loadId);fleet.locks=(fleet.locks||[]).filter(lock=>lock.loadId!==loadId);fleet.audit=fleet.audit||[];fleet.audit.push({entity:'trip_lock',entityId:loadId,action:'authorized_change',reason:note,reasons:[note],before,after:null,timestamp:new Date().toISOString()});saveFleet(fleet);if(typeof toast==='function')toast('Assignment cancelled and preserved in the V3.8 audit history.');reasonOptions();render();
   }
-  loadSelect.addEventListener('change',()=>{migrateLegacy(loadSelect.value);reasonOptions();render()});
+  loadSelect.addEventListener('change',()=>{delete loadSelect.dataset.autoSelected;migrateLegacy(loadSelect.value);reasonOptions();render()});
   form.addEventListener('submit',()=>setTimeout(syncFromLegacy,0));
-  ensureControls();migrateLegacy(loadSelect.value);reasonOptions();render();
-  window.FLTAssignmentUI={render,syncFromLegacy,cancelCurrent};
+  document.querySelectorAll('#nav [data-view="fleet"],[data-view-jump="fleet"]').forEach(button=>button.addEventListener('click',()=>setTimeout(()=>autoSelectCurrentLoad(!loadSelect.value),0)));
+  new MutationObserver(()=>{if(!loadSelect.value)autoSelectCurrentLoad(false)}).observe(loadSelect,{childList:true});
+  ensureControls();
+  if(!autoSelectCurrentLoad(false)){migrateLegacy(loadSelect.value);reasonOptions();render()}
+  setTimeout(()=>autoSelectCurrentLoad(false),0);
+  window.FLTAssignmentUI={render,syncFromLegacy,cancelCurrent,autoSelectCurrentLoad,currentLoadId};
 })();
