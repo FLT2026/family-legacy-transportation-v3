@@ -52,6 +52,13 @@
     nav.querySelectorAll('.v38-nav-next').forEach(item=>item.classList.remove('v38-nav-next'));
     nav.querySelector('[data-view="business-setup"]')?.classList.add('v38-nav-next');
   }
+  function clearFreshBusinessPlanningDefaults(){
+    if(localStorage.getItem('flt-v35-classification'))return;
+    ['v35-truck-gvwr','v35-trailer-gvwr','v35-truck-empty','v35-trailer-empty','v35-gcwr'].forEach(id=>{
+      const input=document.getElementById(id);
+      if(input)input.value='';
+    });
+  }
   function showEmptyDashboard(){
     const heroTitle=document.getElementById('hero-title'),heroRoute=document.getElementById('hero-route');
     if(heroTitle)heroTitle.textContent='Commercial Command is ready for a fresh test.';
@@ -83,6 +90,7 @@
         }
       }
     }catch(error){console.warn('Unable to clear seeded demo load after fresh reset.',error)}
+    clearFreshBusinessPlanningDefaults();
     showEmptyDashboard();return true;
   }
 
