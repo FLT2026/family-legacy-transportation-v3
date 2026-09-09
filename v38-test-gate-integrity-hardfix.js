@@ -41,9 +41,6 @@
         changed=true;
       }
     }
-    // V3.6 historically looked only at expense.receipt. V3.8 also stores
-    // classified Load-ID document evidence. Bridge a real receipt document to
-    // the matching fuel expense; never manufacture evidence when none exists.
     const receipt=receiptDocument(load);
     if(receipt){
       const fuel=(load.expenses||[]).find(item=>/fuel/i.test(String(item?.category||''))&&!item.receipt);
@@ -66,10 +63,6 @@
     const gate=document.getElementById('v36-gate');
     if(!gate)return;
     const record=latestActualTrip(load);
-    // V3.6 owns trip fuel-efficiency history. V3.8 Assignment Integrity owns
-    // the separate requirement that a driver/truck/trailer be assigned. Do not
-    // falsely fail a valid V3.6 MPG snapshot merely because legacy V3.5 lock
-    // metadata was not carried into the V3.6 snapshot.
     const mpgPass=Boolean(record&&Number.isFinite(Number(record.actualMpg))&&Number(record.actualMpg)>0);
     [...gate.querySelectorAll('.metric-row')].forEach(row=>{
       if(!/Vehicle MPG history created/i.test(row.textContent||''))return;
@@ -106,17 +99,36 @@
     repairV37Gate(load);
     try{window.FLTUpdateOverallGate?.()}catch(_error){}
   }
-  let busy=false;
-  const observer=new MutationObserver(()=>{
-    if(busy)return;busy=true;
-    queueMicrotask(()=>{try{repairVisibleGate()}finally{busy=false}});
+
+  // Repair only after meaningful DOM changes and disconnect while repairing.
+  // This prevents the hardfix from observing its own tag/status updates and
+  // causing the browser refresh / "page isn't responding" loop.
+  let repairTimer=null;
+  const observerOptions={subtree:true,childList:true};
+  const observer=new MutationObserver(mutations=>{
+    const meaningful=mutations.some(m=>[...m.addedNodes].some(node=>{
+      if(node?.nodeType!==1)return false;
+      return node.id==='v36-gate'||node.id==='v37-gate'||node.querySelector?.('#v36-gate,#v37-gate');
+    }));
+    if(!meaningful)return;
+    clearTimeout(repairTimer);
+    repairTimer=setTimeout(()=>{
+      observer.disconnect();
+      try{repairVisibleGate()}finally{observer.observe(document.documentElement,observerOptions)}
+    },25);
   });
-  observer.observe(document.documentElement,{subtree:true,childList:true});
+  observer.observe(document.documentElement,observerOptions);
+
   migrateActualTripEvidence(currentLoad());
   setTimeout(()=>{
-    migrateActualTripEvidence(currentLoad());
-    try{if(typeof renderFinance==='function')renderFinance()}catch(_error){}
-    repairVisibleGate();
+    observer.disconnect();
+    try{
+      migrateActualTripEvidence(currentLoad());
+      try{if(typeof renderFinance==='function')renderFinance()}catch(_error){}
+      repairVisibleGate();
+    }finally{
+      observer.observe(document.documentElement,observerOptions);
+    }
   },0);
   window.FLTV38TestGateIntegrity={migrateActualTripEvidence,correctionCapabilityPass,repairV36Gate,repairV37Gate,repairVisibleGate};
 })();
