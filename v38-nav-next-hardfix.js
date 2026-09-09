@@ -27,6 +27,10 @@
   const fiveZip=value=>/^\d{5}(?:-\d{4})?$/.test(String(value||'').trim());
   const acceptedProposalReady=()=>{const p=read('flt-v38-accepted-proposal',null);return Boolean(p&&fiveZip(p.pickupZip)&&fiveZip(p.deliveryZip)&&Number(p.offer)>0)};
   const acceptedDecisionReady=()=>read('flt-v35-last-decision',null)?.decision==='ACCEPT LOAD';
+  const setupPrerequisitePending=()=>{
+    if(localStorage.getItem('commercial-command-fresh-start')==='1')return true;
+    try{return Boolean(window.FLTNavigationPrerequisitesHardfix?.prerequisite?.())}catch(error){return false}
+  };
 
   let applying=false;
   function applyHardNext(){
@@ -34,6 +38,7 @@
     applying=true;
     try{
       [decisionNav,loadNav].forEach(button=>button.removeAttribute('data-v38-hard-next'));
+      if(setupPrerequisitePending())return;
       const active=nav.querySelector('button.active')?.dataset.view||'';
       if(active==='dashboard'){
         decisionNav.setAttribute('data-v38-hard-next','true');
