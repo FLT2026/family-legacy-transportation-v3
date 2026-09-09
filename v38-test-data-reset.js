@@ -47,7 +47,7 @@
 
   function mount(){
     if(document.getElementById('v38-test-data-reset'))return;
-    const business=document.getElementById('business')||document.querySelector('.view[data-view="business"]')||document.querySelector('[data-section="business"]');
+    const business=document.getElementById('business-setup')||document.querySelector('.view#business-setup')||document.querySelector('.view[data-view="business-setup"]');
     if(!business)return;
     const panel=document.createElement('div');
     panel.id='v38-test-data-reset';
