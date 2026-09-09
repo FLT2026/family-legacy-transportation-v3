@@ -28,8 +28,24 @@
     const rows=Array.isArray(load?.actualTripRecords)?load.actualTripRecords:[];
     return rows.at(-1)||null;
   }
+  function restoreClosedHardfixReceipt(load){
+    if(load?.financialClose?.status!=='Closed'||!load?.financialClose?.snapshot)return false;
+    const currentExpenses=Array.isArray(load.expenses)?load.expenses:[];
+    const snapshotExpenses=Array.isArray(load.financialClose.snapshot.expenses)?load.financialClose.snapshot.expenses:[];
+    let changed=false;
+    currentExpenses.forEach((expense,index)=>{
+      const snap=expense?.id?snapshotExpenses.find(item=>item?.id===expense.id):snapshotExpenses[index];
+      if(expense?.receipt?.source==='v38-load-document'&&!snap?.receipt){
+        delete expense.receipt;
+        changed=true;
+      }
+    });
+    if(changed)persistLoad();
+    return changed;
+  }
   function migrateActualTripEvidence(load){
     if(!load)return false;
+    if(load?.financialClose?.status==='Closed')return restoreClosedHardfixReceipt(load);
     let changed=false;
     const record=latestActualTrip(load);
     if(record&&(!record.truckId||!record.truckUnit)){
@@ -84,11 +100,15 @@
     [...gate.querySelectorAll('.metric-row')].forEach(row=>{
       const text=row.textContent||'';
       if(/Post-close financial snapshot unchanged/i.test(text))setTag(row.querySelector('.tag'),snapshotPass?'PASS':'PENDING',snapshotPass);
-      if(/Protected correction audit history/i.test(text))setTag(row.querySelector('.tag'),correctionPass?'PASS':'PENDING',correctionPass);
+      if(/Protected correction audit history/i.test(text)){
+        const hasHistory=Boolean((load?.financialCloseHistory||[]).length);
+        setTag(row.querySelector('.tag'),hasHistory?'PASS':'PENDING',hasHistory);
+      }
     });
     if(snapshotPass){
       const headTag=gate.querySelector('.section-head .tag');
-      setTag(headTag,'LOAD CLOSED',true);
+      const hasHistory=Boolean((load?.financialCloseHistory||[]).length);
+      setTag(headTag,hasHistory?'LOAD CLOSED':'LOAD CLOSED',true);
     }
   }
   function repairVisibleGate(){
@@ -100,9 +120,6 @@
     try{window.FLTUpdateOverallGate?.()}catch(_error){}
   }
 
-  // Repair only after meaningful DOM changes and disconnect while repairing.
-  // This prevents the hardfix from observing its own tag/status updates and
-  // causing the browser refresh / "page isn't responding" loop.
   let repairTimer=null;
   const observerOptions={subtree:true,childList:true};
   const observer=new MutationObserver(mutations=>{
@@ -130,5 +147,5 @@
       observer.observe(document.documentElement,observerOptions);
     }
   },0);
-  window.FLTV38TestGateIntegrity={migrateActualTripEvidence,correctionCapabilityPass,repairV36Gate,repairV37Gate,repairVisibleGate};
+  window.FLTV38TestGateIntegrity={migrateActualTripEvidence,restoreClosedHardfixReceipt,correctionCapabilityPass,repairV36Gate,repairV37Gate,repairVisibleGate};
 })();
