@@ -14,8 +14,7 @@
   function businessReady(){
     const profile=readJson('flt-v34-business-profile',null),classification=readJson('flt-v35-classification',null);
     if(!profile||!classification)return false;
-    const reviewed=['insurance','authority','equipment'].every(key=>['pending','verified'].includes(classification?.[key+'Status']));
-    return reviewed;
+    return ['insurance','authority','equipment'].every(key=>['pending','verified'].includes(classification?.[key+'Status']));
   }
   function fleetReady(){
     const fleet=readJson('flt-v35-fleet',{drivers:[],trucks:[],trailers:[]});
@@ -23,9 +22,22 @@
   }
   function prerequisite(){
     if(localStorage.getItem(dashboardKey)!=='true')return{view:'dashboard',label:'Dashboard'};
-    if(!businessReady())return{view:'business',label:'Business Setup'};
+    if(!businessReady())return{view:'business-setup',label:'Business Setup'};
     if(!fleetReady())return{view:'fleet',label:'Drivers & Equipment'};
     return null;
+  }
+  function hasRealLoad(){
+    try{
+      if(typeof store!=='undefined'&&Array.isArray(store.loads))return store.loads.some(load=>load&&load.id&&!String(load.id).startsWith('DEMO-'));
+    }catch(error){}
+    const loads=readJson('flt-v32-loads',[]);
+    return Array.isArray(loads)&&loads.some(load=>load&&load.id&&!String(load.id).startsWith('DEMO-'));
+  }
+  function blockedView(view){
+    const required=prerequisite();
+    if(required)return view!==required.view;
+    if(!hasRealLoad()&&['load','pickup','delivery','finance','test'].includes(view))return true;
+    return false;
   }
   function clearTraining(){
     document.getElementById('v38-hard-training-banner')?.remove();
@@ -34,13 +46,15 @@
   }
   function apply(){
     const required=prerequisite();
-    if(!required)return;
     nav.querySelectorAll('button[data-view]').forEach(button=>{
-      const isRequired=button.dataset.view===required.view;
+      const view=button.dataset.view;
+      const isRequired=Boolean(required&&view===required.view);
       button.classList.toggle('nav-required',isRequired);
-      if(!isRequired&&button.dataset.view!=='test')button.classList.add('nav-waiting');
+      button.classList.toggle('nav-waiting',Boolean(required)&&!isRequired);
+      button.setAttribute('aria-disabled',blockedView(view)?'true':'false');
     });
     clearTraining();
+    if(!required){document.getElementById('v38-prerequisite-banner')?.remove();return}
     const active=nav.querySelector('button.active')?.dataset.view||'';
     if(active===required.view){
       const root=document.getElementById(required.view);
@@ -51,19 +65,27 @@
       }
     }else document.getElementById('v38-prerequisite-banner')?.remove();
   }
-  function markDashboardReviewed(){
-    localStorage.setItem(dashboardKey,'true');
-    document.getElementById('v38-prerequisite-banner')?.remove();
-    setTimeout(apply,0);
-  }
+  function markDashboardReviewed(){localStorage.setItem(dashboardKey,'true');setTimeout(apply,0)}
 
-  nav.querySelector('[data-view="dashboard"]')?.addEventListener('click',markDashboardReviewed,true);
-  ['business-profile-form','v35-classification-form','fleet-driver-form','fleet-truck-form','fleet-trailer-form'].forEach(id=>document.getElementById(id)?.addEventListener('submit',()=>setTimeout(apply,80),true));
-  nav.addEventListener('click',()=>setTimeout(apply,60),true);
+  nav.addEventListener('click',event=>{
+    const button=event.target.closest('button[data-view]');if(!button)return;
+    const view=button.dataset.view;
+    if(blockedView(view)){
+      event.preventDefault();event.stopImmediatePropagation();
+      const required=prerequisite();
+      const target=required?.view||(!hasRealLoad()?'intelligence':null);
+      if(typeof toast==='function')toast(required?'Complete '+required.label+' before moving forward.':'Evaluate and accept a proposed load before opening downstream screens.');
+      if(target&&target!==view)setTimeout(()=>nav.querySelector(`[data-view="${target}"]`)?.click(),0);
+      return;
+    }
+    if(view==='dashboard')markDashboardReviewed();
+    setTimeout(apply,60);
+  },true);
+
+  ['business-profile-form','v35-classification-form','fleet-driver-form','fleet-truck-form','fleet-trailer-form'].forEach(id=>document.getElementById(id)?.addEventListener('submit',()=>setTimeout(apply,100),true));
   window.addEventListener('flt:modules-loaded',()=>setTimeout(apply,0));
-  const observer=new MutationObserver(()=>{if(prerequisite())setTimeout(apply,0)});
-  observer.observe(nav,{subtree:true,attributes:true,attributeFilter:['class']});
+  new MutationObserver(()=>setTimeout(apply,0)).observe(nav,{subtree:true,attributes:true,attributeFilter:['class']});
   setTimeout(apply,120);
 
-  window.FLTNavigationPrerequisitesHardfix={apply,prerequisite,businessReady,fleetReady,markDashboardReviewed};
+  window.FLTNavigationPrerequisitesHardfix={apply,prerequisite,businessReady,fleetReady,markDashboardReviewed,blockedView,hasRealLoad};
 })();
