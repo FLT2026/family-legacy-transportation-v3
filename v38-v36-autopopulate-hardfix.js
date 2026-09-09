@@ -14,16 +14,29 @@
     return saved.find(load=>load.id===selected)||saved.at(-1)||null;
   }
 
+  function deepFindTruck(value,loadId,seen=new Set()){
+    if(!value||typeof value!=='object'||seen.has(value))return null;
+    seen.add(value);
+    if(String(value.loadId||value.entityId||'')===String(loadId)&&value.truckId)return value;
+    if(Array.isArray(value)){
+      for(let i=value.length-1;i>=0;i--){const found=deepFindTruck(value[i],loadId,seen);if(found)return found}
+      return null;
+    }
+    const priority=['after','before','assignment','current','previous','lock','snapshot','record','data'];
+    for(const key of priority){if(key in value){const found=deepFindTruck(value[key],loadId,seen);if(found)return found}}
+    for(const [key,child] of Object.entries(value)){
+      if(priority.includes(key))continue;
+      const found=deepFindTruck(child,loadId,seen);if(found)return found;
+    }
+    return null;
+  }
+
   function getV38Assignment(loadId){
     const data=readJson('flt-v38-assignments',{assignments:[],assignmentAudit:[]});
     const assignments=Array.isArray(data?.assignments)?data.assignments:[];
     const active=[...assignments].reverse().find(item=>item.loadId===loadId&&item.status==='Verified / Locked');
     if(active)return active;
-    const audit=Array.isArray(data?.assignmentAudit)?data.assignmentAudit:[];
-    const event=[...audit].reverse().find(item=>item.loadId===loadId&&(item.after?.truckId||item.before?.truckId));
-    if(event?.after?.truckId)return event.after;
-    if(event?.before?.truckId)return event.before;
-    return [...assignments].reverse().find(item=>item.loadId===loadId&&item.truckId)||null;
+    return deepFindTruck(data,loadId);
   }
 
   function getLegacyAssignment(loadId){
@@ -31,24 +44,33 @@
     const locks=Array.isArray(fleet?.locks)?fleet.locks:[];
     const active=[...locks].reverse().find(lock=>lock.loadId===loadId&&lock.truckId);
     if(active)return active;
+    return deepFindTruck(fleet,loadId);
+  }
 
-    // Completed/cancelled loads can legitimately have no current lock. The
-    // immutable dispatch audit is the authoritative source for the truck that
-    // was actually assigned when the trip ran.
-    const audit=Array.isArray(fleet?.audit)?fleet.audit:[];
-    const event=[...audit].reverse().find(item=>item.entity==='trip_lock'&&item.entityId===loadId&&(item.after?.truckId||item.before?.truckId));
-    if(event?.after?.truckId)return event.after;
-    if(event?.before?.truckId)return event.before;
+  function getAnyStoredAssignment(loadId){
+    // Final recovery for completed loads: search Family Legacy local records for
+    // a load-specific object that already contains the historical truck ID.
+    // This handles older/newer audit shapes, including nested before/after arrays.
+    for(let i=localStorage.length-1;i>=0;i--){
+      const key=localStorage.key(i);
+      if(!key||!/^flt-/i.test(key))continue;
+      try{
+        const parsed=JSON.parse(localStorage.getItem(key)||'null');
+        const found=deepFindTruck(parsed,loadId);
+        if(found)return found;
+      }catch(error){}
+    }
     return null;
   }
 
   function resolveAssignment(loadId){
-    return getV38Assignment(loadId)||getLegacyAssignment(loadId);
+    return getV38Assignment(loadId)||getLegacyAssignment(loadId)||getAnyStoredAssignment(loadId);
   }
 
   function resolveTruckUnit(truckId,assignment){
     if(assignment?.truckUnit)return assignment.truckUnit;
     if(assignment?.truckSnapshot?.unit)return assignment.truckSnapshot.unit;
+    if(assignment?.unit)return assignment.unit;
     const fleet=readJson('flt-v35-fleet',{trucks:[]});
     const truck=(Array.isArray(fleet?.trucks)?fleet.trucks:[]).find(item=>String(item.id)===String(truckId));
     return truck?.unit||truck?.name||truckId||null;
@@ -79,7 +101,7 @@
     const assignment=resolveAssignment(load.id);
     let changed=false;
 
-    if(assignment?.truckId&&record.truckId!==assignment.truckId){record.truckId=assignment.truckId;changed=true}
+    if(assignment?.truckId&&record.truckId!==String(assignment.truckId)){record.truckId=String(assignment.truckId);changed=true}
     const unit=assignment?.truckId?resolveTruckUnit(assignment.truckId,assignment):record.truckUnit;
     if(unit&&record.truckUnit!==unit){record.truckUnit=unit;changed=true}
 
@@ -143,5 +165,5 @@
   window.addEventListener('flt:modules-loaded',()=>setTimeout(refreshV36,0),{once:true});
   setTimeout(refreshV36,0);
 
-  window.FLTV36AutopopulateHardfix={refresh:refreshV36,fillForm,enrichLatestSnapshot,getV38Assignment,getLegacyAssignment,resolveAssignment};
+  window.FLTV36AutopopulateHardfix={refresh:refreshV36,fillForm,enrichLatestSnapshot,getV38Assignment,getLegacyAssignment,getAnyStoredAssignment,resolveAssignment};
 })();
