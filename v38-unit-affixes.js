@@ -2,7 +2,7 @@
   if(typeof document==='undefined')return;
 
   const moneyName=/\b(rate|price|cost|pay|charge|charges|profit|revenue|amount|toll|tolls|permit|permits|reserve|reserves|walk-away|target|ask|invoice|payment|expense|expenses|balance|subtotal|total|tax|fee|fees|parking|lodging|meals|scales|washout|loading|unloading|securement|insurance|accessorial|accessorials)\b/i;
-  const excludeMoney=/\b(mpg|rpm|cpm|percent|percentage|%|weight|lb|gvwr|gcwr|gawr|payload)\b/i;
+  const excludeMoney=/\b(mpg|rpm|cpm|percent|percentage|%|weight|lb|gvwr|gcwr|gawr|payload|mile|miles|mileage)\b/i;
   const weightName=/\b(weight|payload|gvwr|gcwr|gawr)\b/i;
   const criticalEditableIds=new Set(['v35-offer','v35-loaded-miles','v35-cargo-weight','v35-deadhead-miles']);
 
