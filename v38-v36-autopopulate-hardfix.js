@@ -48,9 +48,6 @@
   }
 
   function getAnyStoredAssignment(loadId){
-    // Final recovery for completed loads: search Family Legacy local records for
-    // a load-specific object that already contains the historical truck ID.
-    // This handles older/newer audit shapes, including nested before/after arrays.
     for(let i=localStorage.length-1;i>=0;i--){
       const key=localStorage.key(i);
       if(!key||!/^flt-/i.test(key))continue;
@@ -91,6 +88,59 @@
     const entries=Array.isArray(load?.expenses)?load.expenses:[];
     const fuel=[...entries].reverse().find(item=>String(item.category||'').toLowerCase()==='fuel'&&num(item.amount)!==null);
     return fuel?num(fuel.amount):null;
+  }
+
+  function persistRepairAudit(loadId,before,after){
+    const fleet=readJson('flt-v35-fleet',{drivers:[],trucks:[],trailers:[],locks:[],audit:[]});
+    fleet.audit=Array.isArray(fleet.audit)?fleet.audit:[];
+    fleet.audit.push({
+      entity:'actual_trip',entityId:loadId,action:'authorized_change',
+      reason:'Repair missing historical truck link on saved V3.6 actual trip',
+      before,after,timestamp:new Date().toISOString()
+    });
+    localStorage.setItem('flt-v35-fleet',JSON.stringify(fleet));
+  }
+
+  function linkTruckToSnapshot(truckId){
+    const load=getLoad();
+    if(!load||!truckId)return false;
+    const records=Array.isArray(load.actualTripRecords)?load.actualTripRecords:[];
+    const record=records.at(-1);
+    if(!record)return false;
+    const fleet=readJson('flt-v35-fleet',{trucks:[]});
+    const truck=(Array.isArray(fleet?.trucks)?fleet.trucks:[]).find(item=>String(item.id)===String(truckId));
+    if(!truck)return false;
+    const before={truckId:record.truckId||null,truckUnit:record.truckUnit||null};
+    record.truckId=String(truck.id);
+    record.truckUnit=truck.unit||truck.name||String(truck.id);
+    persistRepairAudit(load.id,before,{truckId:record.truckId,truckUnit:record.truckUnit});
+    try{if(typeof persist==='function')persist()}catch(error){}
+    try{if(typeof renderFinance==='function')renderFinance()}catch(error){}
+    if(typeof toast==='function')toast('Dispatched truck linked to the saved V3.6 trip.');
+    return true;
+  }
+
+  function ensureTruckRepair(){
+    const load=getLoad(),form=$('v36-actual-form');
+    if(!load||!form)return;
+    const record=Array.isArray(load.actualTripRecords)?load.actualTripRecords.at(-1):null;
+    const existing=$('v36-truck-repair-field');
+    if(!record||record.truckId){existing?.remove();return}
+
+    const fleet=readJson('flt-v35-fleet',{trucks:[]});
+    const trucks=Array.isArray(fleet?.trucks)?fleet.trucks:[];
+    if(!trucks.length)return;
+    let host=existing;
+    if(!host){
+      host=document.createElement('div');host.id='v36-truck-repair-field';host.className='field full';
+      host.innerHTML='<label for="v36-truck-repair-select">Dispatched truck <span class="subtle">— required to complete V3.6</span></label><select id="v36-truck-repair-select"><option value="">Select the truck used for this trip</option></select><div class="subtle" style="margin-top:6px">Historical assignment data is missing for this saved trip. Selecting the actual truck repairs the link and records the change in audit history.</div>';
+      form.querySelector('.form-actions')?.insertAdjacentElement('beforebegin',host);
+      $('v36-truck-repair-select')?.addEventListener('change',event=>{if(event.target.value)linkTruckToSnapshot(event.target.value)});
+    }
+    const select=$('v36-truck-repair-select');
+    if(select){
+      select.innerHTML='<option value="">Select the truck used for this trip</option>'+trucks.map(truck=>'<option value="'+String(truck.id)+'">'+String(truck.unit||truck.name||truck.id)+'</option>').join('');
+    }
   }
 
   function enrichLatestSnapshot(load){
@@ -155,6 +205,7 @@
     const changed=enrichLatestSnapshot(load);
     if(changed){try{if(typeof renderFinance==='function')renderFinance()}catch(error){}}
     fillForm();
+    ensureTruckRepair();
   }
 
   function afterSubmit(){setTimeout(refreshV36,0)}
@@ -165,5 +216,5 @@
   window.addEventListener('flt:modules-loaded',()=>setTimeout(refreshV36,0),{once:true});
   setTimeout(refreshV36,0);
 
-  window.FLTV36AutopopulateHardfix={refresh:refreshV36,fillForm,enrichLatestSnapshot,getV38Assignment,getLegacyAssignment,getAnyStoredAssignment,resolveAssignment};
+  window.FLTV36AutopopulateHardfix={refresh:refreshV36,fillForm,enrichLatestSnapshot,getV38Assignment,getLegacyAssignment,getAnyStoredAssignment,resolveAssignment,linkTruckToSnapshot};
 })();
