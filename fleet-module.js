@@ -27,7 +27,8 @@
     'v38-process-training-hardfix.js?v=20260908a',
     'v38-proposed-load-layout-hardfix.js?v=20260908a',
     'v38-unit-affixes.js?v=20260908a',
-    'v38-v36-autopopulate-hardfix.js?v=20260908a'
+    'v38-v36-autopopulate-hardfix.js?v=20260908a',
+    'v38-navigation-prerequisites-hardfix.js?v=20260909a'
   ];
 
   // HARD DEV CACHE RULE:
