@@ -94,6 +94,7 @@
     .flt-unit-money>.flt-unit-affix{padding-left:11px}
     .flt-unit-weight>.flt-unit-affix,.flt-unit-miles>.flt-unit-affix,.flt-unit-gallons>.flt-unit-affix,.flt-unit-mpg>.flt-unit-affix,.flt-unit-percent>.flt-unit-affix{padding-right:11px}
     #fuel-total-miles::after{content:' mi';font-size:.62em;font-weight:800;letter-spacing:0;color:#45534c}
+    #v36-actual-mpg::after{content:' mpg';font-size:.48em;font-weight:800;letter-spacing:0;color:#45534c}
     #v38-core-load-decision-fields .flt-unit-input{min-width:126px}
     #v38-core-load-decision-fields #v35-offer{min-width:86px!important}
     @media(max-width:760px){#v38-core-load-decision-fields .flt-unit-input{min-width:0}}
