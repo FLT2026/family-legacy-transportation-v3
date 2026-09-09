@@ -2,6 +2,7 @@
   'use strict';
   if(window.FLTTestDataReset)return;
 
+  const freshStartKey='commercial-command-fresh-start';
   const isCommercialCommandKey=key=>/^flt-/i.test(String(key||''));
   const matchingKeys=storage=>{
     const keys=[];
@@ -19,10 +20,15 @@
     };
   }
 
+  function setFreshStartMode(){localStorage.setItem(freshStartKey,'1');}
+  function clearFreshStartMode(){localStorage.removeItem(freshStartKey);}
+  function isFreshStartMode(){return localStorage.getItem(freshStartKey)==='1';}
+
   function reset(){
     const before=preview();
     before.localStorage.forEach(key=>localStorage.removeItem(key));
     before.sessionStorage.forEach(key=>sessionStorage.removeItem(key));
+    setFreshStartMode();
     sessionStorage.setItem('flt-reset-complete','1');
     return before;
   }
@@ -43,6 +49,47 @@
     reset();
     location.reload();
     return true;
+  }
+
+  function showEmptyDashboard(){
+    const heroTitle=document.getElementById('hero-title');
+    const heroRoute=document.getElementById('hero-route');
+    if(heroTitle)heroTitle.textContent='Commercial Command is ready for a fresh test.';
+    if(heroRoute)heroRoute.textContent='Start with Business Setup, then Drivers & Equipment, then evaluate the first proposed load.';
+    const open=document.getElementById('open-loads');if(open)open.textContent='0';
+    const pending=document.getElementById('pending-count');if(pending)pending.textContent='0';
+    const table=document.getElementById('load-table');if(table)table.innerHTML='<tr><td colspan="4" class="empty">No loads yet. Complete setup, then evaluate your first proposed load.</td></tr>';
+    const ready=document.getElementById('health-ready');if(ready)ready.textContent='0% ready';
+    const completeness=document.getElementById('health-completeness');if(completeness)completeness.textContent='0%';
+    const documents=document.getElementById('health-documents');if(documents)documents.textContent='0 / 4';
+    const invoice=document.getElementById('health-invoice');if(invoice)invoice.textContent='Not started';
+    const bar=document.getElementById('health-bar');if(bar)bar.style.width='0%';
+  }
+
+  function applyFreshStart(){
+    if(!isFreshStartMode())return false;
+    try{
+      if(typeof store!=='undefined'&&Array.isArray(store.loads)){
+        const onlyDemo=store.loads.length===1&&String(store.loads[0]?.id||'')==='DEMO-000001';
+        if(onlyDemo||sessionStorage.getItem('flt-reset-complete')==='1'){
+          store.loads=[];
+          store.selectedId='';
+          localStorage.setItem('flt-v32-loads','[]');
+          localStorage.removeItem('flt-v32-loads-selected');
+        }
+      }
+    }catch(error){console.warn('Unable to clear seeded demo load after fresh reset.',error)}
+    showEmptyDashboard();
+    return true;
+  }
+
+  function watchForFirstRealLoad(){
+    const form=document.getElementById('load-form');
+    form?.addEventListener('submit',()=>setTimeout(()=>{
+      try{
+        if(typeof store!=='undefined'&&Array.isArray(store.loads)&&store.loads.some(load=>load&&load.id&&load.id!=='DEMO-000001'))clearFreshStartMode();
+      }catch(error){}
+    },50));
   }
 
   function mount(){
@@ -73,7 +120,9 @@
     document.getElementById('v38-reset-test-data')?.addEventListener('click',confirmReset);
   }
 
-  window.FLTTestDataReset={preview,reset,confirmReset,mount,isCommercialCommandKey};
+  window.FLTTestDataReset={preview,reset,confirmReset,mount,isCommercialCommandKey,applyFreshStart,isFreshStartMode,clearFreshStartMode};
+  applyFreshStart();
+  watchForFirstRealLoad();
   mount();
-  window.addEventListener('flt:modules-loaded',mount,{once:true});
+  window.addEventListener('flt:modules-loaded',()=>{applyFreshStart();mount();},{once:true});
 })();
