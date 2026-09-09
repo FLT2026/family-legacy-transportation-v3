@@ -5,22 +5,30 @@
   const $=id=>document.getElementById(id);
   const num=value=>{if(value===null||value===undefined||String(value).trim()==='')return null;const n=Number(value);return Number.isFinite(n)?n:null};
   const readJson=(key,fallback)=>{try{const parsed=JSON.parse(localStorage.getItem(key)||'null');return parsed??fallback}catch(error){return fallback}};
-  const writeJson=(key,value)=>localStorage.setItem(key,JSON.stringify(value));
 
   function getLoad(){
     try{if(typeof current==='function')return current()}catch(error){}
-    try{
-      const saved=readJson('flt-v32-loads',[]);
-      if(!Array.isArray(saved)||!saved.length)return null;
-      const selected=localStorage.getItem('flt-selected-load-id');
-      return saved.find(load=>load.id===selected)||saved.at(-1)||null;
-    }catch(error){return null}
+    const saved=readJson('flt-v32-loads',[]);
+    if(!Array.isArray(saved)||!saved.length)return null;
+    const selected=localStorage.getItem('flt-selected-load-id');
+    return saved.find(load=>load.id===selected)||saved.at(-1)||null;
   }
 
   function getV38Assignment(loadId){
-    const data=readJson('flt-v38-assignments',{assignments:[]});
+    const data=readJson('flt-v38-assignments',{assignments:[],assignmentAudit:[]});
     const assignments=Array.isArray(data?.assignments)?data.assignments:[];
-    return [...assignments].reverse().find(item=>item.loadId===loadId&&item.status==='Verified / Locked')||null;
+    const active=[...assignments].reverse().find(item=>item.loadId===loadId&&item.status==='Verified / Locked');
+    if(active)return active;
+
+    // Completed loads may no longer have an active assignment. In that case,
+    // recover the historically verified truck from the immutable V3.8 audit.
+    const audit=Array.isArray(data?.assignmentAudit)?data.assignmentAudit:[];
+    const event=[...audit].reverse().find(item=>item.loadId===loadId&&item.after?.truckId);
+    if(event?.after)return event.after;
+
+    // Final fallback: latest assignment record for this Load ID. This keeps
+    // completed-trip MPG linked to the truck that was actually assigned.
+    return [...assignments].reverse().find(item=>item.loadId===loadId&&item.truckId)||null;
   }
 
   function getLegacyAssignment(loadId){
@@ -33,7 +41,7 @@
     if(assignment?.truckUnit)return assignment.truckUnit;
     const fleet=readJson('flt-v35-fleet',{trucks:[]});
     const truck=(Array.isArray(fleet?.trucks)?fleet.trucks:[]).find(item=>String(item.id)===String(truckId));
-    return truck?.unit||truck?.name||null;
+    return truck?.unit||truck?.name||truckId||null;
   }
 
   function resolveEstimate(load){
@@ -60,11 +68,17 @@
     if(!record)return false;
     const assignment=getV38Assignment(load.id)||getLegacyAssignment(load.id);
     let changed=false;
+
     if(assignment?.truckId&&record.truckId!==assignment.truckId){record.truckId=assignment.truckId;changed=true}
     const unit=assignment?.truckId?resolveTruckUnit(assignment.truckId,assignment):record.truckUnit;
     if(unit&&record.truckUnit!==unit){record.truckUnit=unit;changed=true}
+
     const miles=num(record.actualMiles),gallons=num(record.actualGallons);
-    if(miles>0&&gallons>0){const mpg=miles/gallons;if(!Number.isFinite(record.actualMpg)||Math.abs(Number(record.actualMpg)-mpg)>0.0001){record.actualMpg=mpg;changed=true}}
+    if(miles>0&&gallons>0){
+      const mpg=miles/gallons;
+      if(!Number.isFinite(record.actualMpg)||Math.abs(Number(record.actualMpg)-mpg)>0.0001){record.actualMpg=mpg;changed=true}
+    }
+
     if(changed){
       load.actualMiles=miles??load.actualMiles;
       load.actualFuelGallons=gallons??load.actualFuelGallons;
@@ -107,21 +121,11 @@
     const load=getLoad();
     if(!load)return;
     const changed=enrichLatestSnapshot(load);
-    if(changed){
-      try{if(typeof renderFinance==='function')renderFinance()}catch(error){}
-    }
+    if(changed){try{if(typeof renderFinance==='function')renderFinance()}catch(error){}}
     fillForm();
   }
 
-  function afterSubmit(){
-    setTimeout(()=>{
-      const load=getLoad();
-      if(!load)return;
-      const changed=enrichLatestSnapshot(load);
-      if(changed){try{if(typeof renderFinance==='function')renderFinance()}catch(error){}}
-      fillForm();
-    },0);
-  }
+  function afterSubmit(){setTimeout(refreshV36,0)}
 
   const form=$('v36-actual-form');
   form?.addEventListener('submit',afterSubmit);
@@ -129,5 +133,5 @@
   window.addEventListener('flt:modules-loaded',()=>setTimeout(refreshV36,0),{once:true});
   setTimeout(refreshV36,0);
 
-  window.FLTV36AutopopulateHardfix={refresh:refreshV36,fillForm,enrichLatestSnapshot};
+  window.FLTV36AutopopulateHardfix={refresh:refreshV36,fillForm,enrichLatestSnapshot,getV38Assignment};
 })();
