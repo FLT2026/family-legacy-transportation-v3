@@ -27,9 +27,7 @@
     return null;
   }
   function hasRealLoad(){
-    try{
-      if(typeof store!=='undefined'&&Array.isArray(store.loads))return store.loads.some(load=>load&&load.id&&!String(load.id).startsWith('DEMO-'));
-    }catch(error){}
+    try{if(typeof store!=='undefined'&&Array.isArray(store.loads))return store.loads.some(load=>load&&load.id&&!String(load.id).startsWith('DEMO-'))}catch(error){}
     const loads=readJson('flt-v32-loads',[]);
     return Array.isArray(loads)&&loads.some(load=>load&&load.id&&!String(load.id).startsWith('DEMO-'));
   }
@@ -39,6 +37,7 @@
     if(!hasRealLoad()&&['load','pickup','delivery','finance','test'].includes(view))return true;
     return false;
   }
+  function targetView(){const required=prerequisite();return required?.view||(!hasRealLoad()?'intelligence':null)}
   function clearTraining(){
     document.getElementById('v38-hard-training-banner')?.remove();
     document.querySelectorAll('.v38-hard-field-next,.v38-hard-action-next').forEach(el=>el.classList.remove('v38-hard-field-next','v38-hard-action-next'));
@@ -47,15 +46,18 @@
   function apply(){
     const required=prerequisite();
     nav.querySelectorAll('button[data-view]').forEach(button=>{
-      const view=button.dataset.view;
-      const isRequired=Boolean(required&&view===required.view);
+      const view=button.dataset.view,isRequired=Boolean(required&&view===required.view);
       button.classList.toggle('nav-required',isRequired);
       button.classList.toggle('nav-waiting',Boolean(required)&&!isRequired);
       button.setAttribute('aria-disabled',blockedView(view)?'true':'false');
     });
     clearTraining();
-    if(!required){document.getElementById('v38-prerequisite-banner')?.remove();return}
     const active=nav.querySelector('button.active')?.dataset.view||'';
+    if(active&&blockedView(active)){
+      const target=targetView();
+      if(target&&target!==active){setTimeout(()=>nav.querySelector(`[data-view="${target}"]`)?.click(),0);return}
+    }
+    if(!required){document.getElementById('v38-prerequisite-banner')?.remove();return}
     if(active===required.view){
       const root=document.getElementById(required.view);
       if(root&&!document.getElementById('v38-prerequisite-banner')){
@@ -72,8 +74,7 @@
     const view=button.dataset.view;
     if(blockedView(view)){
       event.preventDefault();event.stopImmediatePropagation();
-      const required=prerequisite();
-      const target=required?.view||(!hasRealLoad()?'intelligence':null);
+      const target=targetView(),required=prerequisite();
       if(typeof toast==='function')toast(required?'Complete '+required.label+' before moving forward.':'Evaluate and accept a proposed load before opening downstream screens.');
       if(target&&target!==view)setTimeout(()=>nav.querySelector(`[data-view="${target}"]`)?.click(),0);
       return;
