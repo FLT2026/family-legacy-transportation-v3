@@ -20,10 +20,17 @@
     const fleet=readJson('flt-v35-fleet',{drivers:[],trucks:[],trailers:[]});
     return Boolean((fleet.drivers||[]).some(driverReady)&&(fleet.trucks||[]).some(truckReady)&&(fleet.trailers||[]).some(trailerReady));
   }
+  function acceptedProposalReady(){
+    const p=readJson('flt-v38-accepted-proposal',null);
+    return Boolean(p&&/^\d{5}$/.test(String(p.pickupZip||''))&&/^\d{5}$/.test(String(p.deliveryZip||''))&&Number(p.offer)>0&&Number(p.loadedMiles)>=0&&Number(p.deadheadMiles)>=0);
+  }
+  function acceptedDecision(){return readJson('flt-v35-last-decision',null)?.decision==='ACCEPT LOAD'}
   function prerequisite(){
     if(localStorage.getItem(dashboardKey)!=='true')return{view:'dashboard',label:'Dashboard'};
     if(!businessReady())return{view:'business-setup',label:'Business Setup'};
     if(!fleetReady())return{view:'fleet',label:'Drivers & Equipment'};
+    if(!acceptedDecision())return{view:'intelligence',label:'Evaluate Proposed Load'};
+    if(!hasRealLoad())return{view:'load',label:'Complete Accepted Load'};
     return null;
   }
   function hasRealLoad(){
@@ -32,9 +39,9 @@
     return Array.isArray(loads)&&loads.some(load=>load&&load.id&&!String(load.id).startsWith('DEMO-'));
   }
   function blockedView(view){
-    // Navigation should guide, not trap. Readiness is enforced by the actual workflow gates.
-    // Users must always be able to move among setup, fleet, dispatch, and proposed-load screens.
+    // Navigation guides but does not trap setup/fleet/dispatch/evaluation work.
     if(['dashboard','business-setup','fleet','dispatch-control','intelligence'].includes(view))return false;
+    if(view==='load'&&(acceptedProposalReady()||acceptedDecision()))return false;
     if(!hasRealLoad()&&['load','pickup','delivery','finance','test'].includes(view))return true;
     return false;
   }
@@ -44,8 +51,24 @@
     document.querySelectorAll('.v38-hard-field-next,.v38-hard-action-next').forEach(el=>el.classList.remove('v38-hard-field-next','v38-hard-action-next'));
     document.querySelectorAll('.v38-hard-field-wrap').forEach(el=>el.classList.remove('v38-hard-field-wrap'));
   }
+  function moveIntegrityBadge(){
+    document.querySelectorAll('body *').forEach(el=>{
+      if(el.children.length===0&&/V3\.8\s*[·-]\s*OPERATIONAL INTEGRITY/i.test((el.textContent||'').trim())){
+        el.style.position='fixed';
+        el.style.top='10px';
+        el.style.right='12px';
+        el.style.bottom='auto';
+        el.style.zIndex='20';
+        el.style.pointerEvents='none';
+        el.style.opacity='.72';
+        el.style.fontSize='10px';
+      }
+    });
+  }
   function apply(){
     const required=prerequisite();
+    // Remove stale NEXT markers created by older workflow logic before applying the current one.
+    nav.querySelectorAll('button[data-view]').forEach(button=>button.classList.remove('nav-required','nav-waiting'));
     nav.querySelectorAll('button[data-view]').forEach(button=>{
       const view=button.dataset.view,isRequired=Boolean(required&&view===required.view);
       button.classList.toggle('nav-required',isRequired);
@@ -53,6 +76,7 @@
       button.setAttribute('aria-disabled',blockedView(view)?'true':'false');
     });
     clearTraining();
+    moveIntegrityBadge();
     const active=nav.querySelector('button.active')?.dataset.view||'';
     if(active&&blockedView(active)){
       const target=targetView();
@@ -63,7 +87,7 @@
       const root=document.getElementById(required.view);
       if(root&&!document.getElementById('v38-prerequisite-banner')){
         const banner=document.createElement('div');banner.id='v38-prerequisite-banner';banner.className='panel next-action';banner.style.marginBottom='14px';
-        banner.innerHTML='<div><div class="eyebrow">Current required step</div><h2>'+required.label+'</h2><p class="subtle" style="margin-top:5px">Complete this section to advance the highlighted workflow. You may still open setup, fleet, dispatch, and proposed-load screens for review.</p></div>';
+        banner.innerHTML='<div><div class="eyebrow">Current required step</div><h2>'+required.label+'</h2><p class="subtle" style="margin-top:5px">Complete this section to advance the highlighted workflow. Required unfinished fields remain highlighted until completed.</p></div>';
         root.insertBefore(banner,root.firstElementChild);
       }
     }else document.getElementById('v38-prerequisite-banner')?.remove();
@@ -75,17 +99,17 @@
     const view=button.dataset.view;
     if(blockedView(view)){
       event.preventDefault();event.stopImmediatePropagation();
-      if(typeof toast==='function')toast('Evaluate and accept a proposed load before opening downstream load-completion screens.');
+      if(typeof toast==='function')toast('Finish the current required load step before opening downstream screens.');
       return;
     }
     if(view==='dashboard')markDashboardReviewed();
     setTimeout(apply,60);
   },true);
 
-  ['business-profile-form','v35-classification-form','fleet-driver-form','fleet-truck-form','fleet-trailer-form'].forEach(id=>document.getElementById(id)?.addEventListener('submit',()=>setTimeout(apply,100),true));
+  ['business-profile-form','v35-classification-form','fleet-driver-form','fleet-truck-form','fleet-trailer-form','v35-decision-form','load-form'].forEach(id=>document.getElementById(id)?.addEventListener('submit',()=>setTimeout(apply,140),true));
   window.addEventListener('flt:modules-loaded',()=>setTimeout(apply,0));
   new MutationObserver(()=>setTimeout(apply,0)).observe(nav,{subtree:true,attributes:true,attributeFilter:['class']});
   setTimeout(apply,120);
 
-  window.FLTNavigationPrerequisitesHardfix={apply,prerequisite,businessReady,fleetReady,markDashboardReviewed,blockedView,hasRealLoad};
+  window.FLTNavigationPrerequisitesHardfix={apply,prerequisite,businessReady,fleetReady,markDashboardReviewed,blockedView,hasRealLoad,acceptedProposalReady,acceptedDecision,moveIntegrityBadge};
 })();
