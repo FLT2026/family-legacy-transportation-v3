@@ -20,6 +20,7 @@
     'v38-owner-operator-dispatch-hardfix.js?v=20260910a',
     'v38-weight-equipment-ui.js?v=20260908b',
     'v38-document-compliance-ui.js?v=20260908b',
+    'v38-dispatch-control-page.js?v=20260910a',
     'v38-pickup-delivery-ui.js?v=20260908b',
     'v38-finance-pod-compat-hardfix.js?v=20260908a',
     'v38-test-gate-integrity-hardfix.js?v=20260908a',
