@@ -3,6 +3,7 @@
   if (window.FLTOwnerOperatorDispatchHardfix) return;
 
   const ownerReason = 'Owner-operator self-dispatch';
+  let relabelQueued = false;
 
   function addOwnerOperatorReason() {
     const api = window.FLTAssignmentIntegrity;
@@ -43,16 +44,37 @@
     }
   }
 
+  function relabelAuditTrail() {
+    document.querySelectorAll('h1,h2,h3').forEach(heading => {
+      if ((heading.textContent || '').trim() === 'Dispatch Audit Trail') {
+        heading.textContent = 'Owner Operator Audit Trail';
+      }
+    });
+  }
+
   function apply() {
     addOwnerOperatorReason();
     relabelDispatchControl();
+    relabelAuditTrail();
   }
 
-  window.addEventListener('flt:modules-loaded', () => setTimeout(apply, 0));
-  document.getElementById('nav')?.addEventListener('click', event => {
-    if (event.target.closest('[data-view="fleet"],[data-view-jump="fleet"]')) setTimeout(apply, 80);
-  }, true);
+  function queueApply() {
+    if (relabelQueued) return;
+    relabelQueued = true;
+    setTimeout(() => {
+      relabelQueued = false;
+      apply();
+    }, 0);
+  }
+
+  window.addEventListener('flt:modules-loaded', queueApply);
+  document.getElementById('nav')?.addEventListener('click', queueApply, true);
+
+  // Fleet content is re-rendered after saves/updates. Keep the owner-operator
+  // terminology applied even when the audit trail is recreated later.
+  const fleetRoot = document.getElementById('fleet') || document.body;
+  new MutationObserver(queueApply).observe(fleetRoot, { childList: true, subtree: true });
 
   apply();
-  window.FLTOwnerOperatorDispatchHardfix = { apply, ownerReason };
+  window.FLTOwnerOperatorDispatchHardfix = { apply, ownerReason, relabelAuditTrail };
 })();
