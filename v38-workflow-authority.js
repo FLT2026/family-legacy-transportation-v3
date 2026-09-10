@@ -38,10 +38,21 @@
     try{if(typeof store!=='undefined'&&Array.isArray(store.loads))return store.loads.some(load=>load&&load.id&&!String(load.id).startsWith('DEMO-'))}catch(error){}
     const loads=read('flt-v32-loads',[]);return Array.isArray(loads)&&loads.some(load=>load&&load.id&&!String(load.id).startsWith('DEMO-'));
   }
+  function allLoads(){
+    try{if(typeof store!=='undefined'&&Array.isArray(store.loads))return store.loads}catch(error){}
+    const loads=read('flt-v32-loads',[]);return Array.isArray(loads)?loads:[];
+  }
   function selectedLoad(){
     try{if(typeof current==='function'){const load=current();if(load)return load}}catch(error){}
-    const loads=read('flt-v32-loads',[]),selected=localStorage.getItem('flt-v32-loads-selected');
-    return (Array.isArray(loads)?loads:[]).find(x=>x.id===selected)||(Array.isArray(loads)?loads.at(-1):null);
+    const loads=allLoads();
+    const selectedIds=[localStorage.getItem('flt-selected-load-id'),localStorage.getItem('flt-v32-loads-selected')].filter(Boolean);
+    for(const selected of selectedIds){const found=loads.find(x=>x?.id===selected);if(found)return found}
+    const real=loads.filter(x=>x?.id&&!String(x.id).startsWith('DEMO-'));
+    return real.at(-1)||loads.at(-1)||null;
+  }
+  function financiallyClosed(load){
+    const status=String(load?.financialClose?.status||'').trim().toLowerCase();
+    return status==='closed'&&Boolean(load?.financialClose?.snapshot);
   }
   function nextView(){
     if(!businessReady())return'business-setup';
@@ -49,9 +60,11 @@
     if(!acceptedDecision())return'intelligence';
     if(!hasRealLoad())return'load';
     const load=selectedLoad();
+    // A valid financial close proves all earlier load lifecycle gates have passed.
+    // Check it first so a stale pickup/delivery rendering state can never leave NEXT on Finance.
+    if(financiallyClosed(load))return'test';
     if(load&&!load.pickupProof?.signature)return'pickup';
     if(load?.pickupProof?.signature&&!load.deliveryProof?.signature)return'delivery';
-    if(load?.financialClose?.status==='Closed')return'test';
     if(load?.deliveryProof?.signature)return'finance';
     return null;
   }
@@ -120,6 +133,9 @@
   window.addEventListener('storage',schedule);window.addEventListener('flt:modules-loaded',schedule);window.addEventListener('flt:workflow-state-changed',schedule);window.addEventListener('visibilitychange',()=>{if(!document.hidden)schedule()});
   new MutationObserver(schedule).observe(nav,{subtree:true,attributes:true,attributeFilter:['class','data-v38-hard-next']});
   const dashboard=document.getElementById('dashboard');if(dashboard)new MutationObserver(schedule).observe(dashboard,{subtree:true,childList:true,characterData:true});
+  const finance=document.getElementById('finance');if(finance)new MutationObserver(schedule).observe(finance,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:['class']});
+  // Lightweight safety reconciliation prevents stale NEXT state after any module mutates load state without emitting an event.
+  setInterval(()=>{const expected=nextView(),marked=nav.querySelector('button[data-v38-authoritative-next="true"]')?.dataset.view||null;if(expected!==marked)schedule()},1000);
   apply();setTimeout(apply,150);setTimeout(apply,500);setTimeout(apply,1200);
-  window.FLTWorkflowAuthority={apply,nextView,businessReady,fleetReady,acceptedDecision,acceptedProposalReady,hasRealLoad,selectedLoad,syncDashboardCallToAction};
+  window.FLTWorkflowAuthority={apply,nextView,businessReady,fleetReady,acceptedDecision,acceptedProposalReady,hasRealLoad,selectedLoad,financiallyClosed,syncDashboardCallToAction};
 })();
