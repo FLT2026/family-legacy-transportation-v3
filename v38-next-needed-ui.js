@@ -14,14 +14,22 @@
   const isVisible=el=>Boolean(el&&el.offsetParent!==null);
   const pendingText=text=>/^(PENDING|INCOMPLETE|MORE INFORMATION REQUIRED|DO NOT DISPATCH)$/i.test(String(text||'').trim());
 
-  function rowFor(el,root){
-    const preferred=el.closest('.metric-row,tr,.panel,.choice,li,.notice,.section-head');
-    if(preferred&&root.contains(preferred))return preferred;
+  function actionableRow(el,root){
+    const granular=el.closest('.metric-row,tr,.choice,li,.notice');
+    if(granular&&root.contains(granular))return granular;
+
     let node=el.parentElement;
     while(node&&node!==root){
-      if(node.children.length>1)return node;
+      if(node.classList?.contains('section-head'))return null;
+      if(node.children.length>1&&!node.classList?.contains('panel'))return node;
       node=node.parentElement;
     }
+    return null;
+  }
+
+  function summaryRow(el,root){
+    const preferred=el.closest('.panel,.section-head');
+    if(preferred&&root.contains(preferred))return preferred;
     return el.parentElement||el;
   }
 
@@ -29,10 +37,24 @@
     clear();
     const active=document.querySelector('.view.active');
     if(!active)return;
+
     const candidates=[...active.querySelectorAll('*')].filter(el=>isVisible(el)&&el.children.length===0&&pendingText(el.textContent));
     if(!candidates.length)return;
-    const target=rowFor(candidates[0],active);
-    if(target)target.classList.add('v38-next-needed');
+
+    // First choice: the first real requirement row that is still pending.
+    // This prevents an overall INCOMPLETE badge in a section header from
+    // stealing the highlight from the actual information the operator needs.
+    for(const candidate of candidates){
+      const target=actionableRow(candidate,active);
+      if(target){
+        target.classList.add('v38-next-needed');
+        return;
+      }
+    }
+
+    // Fallback only when the page has no more specific actionable row.
+    const fallback=summaryRow(candidates[0],active);
+    if(fallback)fallback.classList.add('v38-next-needed');
   }
 
   let timer=null;
