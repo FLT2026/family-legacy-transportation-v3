@@ -60,8 +60,6 @@
     if(!acceptedDecision())return'intelligence';
     if(!hasRealLoad())return'load';
     const load=selectedLoad();
-    // A valid financial close proves all earlier load lifecycle gates have passed.
-    // Check it first so a stale pickup/delivery rendering state can never leave NEXT on Finance.
     if(financiallyClosed(load))return'test';
     if(load&&!load.pickupProof?.signature)return'pickup';
     if(load?.pickupProof?.signature&&!load.deliveryProof?.signature)return'delivery';
@@ -83,7 +81,11 @@
 
   const nextLabels={'business-setup':'Business Setup',fleet:'Drivers & Equipment',intelligence:'Evaluate Proposed Load',load:'Complete Accepted Load',pickup:'Pickup + E-Signature',delivery:'Delivery + E-Signature',finance:'Finance & Ledger',test:'V3.8 Test Gate'};
 
-  function hideIntegrityBadge(){document.querySelectorAll('body *').forEach(el=>{if(el.children.length===0&&/V3\.8\s*[·-]\s*OPERATIONAL INTEGRITY/i.test((el.textContent||'').trim()))el.style.display='none'})}
+  function hideIntegrityBadge(){
+    document.querySelectorAll('body *').forEach(el=>{
+      if(el.children.length===0&&/V3\.8\s*[·-]\s*OPERATIONAL INTEGRITY/i.test((el.textContent||'').trim())&&el.style.display!=='none')el.style.display='none';
+    });
+  }
   function clearLegacyNext(){nav.querySelectorAll('button[data-view]').forEach(button=>{button.classList.remove('nav-required','v38-nav-next');button.removeAttribute('data-v38-hard-next');button.removeAttribute('data-v38-authoritative-next')})}
   function applyNav(){clearLegacyNext();const view=nextView(),button=view?nav.querySelector(`[data-view="${view}"]`):null;if(button)button.setAttribute('data-v38-authoritative-next','true')}
   function syncDashboardCallToAction(){
@@ -95,9 +97,19 @@
     const button=buttons.find(el=>/Start Business Setup|Continue to|Start Drivers|Start .*Setup/i.test((el.textContent||'').trim()))||hero?.querySelector('button,.btn');
     const title=hero?.querySelector('h2');
     const detail=hero?.querySelector('.subtle,p');
-    if(button){button.textContent='Continue to '+label+' →';button.dataset.viewJump=view;button.onclick=event=>{event.preventDefault();nav.querySelector(`[data-view="${view}"]`)?.click()}}
-    if(title)title.textContent='Commercial Command is ready for the next step.';
-    if(detail)detail.textContent='Next required step: '+label+'. Commercial Command will keep one NEXT marker on the correct workflow step.';
+    const buttonText='Continue to '+label+' →';
+    const titleText='Commercial Command is ready for the next step.';
+    const detailText='Next required step: '+label+'. Commercial Command will keep one NEXT marker on the correct workflow step.';
+    if(button){
+      if(button.textContent!==buttonText)button.textContent=buttonText;
+      if(button.dataset.viewJump!==view)button.dataset.viewJump=view;
+      if(button.dataset.v38AuthorityBound!==view){
+        button.dataset.v38AuthorityBound=view;
+        button.onclick=event=>{event.preventDefault();nav.querySelector(`[data-view="${view}"]`)?.click()};
+      }
+    }
+    if(title&&title.textContent!==titleText)title.textContent=titleText;
+    if(detail&&detail.textContent!==detailText)detail.textContent=detailText;
   }
 
   function clearFieldGuide(){document.querySelectorAll('.v38-authority-missing').forEach(el=>el.classList.remove('v38-authority-missing'));document.querySelectorAll('.v38-authority-wrap').forEach(el=>el.classList.remove('v38-authority-wrap'))}
@@ -132,9 +144,7 @@
   document.addEventListener('input',schedule,true);document.addEventListener('change',schedule,true);document.addEventListener('submit',()=>setTimeout(schedule,80),true);document.addEventListener('click',()=>setTimeout(schedule,80),true);nav.addEventListener('click',()=>setTimeout(schedule,60),true);
   window.addEventListener('storage',schedule);window.addEventListener('flt:modules-loaded',schedule);window.addEventListener('flt:workflow-state-changed',schedule);window.addEventListener('visibilitychange',()=>{if(!document.hidden)schedule()});
   new MutationObserver(schedule).observe(nav,{subtree:true,attributes:true,attributeFilter:['class','data-v38-hard-next']});
-  const dashboard=document.getElementById('dashboard');if(dashboard)new MutationObserver(schedule).observe(dashboard,{subtree:true,childList:true,characterData:true});
   const finance=document.getElementById('finance');if(finance)new MutationObserver(schedule).observe(finance,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:['class']});
-  // Lightweight safety reconciliation prevents stale NEXT state after any module mutates load state without emitting an event.
   setInterval(()=>{const expected=nextView(),marked=nav.querySelector('button[data-v38-authoritative-next="true"]')?.dataset.view||null;if(expected!==marked)schedule()},1000);
   apply();setTimeout(apply,150);setTimeout(apply,500);setTimeout(apply,1200);
   window.FLTWorkflowAuthority={apply,nextView,businessReady,fleetReady,acceptedDecision,acceptedProposalReady,hasRealLoad,selectedLoad,financiallyClosed,syncDashboardCallToAction};
