@@ -139,13 +139,26 @@
   nav.addEventListener('click',event=>{const button=event.target.closest('button[data-view="load"]');if(!button||acceptedProposalReady())return;const proposal=proposalFromDecisionScreen();if(proposal){write('flt-v38-accepted-proposal',proposal);setTimeout(()=>window.FLTFastLoadWorkflow&&document.getElementById('load-form')&&window.dispatchEvent(new Event('flt:workflow-state-changed')),0)}},true);
 
   let scheduled=false,applying=false;
-  function apply(){if(applying)return;applying=true;try{hideIntegrityBadge();applyNav();syncDashboardCallToAction();applyFieldGuide()}finally{applying=false}}
-  function schedule(){if(scheduled)return;scheduled=true;setTimeout(()=>{scheduled=false;apply()},30)}
-  document.addEventListener('input',schedule,true);document.addEventListener('change',schedule,true);document.addEventListener('submit',()=>setTimeout(schedule,80),true);document.addEventListener('click',()=>setTimeout(schedule,80),true);nav.addEventListener('click',()=>setTimeout(schedule,60),true);
-  window.addEventListener('storage',schedule);window.addEventListener('flt:modules-loaded',schedule);window.addEventListener('flt:workflow-state-changed',schedule);window.addEventListener('visibilitychange',()=>{if(!document.hidden)schedule()});
-  new MutationObserver(schedule).observe(nav,{subtree:true,attributes:true,attributeFilter:['class','data-v38-hard-next']});
-  const finance=document.getElementById('finance');if(finance)new MutationObserver(schedule).observe(finance,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:['class']});
-  setInterval(()=>{const expected=nextView(),marked=nav.querySelector('button[data-v38-authoritative-next="true"]')?.dataset.view||null;if(expected!==marked)schedule()},1000);
-  apply();setTimeout(apply,150);setTimeout(apply,500);setTimeout(apply,1200);
+  function apply(){if(applying)return;applying=true;try{applyNav();syncDashboardCallToAction();applyFieldGuide()}finally{applying=false}}
+  function schedule(delay=30){if(scheduled)return;scheduled=true;setTimeout(()=>{scheduled=false;apply()},delay)}
+
+  // Event-driven only: do not observe/rewrite the nav or Finance DOM continuously.
+  // The previous MutationObservers + interval formed a feedback loop with legacy navigation code,
+  // repeatedly changing the nav layout and making its scrollbar flash/jump.
+  document.addEventListener('input',()=>schedule(30),true);
+  document.addEventListener('change',()=>schedule(30),true);
+  document.addEventListener('submit',()=>schedule(100),true);
+  document.addEventListener('click',()=>schedule(100),true);
+  window.addEventListener('storage',()=>schedule(50));
+  window.addEventListener('flt:modules-loaded',()=>schedule(50));
+  window.addEventListener('flt:workflow-state-changed',()=>schedule(50));
+  window.addEventListener('visibilitychange',()=>{if(!document.hidden)schedule(50)});
+
+  // Hide the floating integrity badge once after modules settle; never poll it.
+  hideIntegrityBadge();
+  setTimeout(hideIntegrityBadge,250);
+  apply();
+  setTimeout(apply,200);
+
   window.FLTWorkflowAuthority={apply,nextView,businessReady,fleetReady,acceptedDecision,acceptedProposalReady,hasRealLoad,selectedLoad,financiallyClosed,syncDashboardCallToAction};
 })();
