@@ -32,8 +32,9 @@
     return Array.isArray(loads)&&loads.some(load=>load&&load.id&&!String(load.id).startsWith('DEMO-'));
   }
   function blockedView(view){
-    const required=prerequisite();
-    if(required)return view!==required.view;
+    // Navigation should guide, not trap. Readiness is enforced by the actual workflow gates.
+    // Users must always be able to move among setup, fleet, dispatch, and proposed-load screens.
+    if(['dashboard','business-setup','fleet','dispatch-control','intelligence'].includes(view))return false;
     if(!hasRealLoad()&&['load','pickup','delivery','finance','test'].includes(view))return true;
     return false;
   }
@@ -62,7 +63,7 @@
       const root=document.getElementById(required.view);
       if(root&&!document.getElementById('v38-prerequisite-banner')){
         const banner=document.createElement('div');banner.id='v38-prerequisite-banner';banner.className='panel next-action';banner.style.marginBottom='14px';
-        banner.innerHTML='<div><div class="eyebrow">Current required step</div><h2>'+required.label+'</h2><p class="subtle" style="margin-top:5px">Complete this section before Commercial Command advances the highlighted workflow to the next step.</p></div>';
+        banner.innerHTML='<div><div class="eyebrow">Current required step</div><h2>'+required.label+'</h2><p class="subtle" style="margin-top:5px">Complete this section to advance the highlighted workflow. You may still open setup, fleet, dispatch, and proposed-load screens for review.</p></div>';
         root.insertBefore(banner,root.firstElementChild);
       }
     }else document.getElementById('v38-prerequisite-banner')?.remove();
@@ -74,9 +75,7 @@
     const view=button.dataset.view;
     if(blockedView(view)){
       event.preventDefault();event.stopImmediatePropagation();
-      const target=targetView(),required=prerequisite();
-      if(typeof toast==='function')toast(required?'Complete '+required.label+' before moving forward.':'Evaluate and accept a proposed load before opening downstream screens.');
-      if(target&&target!==view)setTimeout(()=>nav.querySelector(`[data-view="${target}"]`)?.click(),0);
+      if(typeof toast==='function')toast('Evaluate and accept a proposed load before opening downstream load-completion screens.');
       return;
     }
     if(view==='dashboard')markDashboardReviewed();
