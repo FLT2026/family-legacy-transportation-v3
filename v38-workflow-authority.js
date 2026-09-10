@@ -19,6 +19,16 @@
   }
   function fleetReady(){
     const fleet=read('flt-v35-fleet',{drivers:[],trucks:[],trailers:[]});
+    const current=read('flt-v38-current-working-rig',{});
+    const currentDriver=(fleet.drivers||[]).find(item=>item.id===current.driverId&&item.status==='active');
+    const currentTruck=(fleet.trucks||[]).find(item=>item.id===current.truckId&&item.status==='active');
+    const currentTrailer=(fleet.trailers||[]).find(item=>item.id===current.trailerId&&item.status==='active');
+    if(currentDriver&&currentTruck&&currentTrailer)return true;
+    const regular=read('flt-v36-regular-rig',read('flt-v35-default-fleet-selection',{}))||{};
+    const regularDriver=(fleet.drivers||[]).find(item=>item.id===regular.driverId&&item.status==='active');
+    const regularTruck=(fleet.trucks||[]).find(item=>item.id===regular.truckId&&item.status==='active');
+    const regularTrailer=(fleet.trailers||[]).find(item=>item.id===regular.trailerId&&item.status==='active');
+    if(regularDriver&&regularTruck&&regularTrailer)return true;
     return Boolean((fleet.drivers||[]).some(driverReady)&&(fleet.trucks||[]).some(truckReady)&&(fleet.trailers||[]).some(trailerReady));
   }
   function acceptedDecision(){return read('flt-v35-last-decision',null)?.decision==='ACCEPT LOAD'}
