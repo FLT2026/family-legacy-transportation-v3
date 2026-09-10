@@ -53,80 +53,40 @@
   `;
   document.head.appendChild(style);
 
-  const nextLabels={
-    'business-setup':'Business Setup',
-    fleet:'Drivers & Equipment',
-    intelligence:'Evaluate Proposed Load',
-    load:'Complete Accepted Load',
-    pickup:'Pickup + E-Signature',
-    delivery:'Delivery + E-Signature',
-    finance:'Finance & Ledger'
-  };
+  const nextLabels={'business-setup':'Business Setup',fleet:'Drivers & Equipment',intelligence:'Evaluate Proposed Load',load:'Complete Accepted Load',pickup:'Pickup + E-Signature',delivery:'Delivery + E-Signature',finance:'Finance & Ledger'};
 
-  function hideIntegrityBadge(){
-    document.querySelectorAll('body *').forEach(el=>{
-      if(el.children.length===0&&/V3\.8\s*[·-]\s*OPERATIONAL INTEGRITY/i.test((el.textContent||'').trim()))el.style.display='none';
-    });
-  }
-  function clearLegacyNext(){
-    nav.querySelectorAll('button[data-view]').forEach(button=>{
-      button.classList.remove('nav-required','v38-nav-next');
-      button.removeAttribute('data-v38-hard-next');
-      button.removeAttribute('data-v38-authoritative-next');
-    });
-  }
-  function applyNav(){
-    clearLegacyNext();
-    const view=nextView(),button=view?nav.querySelector(`[data-view="${view}"]`):null;
-    if(button)button.setAttribute('data-v38-authoritative-next','true');
-  }
+  function hideIntegrityBadge(){document.querySelectorAll('body *').forEach(el=>{if(el.children.length===0&&/V3\.8\s*[·-]\s*OPERATIONAL INTEGRITY/i.test((el.textContent||'').trim()))el.style.display='none'})}
+  function clearLegacyNext(){nav.querySelectorAll('button[data-view]').forEach(button=>{button.classList.remove('nav-required','v38-nav-next');button.removeAttribute('data-v38-hard-next');button.removeAttribute('data-v38-authoritative-next')})}
+  function applyNav(){clearLegacyNext();const view=nextView(),button=view?nav.querySelector(`[data-view="${view}"]`):null;if(button)button.setAttribute('data-v38-authoritative-next','true')}
   function syncDashboardCallToAction(){
     const view=nextView();if(!view)return;
     const label=nextLabels[view]||'Continue';
-    const hero=document.querySelector('#dashboard .hero');
-    const button=hero?.querySelector('[data-view-jump],button');
+    const dashboard=document.getElementById('dashboard');if(!dashboard)return;
+    const hero=dashboard.querySelector('.hero');
+    const buttons=[...dashboard.querySelectorAll('button,.btn')];
+    const button=buttons.find(el=>/Start Business Setup|Continue to|Start Drivers|Start .*Setup/i.test((el.textContent||'').trim()))||hero?.querySelector('button,.btn');
     const title=hero?.querySelector('h2');
-    const detail=hero?.querySelector('.subtle');
-    if(button){button.textContent='Continue to '+label+' →';button.dataset.viewJump=view;}
-    if(title&&localStorage.getItem('commercial-command-fresh-start')==='1')title.textContent='Commercial Command is ready for a fresh test.';
-    if(detail&&localStorage.getItem('commercial-command-fresh-start')==='1')detail.textContent='Next required step: '+label+'. Commercial Command will keep one NEXT marker on the correct workflow step.';
+    const detail=hero?.querySelector('.subtle,p');
+    if(button){button.textContent='Continue to '+label+' →';button.dataset.viewJump=view;button.onclick=event=>{event.preventDefault();nav.querySelector(`[data-view="${view}"]`)?.click()}}
+    if(title)title.textContent='Commercial Command is ready for the next step.';
+    if(detail)detail.textContent='Next required step: '+label+'. Commercial Command will keep one NEXT marker on the correct workflow step.';
   }
 
-  function clearFieldGuide(){
-    document.querySelectorAll('.v38-authority-missing').forEach(el=>el.classList.remove('v38-authority-missing'));
-    document.querySelectorAll('.v38-authority-wrap').forEach(el=>el.classList.remove('v38-authority-wrap'));
-  }
+  function clearFieldGuide(){document.querySelectorAll('.v38-authority-missing').forEach(el=>el.classList.remove('v38-authority-missing'));document.querySelectorAll('.v38-authority-wrap').forEach(el=>el.classList.remove('v38-authority-wrap'))}
   function visible(control){return Boolean(control&&!control.disabled&&!control.readOnly&&control.offsetParent!==null)}
   function mark(control){if(!visible(control))return false;control.classList.add('v38-authority-missing');(control.closest('.field')||control.closest('.choice')||control.parentElement)?.classList.add('v38-authority-wrap');return true}
   function firstBusinessMissing(){
     const profile=read('flt-v34-business-profile',null),c=read('flt-v35-classification',null);
-    if(!profile){
-      for(const id of ['business-legal-name','business-ein']){const control=document.getElementById(id);if(visible(control)&&!String(control.value||'').trim())return control}
-      return document.getElementById('business-profile-save');
-    }
-    if(!c){
-      const form=document.getElementById('v35-classification-form');
-      return [...(form?.querySelectorAll('select[required],input[required]')||[])].find(x=>visible(x)&&!String(x.value||'').trim())||document.getElementById('v35-classification-form')?.querySelector('button[type="submit"],button:not([type])');
-    }
+    if(!profile){for(const id of ['business-legal-name','business-ein']){const control=document.getElementById(id);if(visible(control)&&!String(control.value||'').trim())return control}return document.getElementById('business-profile-save')}
+    if(!c){const form=document.getElementById('v35-classification-form');return [...(form?.querySelectorAll('select[required],input[required]')||[])].find(x=>visible(x)&&!String(x.value||'').trim())||form?.querySelector('button[type="submit"],button:not([type])')}
     if(c.insuranceStatus!=='verified')return document.getElementById('v35-insurance-ok');
     if(c.authorityStatus!=='verified')return document.getElementById('v35-authority-ok');
     if(c.equipmentStatus!=='verified')return document.getElementById('v35-equipment-ok');
     if(c.driverOk!==true)return document.getElementById('v35-driver-ok');
     return null;
   }
-  function firstGenericMissing(root){
-    if(!root)return null;
-    return [...root.querySelectorAll('input[required],select[required],textarea[required],[data-v38-required="true"]')].find(c=>visible(c)&&((c.type==='checkbox'||c.type==='radio')?!c.checked:!String(c.value||'').trim()))||null;
-  }
-  function applyFieldGuide(){
-    clearFieldGuide();
-    const active=nav.querySelector('button.active')?.dataset.view||'',needed=nextView();
-    if(active!==needed)return;
-    let control=null;
-    if(active==='business-setup')control=firstBusinessMissing();
-    else control=firstGenericMissing(document.getElementById(active));
-    if(control)mark(control);
-  }
+  function firstGenericMissing(root){if(!root)return null;return [...root.querySelectorAll('input[required],select[required],textarea[required],[data-v38-required="true"]')].find(c=>visible(c)&&((c.type==='checkbox'||c.type==='radio')?!c.checked:!String(c.value||'').trim()))||null}
+  function applyFieldGuide(){clearFieldGuide();const active=nav.querySelector('button.active')?.dataset.view||'',needed=nextView();if(active!==needed)return;let control=null;if(active==='business-setup')control=firstBusinessMissing();else control=firstGenericMissing(document.getElementById(active));if(control)mark(control)}
 
   function proposalFromDecisionScreen(){
     if(!acceptedDecision())return null;
@@ -136,22 +96,15 @@
     const d=read('flt-v35-last-decision',null)||{};
     return {source,sourceName:String(get('v38-quick-source-name')?.value||'').trim(),sourceReference:String(get('v38-quick-reference')?.value||'').trim(),pickupZip,deliveryZip,pickupPlace:String(get('v38-quick-pickup-place')?.textContent||'').trim(),deliveryPlace:String(get('v38-quick-delivery-place')?.textContent||'').trim(),loadedMiles:Number(get('v35-loaded-miles')?.value||0),deadheadMiles:Number(get('v35-deadhead-miles')?.value||0),offer:Number(get('v35-offer')?.value||0),cargoWeight:Number(get('v35-cargo-weight')?.value||0),averageMpg:Number(get('v35-mpg')?.value||0),fuelPrice:Number(get('v35-fuel-price')?.value||0),decision:d.decision,metrics:d.metrics||{},acceptedAt:new Date().toISOString()};
   }
-  nav.addEventListener('click',event=>{
-    const button=event.target.closest('button[data-view="load"]');
-    if(!button||acceptedProposalReady())return;
-    const proposal=proposalFromDecisionScreen();
-    if(proposal){write('flt-v38-accepted-proposal',proposal);setTimeout(()=>window.FLTFastLoadWorkflow&&document.getElementById('load-form')&&window.dispatchEvent(new Event('flt:workflow-state-changed')),0)}
-  },true);
+  nav.addEventListener('click',event=>{const button=event.target.closest('button[data-view="load"]');if(!button||acceptedProposalReady())return;const proposal=proposalFromDecisionScreen();if(proposal){write('flt-v38-accepted-proposal',proposal);setTimeout(()=>window.FLTFastLoadWorkflow&&document.getElementById('load-form')&&window.dispatchEvent(new Event('flt:workflow-state-changed')),0)}},true);
 
   let scheduled=false,applying=false;
-  function apply(){
-    if(applying)return;applying=true;
-    try{hideIntegrityBadge();applyNav();syncDashboardCallToAction();applyFieldGuide()}finally{applying=false}
-  }
+  function apply(){if(applying)return;applying=true;try{hideIntegrityBadge();applyNav();syncDashboardCallToAction();applyFieldGuide()}finally{applying=false}}
   function schedule(){if(scheduled)return;scheduled=true;setTimeout(()=>{scheduled=false;apply()},30)}
   document.addEventListener('input',schedule,true);document.addEventListener('change',schedule,true);document.addEventListener('submit',()=>setTimeout(schedule,80),true);nav.addEventListener('click',()=>setTimeout(schedule,60),true);
   window.addEventListener('flt:modules-loaded',schedule);window.addEventListener('flt:workflow-state-changed',schedule);window.addEventListener('visibilitychange',()=>{if(!document.hidden)schedule()});
   new MutationObserver(schedule).observe(nav,{subtree:true,attributes:true,attributeFilter:['class','data-v38-hard-next']});
-  apply();setTimeout(apply,150);setTimeout(apply,500);
+  const dashboard=document.getElementById('dashboard');if(dashboard)new MutationObserver(schedule).observe(dashboard,{subtree:true,childList:true,characterData:true});
+  apply();setTimeout(apply,150);setTimeout(apply,500);setTimeout(apply,1200);
   window.FLTWorkflowAuthority={apply,nextView,businessReady,fleetReady,acceptedDecision,acceptedProposalReady,hasRealLoad,syncDashboardCallToAction};
 })();
