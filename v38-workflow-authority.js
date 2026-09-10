@@ -38,15 +38,20 @@
     try{if(typeof store!=='undefined'&&Array.isArray(store.loads))return store.loads.some(load=>load&&load.id&&!String(load.id).startsWith('DEMO-'))}catch(error){}
     const loads=read('flt-v32-loads',[]);return Array.isArray(loads)&&loads.some(load=>load&&load.id&&!String(load.id).startsWith('DEMO-'));
   }
+  function selectedLoad(){
+    try{if(typeof current==='function'){const load=current();if(load)return load}}catch(error){}
+    const loads=read('flt-v32-loads',[]),selected=localStorage.getItem('flt-v32-loads-selected');
+    return (Array.isArray(loads)?loads:[]).find(x=>x.id===selected)||(Array.isArray(loads)?loads.at(-1):null);
+  }
   function nextView(){
     if(!businessReady())return'business-setup';
     if(!fleetReady())return'fleet';
     if(!acceptedDecision())return'intelligence';
     if(!hasRealLoad())return'load';
-    const loads=read('flt-v32-loads',[]),selected=localStorage.getItem('flt-v32-loads-selected');
-    const load=(Array.isArray(loads)?loads:[]).find(x=>x.id===selected)||(Array.isArray(loads)?loads.at(-1):null);
+    const load=selectedLoad();
     if(load&&!load.pickupProof?.signature)return'pickup';
     if(load?.pickupProof?.signature&&!load.deliveryProof?.signature)return'delivery';
+    if(load?.financialClose?.status==='Closed')return'test';
     if(load?.deliveryProof?.signature)return'finance';
     return null;
   }
@@ -63,7 +68,7 @@
   `;
   document.head.appendChild(style);
 
-  const nextLabels={'business-setup':'Business Setup',fleet:'Drivers & Equipment',intelligence:'Evaluate Proposed Load',load:'Complete Accepted Load',pickup:'Pickup + E-Signature',delivery:'Delivery + E-Signature',finance:'Finance & Ledger'};
+  const nextLabels={'business-setup':'Business Setup',fleet:'Drivers & Equipment',intelligence:'Evaluate Proposed Load',load:'Complete Accepted Load',pickup:'Pickup + E-Signature',delivery:'Delivery + E-Signature',finance:'Finance & Ledger',test:'V3.8 Test Gate'};
 
   function hideIntegrityBadge(){document.querySelectorAll('body *').forEach(el=>{if(el.children.length===0&&/V3\.8\s*[·-]\s*OPERATIONAL INTEGRITY/i.test((el.textContent||'').trim()))el.style.display='none'})}
   function clearLegacyNext(){nav.querySelectorAll('button[data-view]').forEach(button=>{button.classList.remove('nav-required','v38-nav-next');button.removeAttribute('data-v38-hard-next');button.removeAttribute('data-v38-authoritative-next')})}
@@ -111,10 +116,10 @@
   let scheduled=false,applying=false;
   function apply(){if(applying)return;applying=true;try{hideIntegrityBadge();applyNav();syncDashboardCallToAction();applyFieldGuide()}finally{applying=false}}
   function schedule(){if(scheduled)return;scheduled=true;setTimeout(()=>{scheduled=false;apply()},30)}
-  document.addEventListener('input',schedule,true);document.addEventListener('change',schedule,true);document.addEventListener('submit',()=>setTimeout(schedule,80),true);nav.addEventListener('click',()=>setTimeout(schedule,60),true);
-  window.addEventListener('flt:modules-loaded',schedule);window.addEventListener('flt:workflow-state-changed',schedule);window.addEventListener('visibilitychange',()=>{if(!document.hidden)schedule()});
+  document.addEventListener('input',schedule,true);document.addEventListener('change',schedule,true);document.addEventListener('submit',()=>setTimeout(schedule,80),true);document.addEventListener('click',()=>setTimeout(schedule,80),true);nav.addEventListener('click',()=>setTimeout(schedule,60),true);
+  window.addEventListener('storage',schedule);window.addEventListener('flt:modules-loaded',schedule);window.addEventListener('flt:workflow-state-changed',schedule);window.addEventListener('visibilitychange',()=>{if(!document.hidden)schedule()});
   new MutationObserver(schedule).observe(nav,{subtree:true,attributes:true,attributeFilter:['class','data-v38-hard-next']});
   const dashboard=document.getElementById('dashboard');if(dashboard)new MutationObserver(schedule).observe(dashboard,{subtree:true,childList:true,characterData:true});
   apply();setTimeout(apply,150);setTimeout(apply,500);setTimeout(apply,1200);
-  window.FLTWorkflowAuthority={apply,nextView,businessReady,fleetReady,acceptedDecision,acceptedProposalReady,hasRealLoad,syncDashboardCallToAction};
+  window.FLTWorkflowAuthority={apply,nextView,businessReady,fleetReady,acceptedDecision,acceptedProposalReady,hasRealLoad,selectedLoad,syncDashboardCallToAction};
 })();
