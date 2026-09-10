@@ -4,6 +4,7 @@
 
   const fleetKey='flt-v35-fleet';
   const currentKey='flt-v38-current-working-rig';
+  const plannedToVerifiedReason='Complete planned record with verified information';
   const formMap={
     driver:{formId:'fleet-driver-form',bucket:'drivers',identity:'name'},
     truck:{formId:'fleet-truck-form',bucket:'trucks',identity:'unit'},
@@ -28,12 +29,27 @@
     if(button)button.textContent='Saved · Current '+(form.id.includes('driver')?'driver':form.id.includes('truck')?'truck':'trailer');
   }
 
+  function kindForForm(form){return Object.keys(formMap).find(kind=>formMap[kind].formId===form?.id)||''}
   function currentRecord(kind){
     const meta=formMap[kind],fleet=readFleet(),current=readCurrent();
     const id=current[kind+'Id'];
     if(id)return (fleet[meta.bucket]||[]).find(item=>item.id===id&&item.status!=='cancelled')||null;
     return null;
   }
+
+  function prepareCurrentVerification(event){
+    const form=event.target,kind=kindForForm(form);
+    if(!kind||!form.dataset.currentRecordId||form.dataset.editId)return;
+    const record=currentRecord(kind);
+    if(!record||record.id!==form.dataset.currentRecordId)return;
+    if(record.status==='planned'&&form.elements?.status?.value==='active'){
+      form.dataset.editId=record.id;
+      form.dataset.editReason=plannedToVerifiedReason;
+      const button=form.querySelector('button[type="submit"],button:not([type])');
+      if(button)button.textContent='Verify current '+kind;
+    }
+  }
+  document.addEventListener('submit',prepareCurrentVerification,true);
 
   function restoreKind(kind){
     const meta=formMap[kind],form=document.getElementById(meta.formId),record=currentRecord(kind);
@@ -50,10 +66,11 @@
       const before=readFleet()[meta.bucket]||[];
       const identity=String(form.elements?.[meta.identity]?.value||'').trim();
       const beforeIds=new Set(before.map(item=>item.id));
+      const expectedId=form.dataset.editId||form.dataset.currentRecordId||'';
       setTimeout(()=>{
         const after=readFleet()[meta.bucket]||[];
-        let saved=after.find(item=>!beforeIds.has(item.id)&&String(item?.[meta.identity]||'').trim()===identity);
-        if(!saved&&form.dataset.editId)saved=after.find(item=>item.id===form.dataset.editId);
+        let saved=expectedId?after.find(item=>item.id===expectedId):null;
+        if(!saved)saved=after.find(item=>!beforeIds.has(item.id)&&String(item?.[meta.identity]||'').trim()===identity);
         if(!saved)saved=[...after].reverse().find(item=>String(item?.[meta.identity]||'').trim()===identity&&item.status!=='cancelled');
         if(!saved)return;
         const current=readCurrent();
@@ -63,7 +80,7 @@
         writeCurrent(current);
         fillForm(form,saved);
         renderSummary();
-      },80);
+      },350);
     },true);
   }
 
