@@ -1,6 +1,6 @@
 (() => {
   const modules=[
-    'v38-version-ui.js?v=20260908b',
+    'v38-version-ui.js?v=20260910c',
     'v36-date-utils.js?v=20260903d',
     'v38-assignment-integrity.js?v=20260908b',
     'v38-weight-equipment-fit.js?v=20260908b',
@@ -33,14 +33,10 @@
     'v38-navigation-prerequisites-hardfix.js?v=20260909a',
     'v38-test-data-reset.js?v=20260909a',
     'v38-current-rig-display-hardfix.js?v=20260909a',
-    'v38-workflow-authority.js?v=20260910a'
+    'v38-workflow-authority.js?v=20260910b',
+    'v38-next-needed-ui.js?v=20260910a'
   ];
 
-  // HARD DEV CACHE RULE:
-  // Every page refresh must execute the branch's current module files.
-  // Codespaces/browser caches previously masked fixes even after git pull.
-  // One page-load token is shared by every module so dependencies stay on
-  // the same code generation while stale copies are never reused.
   const pageBuildToken=Date.now().toString(36);
   const freshSrc=src=>src+(src.includes('?')?'&':'?')+'devbuild='+pageBuildToken;
 
