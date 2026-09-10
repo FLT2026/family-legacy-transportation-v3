@@ -69,6 +69,13 @@
     const api=window.FLTFinancialClose;
     return Boolean(load?.financialClose?.status==='Closed'&&api?.reopenForCorrection&&api?.auditClosed?.(load)?.pass);
   }
+  function correctionAuditState(load){
+    const rows=Array.isArray(load?.financialCloseHistory)?load.financialCloseHistory:[];
+    if(!rows.length)return {required:false,pass:true,label:'NOT REQUIRED'};
+    const opened=rows.some(item=>item?.type==='Correction Opened');
+    const reclosed=rows.some(item=>item?.type==='Correction Reclosed');
+    return {required:true,pass:opened&&reclosed,label:opened&&reclosed?'PASS':'PENDING'};
+  }
   function setTag(tag,text,pass=true){
     if(!tag)return;
     const nextClass='tag '+(pass?'':'gray');
@@ -96,19 +103,17 @@
     const closed=load?.financialClose?.status==='Closed';
     const audit=closed&&api?.auditClosed?api.auditClosed(load):null;
     const snapshotPass=Boolean(closed&&audit?.pass);
-    const correctionPass=Boolean(snapshotPass&&api?.reopenForCorrection&&api?.reopenFromUi&&api?.history);
     [...gate.querySelectorAll('.metric-row')].forEach(row=>{
       const text=row.textContent||'';
       if(/Post-close financial snapshot unchanged/i.test(text))setTag(row.querySelector('.tag'),snapshotPass?'PASS':'PENDING',snapshotPass);
       if(/Protected correction audit history/i.test(text)){
-        const hasHistory=Boolean((load?.financialCloseHistory||[]).length);
-        setTag(row.querySelector('.tag'),hasHistory?'PASS':'PENDING',hasHistory);
+        const correction=correctionAuditState(load);
+        setTag(row.querySelector('.tag'),correction.label,correction.pass);
       }
     });
     if(snapshotPass){
       const headTag=gate.querySelector('.section-head .tag');
-      const hasHistory=Boolean((load?.financialCloseHistory||[]).length);
-      setTag(headTag,hasHistory?'LOAD CLOSED':'LOAD CLOSED',true);
+      setTag(headTag,'LOAD CLOSED',true);
     }
   }
   function repairVisibleGate(){
@@ -147,5 +152,5 @@
       observer.observe(document.documentElement,observerOptions);
     }
   },0);
-  window.FLTV38TestGateIntegrity={migrateActualTripEvidence,restoreClosedHardfixReceipt,correctionCapabilityPass,repairV36Gate,repairV37Gate,repairVisibleGate};
+  window.FLTV38TestGateIntegrity={migrateActualTripEvidence,restoreClosedHardfixReceipt,correctionCapabilityPass,correctionAuditState,repairV36Gate,repairV37Gate,repairVisibleGate};
 })();
