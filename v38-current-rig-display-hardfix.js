@@ -62,6 +62,7 @@
         current.updatedAt=new Date().toISOString();
         writeCurrent(current);
         fillForm(form,saved);
+        renderSummary();
       },80);
     },true);
   }
