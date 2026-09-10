@@ -53,6 +53,16 @@
   `;
   document.head.appendChild(style);
 
+  const nextLabels={
+    'business-setup':'Business Setup',
+    fleet:'Drivers & Equipment',
+    intelligence:'Evaluate Proposed Load',
+    load:'Complete Accepted Load',
+    pickup:'Pickup + E-Signature',
+    delivery:'Delivery + E-Signature',
+    finance:'Finance & Ledger'
+  };
+
   function hideIntegrityBadge(){
     document.querySelectorAll('body *').forEach(el=>{
       if(el.children.length===0&&/V3\.8\s*[·-]\s*OPERATIONAL INTEGRITY/i.test((el.textContent||'').trim()))el.style.display='none';
@@ -69,6 +79,17 @@
     clearLegacyNext();
     const view=nextView(),button=view?nav.querySelector(`[data-view="${view}"]`):null;
     if(button)button.setAttribute('data-v38-authoritative-next','true');
+  }
+  function syncDashboardCallToAction(){
+    const view=nextView();if(!view)return;
+    const label=nextLabels[view]||'Continue';
+    const hero=document.querySelector('#dashboard .hero');
+    const button=hero?.querySelector('[data-view-jump],button');
+    const title=hero?.querySelector('h2');
+    const detail=hero?.querySelector('.subtle');
+    if(button){button.textContent='Continue to '+label+' →';button.dataset.viewJump=view;}
+    if(title&&localStorage.getItem('commercial-command-fresh-start')==='1')title.textContent='Commercial Command is ready for a fresh test.';
+    if(detail&&localStorage.getItem('commercial-command-fresh-start')==='1')detail.textContent='Next required step: '+label+'. Commercial Command will keep one NEXT marker on the correct workflow step.';
   }
 
   function clearFieldGuide(){
@@ -125,12 +146,12 @@
   let scheduled=false,applying=false;
   function apply(){
     if(applying)return;applying=true;
-    try{hideIntegrityBadge();applyNav();applyFieldGuide()}finally{applying=false}
+    try{hideIntegrityBadge();applyNav();syncDashboardCallToAction();applyFieldGuide()}finally{applying=false}
   }
   function schedule(){if(scheduled)return;scheduled=true;setTimeout(()=>{scheduled=false;apply()},30)}
   document.addEventListener('input',schedule,true);document.addEventListener('change',schedule,true);document.addEventListener('submit',()=>setTimeout(schedule,80),true);nav.addEventListener('click',()=>setTimeout(schedule,60),true);
   window.addEventListener('flt:modules-loaded',schedule);window.addEventListener('flt:workflow-state-changed',schedule);window.addEventListener('visibilitychange',()=>{if(!document.hidden)schedule()});
   new MutationObserver(schedule).observe(nav,{subtree:true,attributes:true,attributeFilter:['class','data-v38-hard-next']});
   apply();setTimeout(apply,150);setTimeout(apply,500);
-  window.FLTWorkflowAuthority={apply,nextView,businessReady,fleetReady,acceptedDecision,acceptedProposalReady,hasRealLoad};
+  window.FLTWorkflowAuthority={apply,nextView,businessReady,fleetReady,acceptedDecision,acceptedProposalReady,hasRealLoad,syncDashboardCallToAction};
 })();
