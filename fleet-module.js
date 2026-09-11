@@ -34,7 +34,8 @@
     'v38-test-data-reset.js?v=20260909a',
     'v38-current-rig-display-hardfix.js?v=20260909a',
     'v38-workflow-authority.js?v=20260910b',
-    'v38-next-needed-ui.js?v=20260910a'
+    'v38-next-needed-ui.js?v=20260910a',
+    'v38-dashboard-close-state-hardfix.js?v=20260910a'
   ];
 
   const pageBuildToken=Date.now().toString(36);
