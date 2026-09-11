@@ -1,77 +1,53 @@
 (() => {
+  'use strict';
   if(typeof document==='undefined')return;
   const nav=document.getElementById('nav');
   if(!nav)return;
-  const decisionNav=nav.querySelector('[data-view="intelligence"]');
-  const loadNav=nav.querySelector('[data-view="load"]');
-  const financeNav=nav.querySelector('[data-view="finance"]');
-  const testNav=nav.querySelector('[data-view="test"]');
-  if(!decisionNav||!loadNav)return;
 
-  const style=document.createElement('style');
-  style.id='v38-nav-next-hardfix-style';
-  style.textContent=`
-    #nav button[data-v38-hard-next="true"]{
-      background:#214f48!important;
-      color:#fff!important;
-      border-left:6px solid #d4d72f!important;
-      box-shadow:inset 0 0 0 2px rgba(212,215,47,.88),0 0 0 2px rgba(212,215,47,.3)!important;
-    }
-    #nav button[data-v38-hard-next="true"] .nav-label{font-weight:900!important}
-    #nav button[data-v38-hard-next="true"]::after{
-      content:'NEXT';margin-left:auto;background:#d4d72f;color:#173f39;
-      font-size:9px;font-weight:900;padding:4px 7px;border-radius:999px;
-    }
-  `;
-  document.head.appendChild(style);
-
-  const read=(key,fallback=null)=>{try{return JSON.parse(localStorage.getItem(key)||JSON.stringify(fallback))}catch(error){return fallback}};
-  const fiveZip=value=>/^\d{5}(?:-\d{4})?$/.test(String(value||'').trim());
-  const acceptedProposalReady=()=>{const p=read('flt-v38-accepted-proposal',null);return Boolean(p&&fiveZip(p.pickupZip)&&fiveZip(p.deliveryZip)&&Number(p.offer)>0)};
-  const acceptedDecisionReady=()=>read('flt-v35-last-decision',null)?.decision==='ACCEPT LOAD';
-  const setupPrerequisitePending=()=>{
-    if(localStorage.getItem('commercial-command-fresh-start')==='1')return true;
-    try{return Boolean(window.FLTNavigationPrerequisitesHardfix?.prerequisite?.())}catch(error){return false}
-  };
-  const currentLoad=()=>{try{return typeof current==='function'?current():null}catch(error){return null}};
-  const financiallyClosed=()=>currentLoad()?.financialClose?.status==='Closed';
-
-  let applying=false;
-  function applyHardNext(){
-    if(applying)return;
-    applying=true;
-    try{
-      [decisionNav,loadNav,financeNav,testNav].filter(Boolean).forEach(button=>button.removeAttribute('data-v38-hard-next'));
-
-      // A financially closed load has finished Finance & Ledger. The only NEXT
-      // marker now belongs on the V3.8 Test Gate.
-      if(financiallyClosed()){
-        testNav?.setAttribute('data-v38-hard-next','true');
-        return;
-      }
-
-      if(setupPrerequisitePending())return;
-      const active=nav.querySelector('button.active')?.dataset.view||'';
-      if(active==='dashboard'){
-        decisionNav.setAttribute('data-v38-hard-next','true');
-      }else if(active==='intelligence'){
-        if(acceptedDecisionReady()&&acceptedProposalReady())loadNav.setAttribute('data-v38-hard-next','true');
-      }else if(active!=='load'&&!acceptedProposalReady()){
-        decisionNav.setAttribute('data-v38-hard-next','true');
-      }
-    }finally{
-      applying=false;
-    }
+  /*
+   * Compatibility shim only.
+   *
+   * V3.8 now has one source of truth for workflow progression:
+   * window.FLTWorkflowAuthority. This older hard-fix previously calculated its
+   * own NEXT destination and could re-apply a yellow outline to V3.8 Test Gate
+   * after the authoritative workflow had already declared the load complete.
+   *
+   * Never choose a NEXT step here again. Clear any legacy marker and, when the
+   * authoritative controller is available, ask it to render the current state.
+   */
+  function clearLegacyHardNext(){
+    nav.querySelectorAll('button[data-v38-hard-next="true"]').forEach(button=>{
+      button.removeAttribute('data-v38-hard-next');
+    });
   }
 
-  const observer=new MutationObserver(()=>queueMicrotask(applyHardNext));
-  observer.observe(nav,{subtree:true,attributes:true,attributeFilter:['class']});
-  document.addEventListener('click',()=>setTimeout(applyHardNext,80),true);
-  window.addEventListener('storage',applyHardNext);
-  window.addEventListener('flt:modules-loaded',applyHardNext);
-  document.addEventListener('visibilitychange',()=>{if(!document.hidden)applyHardNext()});
-  window.FLTNavNextHardfix={apply:applyHardNext,financiallyClosed};
-  applyHardNext();
-  setTimeout(applyHardNext,50);
-  setTimeout(applyHardNext,250);
+  let scheduled=false;
+  function sync(){
+    clearLegacyHardNext();
+    if(window.FLTWorkflowAuthority?.apply){
+      window.FLTWorkflowAuthority.apply();
+    }
+  }
+  function schedule(delay=0){
+    if(scheduled)return;
+    scheduled=true;
+    setTimeout(()=>{
+      scheduled=false;
+      sync();
+    },delay);
+  }
+
+  document.addEventListener('click',()=>schedule(80),true);
+  window.addEventListener('storage',()=>schedule(25));
+  window.addEventListener('flt:modules-loaded',()=>schedule(0));
+  window.addEventListener('flt:workflow-state-changed',()=>schedule(0));
+  document.addEventListener('visibilitychange',()=>{
+    if(!document.hidden)schedule(25);
+  });
+
+  clearLegacyHardNext();
+  setTimeout(clearLegacyHardNext,50);
+  setTimeout(sync,250);
+
+  window.FLTNavNextHardfix={apply:sync};
 })();
