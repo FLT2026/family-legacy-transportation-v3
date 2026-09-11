@@ -4,6 +4,7 @@
   const nav=document.getElementById('nav');
   if(!nav)return;
 
+  const LIVE_REVIEW_KEY='flt-v38-live-test-gate-reviewed';
   const read=(key,fallback=null)=>{try{return JSON.parse(localStorage.getItem(key)||JSON.stringify(fallback))}catch(error){return fallback}};
   const write=(key,value)=>{try{localStorage.setItem(key,JSON.stringify(value));return true}catch(error){return false}};
   const validVin=value=>/^[A-HJ-NPR-Z0-9]{17}$/i.test(String(value||'').trim());
@@ -54,13 +55,14 @@
     const status=String(load?.financialClose?.status||'').trim().toLowerCase();
     return status==='closed'&&Boolean(load?.financialClose?.snapshot);
   }
+  function liveReviewComplete(load){const reviewed=read(LIVE_REVIEW_KEY,null);return Boolean(load?.id&&reviewed?.loadId===load.id)}
   function nextView(){
     if(!businessReady())return'business-setup';
     if(!fleetReady())return'fleet';
     if(!acceptedDecision())return'intelligence';
     if(!hasRealLoad())return'load';
     const load=selectedLoad();
-    if(financiallyClosed(load))return'test';
+    if(financiallyClosed(load))return liveReviewComplete(load)?null:'test';
     if(load&&!load.pickupProof?.signature)return'pickup';
     if(load?.pickupProof?.signature&&!load.deliveryProof?.signature)return'delivery';
     if(load?.deliveryProof?.signature)return'finance';
@@ -89,18 +91,25 @@
   function clearLegacyNext(){nav.querySelectorAll('button[data-view]').forEach(button=>{button.classList.remove('nav-required','v38-nav-next');button.removeAttribute('data-v38-hard-next');button.removeAttribute('data-v38-authoritative-next')})}
   function applyNav(){clearLegacyNext();const view=nextView(),button=view?nav.querySelector(`[data-view="${view}"]`):null;if(button)button.setAttribute('data-v38-authoritative-next','true')}
   function syncDashboardCallToAction(){
-    const view=nextView();if(!view)return;
-    const label=nextLabels[view]||'Continue';
     const dashboard=document.getElementById('dashboard');if(!dashboard)return;
     const hero=dashboard.querySelector('.hero');
     const buttons=[...dashboard.querySelectorAll('button,.btn')];
-    const button=buttons.find(el=>/Start Business Setup|Continue to|Start Drivers|Start .*Setup/i.test((el.textContent||'').trim()))||hero?.querySelector('button,.btn');
+    const button=buttons.find(el=>/Start Business Setup|Continue to|Start Drivers|Start .*Setup|Workflow complete/i.test((el.textContent||'').trim()))||hero?.querySelector('button,.btn');
     const title=hero?.querySelector('h2');
     const detail=hero?.querySelector('.subtle,p');
+    const view=nextView();
+    if(!view){
+      if(button){button.textContent='Workflow complete ✓';button.removeAttribute('data-view-jump');button.onclick=event=>event.preventDefault();button.disabled=true;}
+      if(title)title.textContent='Commercial Command workflow is complete.';
+      if(detail)detail.textContent='This load has completed the live end-to-end workflow. No NEXT action is required.';
+      return;
+    }
+    const label=nextLabels[view]||'Continue';
     const buttonText='Continue to '+label+' →';
     const titleText='Commercial Command is ready for the next step.';
     const detailText='Next required step: '+label+'. Commercial Command will keep one NEXT marker on the correct workflow step.';
     if(button){
+      button.disabled=false;
       if(button.textContent!==buttonText)button.textContent=buttonText;
       if(button.dataset.viewJump!==view)button.dataset.viewJump=view;
       if(button.dataset.v38AuthorityBound!==view){
@@ -142,9 +151,6 @@
   function apply(){if(applying)return;applying=true;try{applyNav();syncDashboardCallToAction();applyFieldGuide()}finally{applying=false}}
   function schedule(delay=30){if(scheduled)return;scheduled=true;setTimeout(()=>{scheduled=false;apply()},delay)}
 
-  // Event-driven only: do not observe/rewrite the nav or Finance DOM continuously.
-  // The previous MutationObservers + interval formed a feedback loop with legacy navigation code,
-  // repeatedly changing the nav layout and making its scrollbar flash/jump.
   document.addEventListener('input',()=>schedule(30),true);
   document.addEventListener('change',()=>schedule(30),true);
   document.addEventListener('submit',()=>schedule(100),true);
@@ -154,11 +160,10 @@
   window.addEventListener('flt:workflow-state-changed',()=>schedule(50));
   window.addEventListener('visibilitychange',()=>{if(!document.hidden)schedule(50)});
 
-  // Hide the floating integrity badge once after modules settle; never poll it.
   hideIntegrityBadge();
   setTimeout(hideIntegrityBadge,250);
   apply();
   setTimeout(apply,200);
 
-  window.FLTWorkflowAuthority={apply,nextView,businessReady,fleetReady,acceptedDecision,acceptedProposalReady,hasRealLoad,selectedLoad,financiallyClosed,syncDashboardCallToAction};
+  window.FLTWorkflowAuthority={apply,nextView,businessReady,fleetReady,acceptedDecision,acceptedProposalReady,hasRealLoad,selectedLoad,financiallyClosed,liveReviewComplete,syncDashboardCallToAction};
 })();
