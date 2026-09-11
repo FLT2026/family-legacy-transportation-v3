@@ -13,6 +13,7 @@
   const clear=()=>document.querySelectorAll('.v38-next-needed').forEach(el=>el.classList.remove('v38-next-needed'));
   const isVisible=el=>Boolean(el&&el.offsetParent!==null);
   const pendingText=text=>/^(PENDING|INCOMPLETE|MORE INFORMATION REQUIRED|DO NOT DISPATCH)$/i.test(String(text||'').trim());
+  const automatedOnly=el=>Boolean(el?.closest?.('[data-v38-automated-only="true"]'));
 
   function actionableRow(el,root){
     const granular=el.closest('.metric-row,tr,.choice,li,.notice');
@@ -38,23 +39,19 @@
     const active=document.querySelector('.view.active');
     if(!active)return;
 
-    const candidates=[...active.querySelectorAll('*')].filter(el=>isVisible(el)&&el.children.length===0&&pendingText(el.textContent));
+    const candidates=[...active.querySelectorAll('*')].filter(el=>isVisible(el)&&el.children.length===0&&!automatedOnly(el)&&pendingText(el.textContent));
     if(!candidates.length)return;
 
-    // First choice: the first real requirement row that is still pending.
-    // This prevents an overall INCOMPLETE badge in a section header from
-    // stealing the highlight from the actual information the operator needs.
     for(const candidate of candidates){
       const target=actionableRow(candidate,active);
-      if(target){
+      if(target&&!automatedOnly(target)){
         target.classList.add('v38-next-needed');
         return;
       }
     }
 
-    // Fallback only when the page has no more specific actionable row.
     const fallback=summaryRow(candidates[0],active);
-    if(fallback)fallback.classList.add('v38-next-needed');
+    if(fallback&&!automatedOnly(fallback))fallback.classList.add('v38-next-needed');
   }
 
   let timer=null;
