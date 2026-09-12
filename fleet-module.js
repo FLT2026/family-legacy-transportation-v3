@@ -32,8 +32,9 @@
     'v38-v36-autopopulate-hardfix.js?v=20260908a',
     'v38-navigation-prerequisites-hardfix.js?v=20260909a',
     'v38-test-data-reset.js?v=20260909a',
-    'v38-current-rig-display-hardfix.js?v=20260909a',
+    'v38-current-rig-display-hardfix.js?v=20260912a',
     'v38-workflow-authority.js?v=20260910b',
+    'v38-fleet-renewal-guidance.js?v=20260912a',
     'v38-next-needed-ui.js?v=20260910a',
     'v38-dashboard-close-state-hardfix.js?v=20260910a'
   ];
