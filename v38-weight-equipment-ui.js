@@ -1,0 +1,27 @@
+(() => {
+  const fit=window.FLTWeightEquipmentFit,assignmentApi=window.FLTAssignmentIntegrity,form=document.getElementById('fleet-lock-form');
+  if(!fit||!form||window.FLTWeightEquipmentUI)return;
+  const fleetKey='flt-v35-fleet',assignmentKey='flt-v38-assignments';
+  const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+  const read=(key,fallback)=>{try{return {...fallback,...JSON.parse(localStorage.getItem(key)||'{}')}}catch(error){return {...fallback}}};
+  const fleet=()=>read(fleetKey,{drivers:[],trucks:[],trailers:[],locks:[],audit:[]});
+  const assignments=()=>read(assignmentKey,{assignments:[],assignmentAudit:[]});
+  const loadSelect=document.getElementById('fleet-lock-load'),driverSelect=document.getElementById('fleet-lock-driver'),truckSelect=document.getElementById('fleet-lock-truck'),trailerSelect=document.getElementById('fleet-lock-trailer');
+  function selectedLoad(){const id=loadSelect.value;return (globalThis.store?.loads||[]).find(load=>load.id===id)||null}
+  function noOpenLoad(){return !loadSelect.value}
+  function candidate(){const load=selectedLoad(),data=fleet(),loadId=load?.id||loadSelect.value,current=assignmentApi?.activeForLoad(assignments(),loadId),driver=data.drivers.find(item=>item.id===driverSelect.value),truck=data.trucks.find(item=>item.id===truckSelect.value),trailer=data.trailers.find(item=>item.id===trailerSelect.value),assignment=current&&current.driverId===driver?.id&&current.truckId===truck?.id&&current.trailerId===trailer?.id?current:{loadId,driverId:driver?.id||'',truckId:truck?.id||'',trailerId:trailer?.id||'',status:'Verified / Locked'};return{load,assignment,driver,truck,trailer}}
+  function evaluate(){return fit.evaluate(candidate())}
+  function ensurePanel(){let panel=document.getElementById('v38-weight-fit-panel');if(panel)return panel;panel=document.createElement('div');panel.id='v38-weight-fit-panel';panel.className='panel';panel.style.marginTop='14px';form.closest('.panel')?.insertAdjacentElement('afterend',panel);return panel}
+  const pounds=value=>Number.isFinite(Number(value))?Number(value).toLocaleString()+' lb':'—';
+  function render(){
+    const panel=ensurePanel();
+    if(noOpenLoad()){
+      panel.innerHTML='<div class="section-head"><div><div class="eyebrow">V3.8 operational integrity</div><h2>Weight & Equipment Fit Gate</h2><p class="subtle" style="margin-top:5px">No open accepted load is currently selected.</p></div><span class="tag gray">NO OPEN LOAD</span></div><div class="notice"><strong>No dispatch evaluation required.</strong><br><span class="subtle">Create or open an accepted load to evaluate cargo weight, equipment ratings, and available payload before dispatch.</span></div>';
+      return{status:'NO OPEN LOAD',pass:true,reasons:[],metrics:{}};
+    }
+    const result=evaluate(),status=result.status,tagClass=status==='PASS'?'':status==='DO NOT DISPATCH'?'red':'orange',metrics=result.metrics||{},reasons=result.reasons||[];panel.innerHTML='<div class="section-head"><div><div class="eyebrow">V3.8 operational integrity</div><h2>Weight & Equipment Fit Gate</h2><p class="subtle" style="margin-top:5px">'+esc(result.loadId||'Select a Load ID')+' · the selected verified combination must pass before Dispatch can lock it.</p></div><span class="tag '+tagClass+'">'+esc(status)+'</span></div><div class="grid three"><div class="stat"><span class="label">Cargo weight</span><div class="value">'+pounds(metrics.cargoWeight)+'</div></div><div class="stat"><span class="label">Estimated loaded combination</span><div class="value">'+pounds(metrics.estimatedCombinationWeight)+'</div></div><div class="stat"><span class="label">Calculated available payload</span><div class="value">'+pounds(metrics.estimatedPayloadAvailable)+'</div></div></div>'+(reasons.length?'<div class="notice '+(status==='DO NOT DISPATCH'?'hard-stop':'')+'"><strong>'+(status==='DO NOT DISPATCH'?'Dispatch blocked':'More information required')+'</strong><ul style="margin:8px 0 0;padding-left:20px">'+reasons.map(reason=>'<li>'+esc(reason)+'</li>').join('')+'</ul></div>':'<div class="notice"><strong>PASS.</strong> Verified weight, rating, hitch, tire, axle, and available-payload checks support this assignment.</div>');return result}
+  function recordBlocked(result){const data=fleet(),timestamp=new Date().toISOString();data.audit=data.audit||[];data.audit.push({entity:'v38_weight_equipment_fit',entityId:result.loadId||loadSelect.value||'No load selected',action:'blocked_dispatch',reasons:[...result.reasons],status:result.status,timestamp});localStorage.setItem(fleetKey,JSON.stringify(data))}
+  form.addEventListener('submit',event=>{if(noOpenLoad())return;const result=evaluate();if(result.pass)return;event.preventDefault();event.stopImmediatePropagation();recordBlocked(result);render();const title=result.status==='DO NOT DISPATCH'?'DO NOT DISPATCH':'MORE INFORMATION REQUIRED';if(typeof alert==='function')alert(title+'\n\n'+result.reasons.join('\n'));if(typeof toast==='function')toast('V3.8 Weight & Equipment Fit Gate blocked this dispatch assignment.');},true);
+  [loadSelect,driverSelect,truckSelect,trailerSelect].forEach(control=>control?.addEventListener('change',render));
+  ensurePanel();render();window.FLTWeightEquipmentUI={candidate,evaluate,render};
+})();
