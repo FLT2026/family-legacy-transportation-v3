@@ -3,6 +3,7 @@
   if(typeof document==='undefined'||window.FLTFleetRenewalGuidance)return;
 
   const CURRENT_KEY='flt-v38-current-working-rig';
+  const FLEET_KEY='flt-v35-fleet';
   const read=(key,fallback={})=>{try{return JSON.parse(localStorage.getItem(key)||JSON.stringify(fallback))}catch(error){return fallback}};
   const nav=document.getElementById('nav');
   if(!nav)return;
@@ -25,11 +26,32 @@
     return true;
   }
 
+  function readinessFunction(kind){
+    return window.FLTCurrentRigDisplayHardfix?.[kind+'Ready'];
+  }
+
+  function healedInvalidation(kind,item,current){
+    const config=kindConfig[kind],fleet=read(FLEET_KEY,{drivers:[],trucks:[],trailers:[]});
+    const record=(fleet[config.bucket]||[]).find(entry=>entry.id===item.id&&entry.status!=='cancelled');
+    const ready=readinessFunction(kind);
+    if(!record||typeof ready!=='function'||!ready(record))return false;
+
+    current[kind+'Id']=record.id;
+    if(current.invalidated)delete current.invalidated[kind];
+    if(current.invalidated&&!Object.keys(current.invalidated).length)delete current.invalidated;
+    current.updatedAt=new Date().toISOString();
+    localStorage.setItem(CURRENT_KEY,JSON.stringify(current));
+    setTimeout(()=>window.dispatchEvent(new Event('flt:workflow-state-changed')),0);
+    return true;
+  }
+
   function activeInvalidation(){
     const current=read(CURRENT_KEY,{}),invalidated=current?.invalidated||{};
     for(const kind of ['driver','truck','trailer']){
       const item=invalidated[kind];
-      if(item?.id)return {kind,item};
+      if(!item?.id)continue;
+      if(healedInvalidation(kind,item,current))continue;
+      return {kind,item};
     }
     return null;
   }
@@ -75,9 +97,9 @@
     const active=nav.querySelector('button.active')?.dataset.view||'';
     if(active!=='fleet')return;
     const invalid=activeInvalidation();
+    clearGuide();
     if(!invalid)return;
 
-    clearGuide();
     if(guideLoadedForm(invalid.kind,invalid.item))return;
     const edit=prepareManager(invalid.kind,invalid.item);
     if(edit){
@@ -93,7 +115,7 @@
   document.addEventListener('submit',()=>schedule(260),true);
   window.addEventListener('flt:modules-loaded',()=>schedule(220));
   window.addEventListener('flt:workflow-state-changed',()=>schedule(220));
-  window.addEventListener('storage',event=>{if(event.key===CURRENT_KEY)schedule(220)});
+  window.addEventListener('storage',event=>{if(event.key===CURRENT_KEY||event.key===FLEET_KEY)schedule(220)});
 
   schedule(240);
   window.FLTFleetRenewalGuidance={apply,activeInvalidation};
