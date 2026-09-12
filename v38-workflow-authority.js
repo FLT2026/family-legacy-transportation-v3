@@ -21,10 +21,12 @@
   function fleetReady(){
     const fleet=read('flt-v35-fleet',{drivers:[],trucks:[],trailers:[]});
     const current=read('flt-v38-current-working-rig',{});
+    const invalidated=current.invalidated&&Object.keys(current.invalidated).length>0;
+    const hasCurrentState=Boolean(current.driverId||current.truckId||current.trailerId||invalidated);
     const currentDriver=(fleet.drivers||[]).find(item=>item.id===current.driverId&&item.status!=='cancelled');
     const currentTruck=(fleet.trucks||[]).find(item=>item.id===current.truckId&&item.status!=='cancelled');
     const currentTrailer=(fleet.trailers||[]).find(item=>item.id===current.trailerId&&item.status!=='cancelled');
-    if(currentDriver&&currentTruck&&currentTrailer&&driverReady(currentDriver)&&truckReady(currentTruck)&&trailerReady(currentTrailer))return true;
+    if(hasCurrentState)return Boolean(!invalidated&&currentDriver&&currentTruck&&currentTrailer&&driverReady(currentDriver)&&truckReady(currentTruck)&&trailerReady(currentTrailer));
     const regular=read('flt-v36-regular-rig',read('flt-v35-default-fleet-selection',{}))||{};
     const regularDriver=(fleet.drivers||[]).find(item=>item.id===regular.driverId&&item.status!=='cancelled');
     const regularTruck=(fleet.trucks||[]).find(item=>item.id===regular.truckId&&item.status!=='cancelled');
