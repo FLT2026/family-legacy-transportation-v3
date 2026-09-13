@@ -49,7 +49,7 @@ Required tools already expected by this repo:
 Serve the repository root and open `index.html` in a browser:
 
 ```bash
-cd /home/runner/work/family-legacy-transportation-v3/family-legacy-transportation-v3
+# from the repository root
 python3 -m http.server 5500
 ```
 
@@ -57,7 +57,7 @@ Then open:
 
 - `http://127.0.0.1:5500/index.html`
 
-Port 5500 is valid for this app and was verified during this task.
+If port 5500 is unavailable locally, use another open port and update the browser URL to match.
 
 ## Build
 
@@ -72,7 +72,7 @@ There is no lint command or lint configuration in the current branch.
 Run the existing automated V3.7 regressions from the repository root:
 
 ```bash
-cd /home/runner/work/family-legacy-transportation-v3/family-legacy-transportation-v3
+# from the repository root
 node v37-itemized-invoice.test.js
 node v37-payments-receivables.test.js
 node v37-double-entry-ledger.test.js
