@@ -110,9 +110,9 @@ During this task:
 - `node v37-itemized-invoice.test.js` passed
 - `node v37-payments-receivables.test.js` passed
 - `node v37-financial-close.test.js` passed
-- `node v37-double-entry-ledger.test.js` failed immediately with a pre-existing JavaScript syntax error in the test file itself
+- `node v37-double-entry-ledger.test.js` passed
 
-Do not hide, bypass, or redefine that failing gate. If future work is specifically about fixing that regression, fix it directly and keep the rest of V3.7 unchanged; otherwise, leave the failure visible and avoid introducing any additional regressions.
+Keep all four regression gates green and avoid introducing regressions to approved V3.5–V3.7 behavior.
 
 ## Data and workflow protections that must not be broken
 
