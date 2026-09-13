@@ -85,9 +85,9 @@ Manual browser gates also exist and remain part of the release contract:
 - `V3.6_ACTUAL_TRIP_SMOKE_TEST.md`
 - `V3.7_FINANCIAL_CLOSE_SMOKE_TEST.md`
 
-## Existing test gates that must stay green
+## Existing test gates that must pass
 
-Do not ship changes that break any approved V3.5–V3.7 behavior.
+Do not ship changes that break any approved V3.5–V3.7 behavior. Run every applicable gate for the area you touched, keep passing gates green, and do not hide or bypass a known baseline failure.
 
 ### Automated V3.7 regression gates
 
@@ -103,7 +103,7 @@ Do not ship changes that break any approved V3.5–V3.7 behavior.
 - V3.7 Financial Close Foundation smoke test
 - In-app gates such as the V3.5 gate, Fleet & Dispatch Gate, V3.6 gate, and V3.7 Financial Close Gate
 
-### Baseline verification note
+### Current baseline verification note
 
 During this task:
 
@@ -112,7 +112,7 @@ During this task:
 - `node v37-financial-close.test.js` passed
 - `node v37-double-entry-ledger.test.js` failed immediately with a pre-existing JavaScript syntax error in the test file itself
 
-Do not hide, bypass, or redefine that failing gate. If future work is specifically about fixing that regression, fix it directly and keep the rest of V3.7 unchanged.
+Do not hide, bypass, or redefine that failing gate. If future work is specifically about fixing that regression, fix it directly and keep the rest of V3.7 unchanged; otherwise, leave the failure visible and avoid introducing any additional regressions.
 
 ## Data and workflow protections that must not be broken
 
