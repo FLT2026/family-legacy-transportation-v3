@@ -35,6 +35,9 @@
     'v38-current-rig-display-hardfix.js?v=20260912a',
     'v38-workflow-authority.js?v=20260910b',
     'v38-fleet-renewal-guidance.js?v=20260912a',
+    'v38-master-record-hub.js?v=20260913a',
+    'v38-master-record-recovery.js?v=20260913a',
+    'v38-business-fleet-bridge.js?v=20260913a',
     'v38-next-needed-ui.js?v=20260910a',
     'v38-dashboard-close-state-hardfix.js?v=20260910a'
   ];
