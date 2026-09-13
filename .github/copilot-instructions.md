@@ -7,7 +7,7 @@ Family Legacy Commercial Command is a browser-based transportation operating sys
 The product contract in this repository is:
 
 - Preserve approved V3.5, V3.6, and V3.7 behavior.
-- Do not interfere with the open V3.8 work in PR #37 (`Add V3.8 Operational Integrity`).
+- Do not interfere with the active V3.8 Operational Integrity workstream, which is currently tracked separately as PR #37.
 - Keep the system simple for owner-operators and fleets with 1–3 drivers.
 - Keep one focused task per pull request.
 - Never merge a pull request automatically.
@@ -157,6 +157,6 @@ Do not hide, bypass, or redefine that failing gate. If future work is specifical
 
 - Keep each PR limited to one focused task.
 - Preserve all approved V3.7 behavior.
-- Do not interfere with PR #37 or mix unrelated V3.8 work into another PR.
+- Do not mix unrelated V3.8 operational-integrity work into another PR.
 - Do not modify application code, dependencies, configuration, tests, or stored data unless the assigned task explicitly requires it.
 - Do not auto-merge PRs.
