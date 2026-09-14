@@ -193,7 +193,7 @@
     if(start!==null&&Math.abs((end-start)-actualMiles)>1){toast('Actual miles must be within 1 mile of the odometer difference.');return}
     const load=current(),assignment=assignedTruck(load),record={snapshotId:'ACT-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,7),version:'V3.6',createdAt:new Date().toISOString(),loadId:load.id,tripDate:load.deliveryDate||load.date||new Date().toISOString().slice(0,10),odometerStart:start,odometerEnd:end,actualMiles,actualGallons,averageFuelPrice,fuelCost,actualMpg:actualMiles/actualGallons,truckId:assignment?.truckId||null,truckUnit:assignment?.truckUnit||null,noTollsIncurred:data.get('noTollsIncurred')==='on',tollsAtSnapshot:tollTotal(load),ledgerCostAtSnapshot:ledgerTotal(load),receiptCountAtSnapshot:receiptCount(load),note:String(data.get('note')||'').trim()},saved=saveTripRecord(load,record);
     load.actualTripRecords=saved.records;
-    if(saved.duplicate){persist();toast('This actual trip is already saved.');renderFinance();form.reset();return}
+    if(saved.duplicate){load.actualMiles=saved.record.actualMiles;load.actualFuelGallons=saved.record.actualGallons;load.actualFuelPrice=saved.record.averageFuelPrice;load.actualMpg=saved.record.actualMpg;persist();toast('This actual trip is already saved.');renderFinance();form.reset();return}
     load.actualMiles=actualMiles;load.actualFuelGallons=actualGallons;load.actualFuelPrice=averageFuelPrice;load.actualMpg=saved.record.actualMpg;persist();toast('Actual trip saved. Confirm the fuel vendor to post the expense.');renderFinance();form.reset();openFuelExpense(saved.record);
   });
 
