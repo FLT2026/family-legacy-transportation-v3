@@ -197,7 +197,7 @@
   document.title='Family Legacy Commercial Command™ V3.8';
   const header=document.querySelector('header .eyebrow');if(header)header.textContent='Family Legacy Commercial Command™ / V3.8';
   const footer=$('clock')?.parentElement;if(footer)footer.childNodes[0].textContent='V3.8 COMMERCIAL COMMAND · ';
-  const testTitle=document.querySelector('#test > .panel > .section-head h2');if(testTitle)testTitle.textContent='V3.6 Test Gate';
-  const testNav=document.querySelector('[data-view="test"] .nav-label');if(testNav)testNav.textContent='V3.6 Test Gate';
+  const testTitle=document.querySelector('#test > .panel > .section-head h2');if(testTitle)testTitle.textContent='V3.8 Test Gate';
+  const testNav=document.querySelector('[data-view="test"] .nav-label');if(testNav)testNav.textContent='V3.8 Test Gate';
   render();
 })();

@@ -2,8 +2,8 @@
   document.title='Family Legacy Commercial Command™ V3.8';
   const header=document.querySelector('header .eyebrow');if(header)header.textContent='Family Legacy Commercial Command™ / V3.8';
   const footer=document.getElementById('clock')?.parentElement;if(footer)footer.childNodes[0].textContent='V3.8 COMMERCIAL COMMAND · ';
-  const testTitle=document.querySelector('#test > .panel > .section-head h2');if(testTitle)testTitle.textContent='V3.7 Test Gate';
-  const testNav=document.querySelector('[data-view="test"] .nav-label');if(testNav)testNav.textContent='V3.7 Test Gate';
+  const testTitle=document.querySelector('#test > .panel > .section-head h2');if(testTitle)testTitle.textContent='V3.8 Test Gate';
+  const testNav=document.querySelector('[data-view="test"] .nav-label');if(testNav)testNav.textContent='V3.8 Test Gate';
   const cents=value=>Math.round((Number(value)||0)*100),clone=value=>JSON.parse(JSON.stringify(value??null)),signature=value=>JSON.stringify(value);
   const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
   const sum=(items,pick)=>items.reduce((total,item)=>total+cents(pick(item)),0),invoiceAmount=load=>cents(load?.invoice?.total ?? (typeof actualRevenue==='function'?actualRevenue(load):load?.actualRevenue ?? load?.revenue)),paymentRecords=load=>Array.isArray(load?.payments)?load.payments:[],paymentAmount=load=>sum(paymentRecords(load).filter(item=>!item.allocation||item.allocation.invoiceNumber===load?.invoice?.number),item=>item.amount),expenseAmount=load=>sum(Array.isArray(load?.expenses)?load.expenses:[],item=>item.amount),adjustmentAmount=load=>sum((Array.isArray(load?.financialAdjustments)?load.financialAdjustments:[]).filter(item=>!item.invoiceNumber||item.invoiceNumber===load?.invoice?.number),item=>item.amount);

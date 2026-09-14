@@ -44,6 +44,7 @@ assert.deepEqual(history.map(item=>item.loadId),['FLT-000002','FLT-000001']);
 const indexHtml=fs.readFileSync('index.html','utf8');
 assert.match(indexHtml,/Family Legacy Commercial Command™ V3\.8/);
 assert.match(indexHtml,/Family Legacy Commercial Command™ \/ V3\.8/);
+assert.match(indexHtml,/V3\.8 Test Gate/);
 assert.match(indexHtml,/The V3\.8 operating path, tested end to end\./);
 assert.match(indexHtml,/V3\.8 health/);
 assert.doesNotMatch(indexHtml,/The V3\.5 operating path, tested end to end\./);
