@@ -11,15 +11,27 @@
   const tollTotal=load=>(load.expenses||[]).filter(item=>/toll/i.test(String(item.category))).reduce((sum,item)=>sum+Number(item.amount||0),0);
   const receiptCount=load=>(load.expenses||[]).filter(item=>item.receipt).length;
   const actualFor=(load,categories)=>(load.expenses||[]).filter(item=>categories.includes(String(item.category))).reduce((sum,item)=>sum+Number(item.amount||0),0);
-  const tripRecordKey=(load,record)=>String(record?.tripKey||load?.actualTripKey||record?.loadId||load?.id||'');
-  const withTripKey=(load,record)=>{
-    const tripKey=tripRecordKey(load,record);
-    return record?.tripKey===tripKey?record:{...record,tripKey};
+  const tripRecordKey=(load,record)=>JSON.stringify([
+    String(record?.loadId??load?.id??''),
+    String(record?.tripDate??load?.deliveryDate??load?.date??String(record?.createdAt||'').slice(0,10)),
+    String(record?.truckId??''),
+    number(record?.odometerStart),
+    number(record?.odometerEnd),
+    number(record?.actualMiles),
+    number(record?.actualGallons),
+    number(record?.averageFuelPrice),
+    number(record?.fuelCost),
+    Boolean(record?.noTollsIncurred),
+    String(record?.note??'').trim()
+  ]);
+  const withTripDate=(load,record)=>{
+    const tripDate=String(record?.tripDate??load?.deliveryDate??load?.date??String(record?.createdAt||'').slice(0,10));
+    return record?.tripDate===tripDate?record:{...record,tripDate};
   };
   function normalizeTripRecords(load){
     const source=records(load),seen=new Set(),normalized=[];
     for(let index=source.length-1;index>=0;index-=1){
-      const record=withTripKey(load,source[index]),key=tripRecordKey(load,record);
+      const record=withTripDate(load,source[index]),key=tripRecordKey(load,record);
       if(seen.has(key))continue;
       seen.add(key);
       normalized.unshift(record);
@@ -27,9 +39,8 @@
     return normalized;
   }
   function saveTripRecord(load,record){
-    if(!load?.actualTripKey&&load?.id)load.actualTripKey=String(load.id);
-    const nextRecord=withTripKey(load,record),normalized=normalizeTripRecords(load),existingIndex=normalized.findIndex(item=>tripRecordKey(load,item)===tripRecordKey(load,nextRecord));
-    if(existingIndex>=0){normalized[existingIndex]=nextRecord;return {duplicate:true,record:nextRecord,records:normalized};}
+    const nextRecord=withTripDate(load,record),normalized=normalizeTripRecords(load),existing=normalized.find(item=>tripRecordKey(load,item)===tripRecordKey(load,nextRecord));
+    if(existing)return {duplicate:true,record:existing,records:normalized};
     normalized.push(nextRecord);
     return {duplicate:false,record:nextRecord,records:normalized};
   }
@@ -96,9 +107,8 @@
   function normalizeStoredRecords(){
     let changed=false;
     (store.loads||[]).forEach(load=>{
-      if(!load?.actualTripKey&&load?.id){load.actualTripKey=String(load.id);changed=true;}
-      const prior=records(load),normalized=normalizeTripRecords(load),keyChanged=normalized.some((record,index)=>record.tripKey!==prior[index]?.tripKey);
-      if(normalized.length!==prior.length||keyChanged){
+      const prior=records(load),normalized=normalizeTripRecords(load),tripDateChanged=normalized.some((record,index)=>record.tripDate!==prior[index]?.tripDate);
+      if(normalized.length!==prior.length||tripDateChanged){
         load.actualTripRecords=normalized;
         changed=true;
       }

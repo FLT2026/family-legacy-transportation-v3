@@ -24,17 +24,17 @@ const load={id:'FLT-000001',actualTripRecords:[duplicateBase,duplicateLater]};
 const normalized=api.normalizeTripRecords(load);
 assert.equal(normalized.length,1);
 assert.equal(normalized[0].snapshotId,'ACT-DUPE');
-assert.equal(normalized[0].tripKey,'FLT-000001');
+assert.equal(normalized[0].tripDate,'2026-09-10');
 
 const duplicateSave=api.saveTripRecord(load,{...duplicateBase,snapshotId:'ACT-NEW',createdAt:'2026-09-10T10:00:00Z'});
 assert.equal(duplicateSave.duplicate,true);
 assert.equal(duplicateSave.records.length,1);
-assert.equal(duplicateSave.record.snapshotId,'ACT-NEW');
-assert.equal(duplicateSave.record.tripKey,'FLT-000001');
+assert.equal(duplicateSave.record.snapshotId,'ACT-DUPE');
+assert.equal(duplicateSave.record.tripDate,'2026-09-10');
 
 const distinctSave=api.saveTripRecord({id:'FLT-000001',actualTripRecords:duplicateSave.records},distinctTrip);
-assert.equal(distinctSave.duplicate,true);
-assert.equal(distinctSave.records.length,1);
+assert.equal(distinctSave.duplicate,false);
+assert.equal(distinctSave.records.length,2);
 assert.equal(distinctSave.record.snapshotId,'ACT-DISTINCT');
 
 const history=api.allVehicleRecordsForLoads([
