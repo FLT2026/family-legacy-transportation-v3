@@ -4,9 +4,13 @@
   const fleetKey='flt-v35-fleet',assignmentKey='flt-v38-assignments',classificationKey='flt-v35-classification';
   const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
   const readJson=(key,fallback)=>{try{return JSON.parse(localStorage.getItem(key)||'null')??fallback}catch(error){return fallback}};
-  const persistStore=()=>{if(typeof persist==='function')persist();else if(globalThis.store)localStorage.setItem('flt-commercial-command',JSON.stringify(globalThis.store))};
+  // The live app declares `store` as a top-level lexical const in index.html,
+  // not as a globalThis/window property, so it must be read as a bare
+  // identifier. `typeof` never throws even when `store` was never declared.
+  const resolveStore=()=>typeof store!=='undefined'?store:null;
+  const persistStore=()=>{if(typeof persist==='function')persist();else if(resolveStore())localStorage.setItem('flt-commercial-command',JSON.stringify(resolveStore()))};
   const loadSelect=document.getElementById('fleet-lock-load');
-  const selectedLoad=()=>{const id=loadSelect?.value||globalThis.store?.selectedId;return (globalThis.store?.loads||[]).find(load=>load.id===id)||null};
+  const selectedLoad=()=>{const s=resolveStore(),id=loadSelect?.value||s?.selectedId;return (s?.loads||[]).find(load=>load.id===id)||null};
   const noOpenLoad=()=>!loadSelect?.value;
   const activeAssignment=loadId=>assignmentApi?.activeForLoad(readJson(assignmentKey,{assignments:[],assignmentAudit:[]}),loadId)||null;
   const classification=()=>readJson(classificationKey,{});
@@ -18,7 +22,7 @@
   }
   function captureLoadSource(){
     const draft={sourceType:document.getElementById('v38-load-source-type')?.value||'',sourceName:document.getElementById('v38-load-source-name')?.value?.trim()||'',sourceReference:document.getElementById('v38-load-source-reference')?.value?.trim()||'',transportationType:document.getElementById('v38-transportation-type')?.value||''};
-    setTimeout(()=>{const load=(globalThis.store?.loads||[]).find(item=>item.id===globalThis.store?.selectedId)||(globalThis.store?.loads||[]).at(-1);if(!load)return;Object.assign(load,draft);load.documents=Array.isArray(load.documents)?load.documents:[];persistStore();renderDispatch();if(typeof renderRecord==='function')renderRecord();},0);
+    setTimeout(()=>{const s=resolveStore(),loads=s?.loads||[],load=loads.find(item=>item.id===s?.selectedId)||loads.at(-1);if(!load)return;Object.assign(load,draft);load.documents=Array.isArray(load.documents)?load.documents:[];persistStore();renderDispatch();if(typeof renderRecord==='function')renderRecord();},0);
   }
   function ensureDispatchPanel(){
     let panel=document.getElementById('v38-document-compliance-panel');if(panel)return panel;

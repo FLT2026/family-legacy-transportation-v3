@@ -7,7 +7,11 @@
   const fleet=()=>read(fleetKey,{drivers:[],trucks:[],trailers:[],locks:[],audit:[]});
   const assignments=()=>read(assignmentKey,{assignments:[],assignmentAudit:[]});
   const loadSelect=document.getElementById('fleet-lock-load'),driverSelect=document.getElementById('fleet-lock-driver'),truckSelect=document.getElementById('fleet-lock-truck'),trailerSelect=document.getElementById('fleet-lock-trailer');
-  function selectedLoad(){const id=loadSelect.value;return (globalThis.store?.loads||[]).find(load=>load.id===id)||null}
+  // The live app declares `store` as a top-level lexical const in index.html,
+  // not as a globalThis/window property, so it must be read as a bare
+  // identifier. `typeof` never throws even when `store` was never declared.
+  const resolveStore=()=>typeof store!=='undefined'?store:null;
+  function selectedLoad(){const id=loadSelect.value;return (resolveStore()?.loads||[]).find(load=>load.id===id)||null}
   function noOpenLoad(){return !loadSelect.value}
   function candidate(){const load=selectedLoad(),data=fleet(),loadId=load?.id||loadSelect.value,current=assignmentApi?.activeForLoad(assignments(),loadId),driver=data.drivers.find(item=>item.id===driverSelect.value),truck=data.trucks.find(item=>item.id===truckSelect.value),trailer=data.trailers.find(item=>item.id===trailerSelect.value),assignment=current&&current.driverId===driver?.id&&current.truckId===truck?.id&&current.trailerId===trailer?.id?current:{loadId,driverId:driver?.id||'',truckId:truck?.id||'',trailerId:trailer?.id||'',status:'Verified / Locked'};return{load,assignment,driver,truck,trailer}}
   function evaluate(){return fit.evaluate(candidate())}

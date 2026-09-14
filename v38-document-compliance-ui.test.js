@@ -237,3 +237,133 @@ ui.render();
 assert.match(elements.get('v38-document-compliance-panel').innerHTML, /Internal \/ Own Customer/);
 
 console.log('V3.8 owner-operator load source persistence, live document gate blocking, audit, evidence attachment, rerender, and self-customer PASS checks passed.');
+
+// Fail-closed store access: the live app declares `store` as a top-level
+// lexical const in index.html (not a globalThis/window property). This
+// scenario mirrors that exact binding shape via two separate vm.runInContext
+// calls, without ever assigning `store` onto the sandbox/global object, to
+// confirm the UI module resolves the real selected load instead of null.
+{
+  const lexElements = new Map();
+  let lexPanelHost;
+  let lexActions;
+
+  function lexRegisterHtmlIds(owner, html) {
+    const seen = new Set();
+    const re = /id=["']([^"']+)["']/g;
+    let match;
+    while ((match = re.exec(String(html || '')))) {
+      const id = match[1];
+      if (seen.has(id)) continue;
+      seen.add(id);
+      if (!lexElements.has(id)) {
+        const child = lexEl(id);
+        child.parentElement = owner;
+        lexElements.set(id, child);
+      }
+    }
+  }
+
+  function lexEl(id = '') {
+    let html = '';
+    const node = {
+      id,
+      textContent: '',
+      value: '',
+      files: null,
+      className: '',
+      style: {},
+      listeners: {},
+      parentElement: null,
+      addEventListener(type, fn, capture) {
+        (this.listeners[type] || (this.listeners[type] = [])).push({ fn, capture: Boolean(capture) });
+      },
+      insertBefore(child) { child.parentElement = this; lexElements.set(child.id, child); },
+      appendChild(child) { child.parentElement = this; lexElements.set(child.id, child); },
+      insertAdjacentElement(position, child) { child.parentElement = this.parentElement || this; lexElements.set(child.id, child); },
+      closest() { return lexPanelHost; },
+      querySelector(selector) { if (selector === '.form-actions') return lexActions; return null; }
+    };
+    Object.defineProperty(node, 'innerHTML', {
+      get() { return html; },
+      set(value) { html = String(value ?? ''); lexRegisterHtmlIds(node, html); }
+    });
+    return node;
+  }
+
+  lexPanelHost = lexEl('lex-panel-host');
+  const lexLoadForm = lexEl('load-form');
+  lexActions = lexEl('actions');
+  const lexDispatchForm = lexEl('fleet-lock-form');
+  const lexLoadSelect = lexEl('fleet-lock-load');
+  lexLoadForm.parentElement = lexPanelHost;
+  lexDispatchForm.parentElement = lexPanelHost;
+  [lexLoadForm, lexDispatchForm, lexLoadSelect].forEach(x => lexElements.set(x.id, x));
+
+  const lexDocument = {
+    createElement: () => lexEl(),
+    getElementById: id => lexElements.get(id) || null
+  };
+
+  const lexStorage = {};
+  const lexLocalStorage = {
+    getItem: key => lexStorage[key] ?? null,
+    setItem: (key, value) => { lexStorage[key] = String(value); }
+  };
+
+  const lexLoad = {
+    id: 'FLT-LEX-1',
+    customer: 'Lexical Store Customer',
+    pickup: 'A',
+    delivery: 'B',
+    date: '2026-09-14',
+    revenue: 500,
+    expenses: [],
+    payments: [],
+    documents: []
+  };
+
+  lexLocalStorage.setItem('flt-v38-assignments', JSON.stringify({ assignments: [], assignmentAudit: [] }));
+  lexLocalStorage.setItem('flt-v35-fleet', JSON.stringify({ drivers: [], trucks: [], trailers: [], locks: [], audit: [] }));
+  lexLocalStorage.setItem('flt-v35-classification', JSON.stringify({}));
+
+  lexLoadSelect.value = lexLoad.id;
+
+  let lexPersisted = 0;
+  const lexSandbox = {
+    window: { FLTWeightEquipmentUI: { evaluate: () => ({ status: 'PASS', pass: true, reasons: [] }) } },
+    document: lexDocument,
+    localStorage: lexLocalStorage,
+    persist() { lexPersisted++; },
+    alert: () => {},
+    toast: () => {},
+    Date,
+    setTimeout: fn => fn(),
+    globalThis: null
+  };
+  lexSandbox.globalThis = lexSandbox;
+  vm.createContext(lexSandbox);
+
+  // Declare `store` as a top-level lexical const in a *separate* runInContext
+  // call, exactly like index.html's inline <script> block declares it before
+  // the dynamically-loaded module scripts run. This does NOT create a
+  // sandbox/globalThis property.
+  vm.runInContext('const store = { loads: [' + JSON.stringify(lexLoad) + '], selectedId: ' + JSON.stringify(lexLoad.id) + ' };', lexSandbox);
+  assert.strictEqual(lexSandbox.store, undefined, 'store must not be a globalThis/window property');
+  assert.strictEqual(vm.runInContext('typeof store', lexSandbox), 'object', 'store must exist as a lexical binding');
+
+  vm.runInContext(fs.readFileSync('v38-assignment-integrity.js', 'utf8'), lexSandbox);
+  vm.runInContext(fs.readFileSync('v38-document-compliance.js', 'utf8'), lexSandbox);
+  vm.runInContext(fs.readFileSync('v38-document-compliance-ui.js', 'utf8'), lexSandbox);
+  const lexUi = lexSandbox.window.FLTDocumentComplianceUI;
+
+  const lexResult = lexUi.evaluate();
+  assert.notEqual(lexResult.loadId, '', 'the real lexical store load must be resolved, not null');
+  assert.equal(lexResult.loadId, lexLoad.id);
+
+  lexUi.render();
+  assert.match(lexElements.get('v38-document-compliance-panel').innerHTML, new RegExp(lexLoad.id));
+  assert.doesNotMatch(lexElements.get('v38-document-compliance-panel').innerHTML, /No open accepted load/);
+
+  console.log('V3.8 document compliance UI resolves the real lexical store binding (not globalThis.store) checks passed.');
+}

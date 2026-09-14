@@ -12,3 +12,37 @@ load.cargoWeight=18000;result=submitEvent();assert.equal(result.prevented,true);
 load.cargoWeight=6000;truck.verificationDate='';localStorage.setItem('flt-v35-fleet',JSON.stringify({...fleet,drivers:[driver],trucks:[truck],trailers:[trailer]}));alerts=[];result=submitEvent();assert.equal(result.prevented,true);assert.match(alerts.at(-1),/MORE INFORMATION REQUIRED/);fleet=JSON.parse(localStorage.getItem('flt-v35-fleet'));assert.ok(fleet.audit.at(-1).reasons.some(x=>/scale verification date/i.test(x)));
 truck.verificationDate='2026-09-01';localStorage.setItem('flt-v35-fleet',JSON.stringify({...fleet,drivers:[driver],trucks:[truck],trailers:[trailer]}));load.transportationType='Auto Transport';alerts=[];result=submitEvent();assert.equal(result.prevented,true);assert.match(alerts.at(-1),/DO NOT DISPATCH/);assert.ok(JSON.parse(localStorage.getItem('flt-v35-fleet')).audit.at(-1).reasons.some(x=>/transportation type/i.test(x)));
 load.transportationType='General Freight';alerts=[];result=submitEvent();assert.equal(result.prevented,false);assert.equal(alerts.length,0);console.log('V3.8 live Dispatch Weight & Equipment Fit Gate PASS, hard-stop, missing-data, audit, and transportation-type regression checks passed.');
+
+// Fail-closed store access: the live app declares `store` as a top-level
+// lexical const in index.html (not a globalThis/window property). This
+// scenario mirrors that exact binding shape via two separate vm.runInContext
+// calls, without ever assigning `store` onto the sandbox/global object, to
+// confirm the UI module resolves the real selected load instead of null.
+{
+  const lexElements=new Map();
+  function lexEl(id=''){return{id,innerHTML:'',textContent:'',className:'',style:{},value:'',listeners:{},parentElement:null,addEventListener(type,fn,capture){(this.listeners[type]||(this.listeners[type]=[])).push({fn,capture:Boolean(capture)})},insertAdjacentElement(position,child){child.parentElement=this.parentElement||this;lexElements.set(child.id,child)},closest(){return lexPanelHost},appendChild(child){child.parentElement=this;lexElements.set(child.id,child)}}}
+  const lexPanelHost=lexEl('lex-host'),lexForm=lexEl('fleet-lock-form'),lexLoadSelect=lexEl('fleet-lock-load'),lexDriverSelect=lexEl('fleet-lock-driver'),lexTruckSelect=lexEl('fleet-lock-truck'),lexTrailerSelect=lexEl('fleet-lock-trailer');
+  lexForm.parentElement=lexPanelHost;[lexForm,lexLoadSelect,lexDriverSelect,lexTruckSelect,lexTrailerSelect].forEach(x=>lexElements.set(x.id,x));
+  const lexDocument={createElement:()=>lexEl(),getElementById:id=>lexElements.get(id)||null};
+  const lexStorage={};const lexLocalStorage={getItem:key=>lexStorage[key]??null,setItem:(key,value)=>{lexStorage[key]=String(value)}};
+  const lexLoad={id:'FLT-LEX-W1',cargoWeight:6000,cargoLength:20,cargoWidth:8,transportationType:'General Freight'};
+  lexLocalStorage.setItem('flt-v35-fleet',JSON.stringify({drivers:[],trucks:[],trailers:[],locks:[],audit:[]}));
+  lexLocalStorage.setItem('flt-v38-assignments',JSON.stringify({assignments:[],assignmentAudit:[]}));
+  lexLoadSelect.value=lexLoad.id;
+  const lexSandbox={window:{},document:lexDocument,localStorage:lexLocalStorage,alert:()=>{},toast:()=>{},Date,globalThis:null};
+  lexSandbox.globalThis=lexSandbox;
+  vm.createContext(lexSandbox);
+  // Declare `store` as a top-level lexical const in a *separate* runInContext
+  // call, exactly like index.html's inline <script> block declares it before
+  // the dynamically-loaded module scripts run. This does NOT create a
+  // sandbox/globalThis property.
+  vm.runInContext('const store = { loads: ['+JSON.stringify(lexLoad)+'], selectedId: '+JSON.stringify(lexLoad.id)+' };',lexSandbox);
+  assert.strictEqual(lexSandbox.store,undefined,'store must not be a globalThis/window property');
+  assert.strictEqual(vm.runInContext('typeof store',lexSandbox),'object','store must exist as a lexical binding');
+  vm.runInContext(fs.readFileSync('v38-weight-equipment-fit.js','utf8'),lexSandbox);
+  vm.runInContext(fs.readFileSync('v38-weight-equipment-ui.js','utf8'),lexSandbox);
+  const lexApi=lexSandbox.window.FLTWeightEquipmentUI;
+  const lexResult=lexApi.evaluate();
+  assert.equal(lexResult.loadId,lexLoad.id,'the real lexical store load must be resolved, not null');
+  console.log('V3.8 weight/equipment UI resolves the real lexical store binding (not globalThis.store) checks passed.');
+}
