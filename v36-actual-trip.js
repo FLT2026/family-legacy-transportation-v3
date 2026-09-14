@@ -11,22 +11,15 @@
   const tollTotal=load=>(load.expenses||[]).filter(item=>/toll/i.test(String(item.category))).reduce((sum,item)=>sum+Number(item.amount||0),0);
   const receiptCount=load=>(load.expenses||[]).filter(item=>item.receipt).length;
   const actualFor=(load,categories)=>(load.expenses||[]).filter(item=>categories.includes(String(item.category))).reduce((sum,item)=>sum+Number(item.amount||0),0);
-  const tripRecordKey=(loadId,record)=>JSON.stringify([
-    String(loadId??record?.loadId??''),
-    String(record?.truckId??''),
-    number(record?.odometerStart),
-    number(record?.odometerEnd),
-    number(record?.actualMiles),
-    number(record?.actualGallons),
-    number(record?.averageFuelPrice),
-    number(record?.fuelCost),
-    Boolean(record?.noTollsIncurred),
-    String(record?.note??'').trim()
-  ]);
+  const tripRecordKey=(load,record)=>String(record?.tripKey||load?.actualTripKey||record?.loadId||load?.id||'');
+  const withTripKey=(load,record)=>{
+    const tripKey=tripRecordKey(load,record);
+    return record?.tripKey===tripKey?record:{...record,tripKey};
+  };
   function normalizeTripRecords(load){
     const source=records(load),seen=new Set(),normalized=[];
     for(let index=source.length-1;index>=0;index-=1){
-      const record=source[index],key=tripRecordKey(load?.id,record);
+      const record=withTripKey(load,source[index]),key=tripRecordKey(load,record);
       if(seen.has(key))continue;
       seen.add(key);
       normalized.unshift(record);
@@ -34,10 +27,11 @@
     return normalized;
   }
   function saveTripRecord(load,record){
-    const normalized=normalizeTripRecords(load),key=tripRecordKey(load?.id,record),existing=normalized.find(item=>tripRecordKey(load?.id,item)===key);
-    if(existing)return {duplicate:true,record:existing,records:normalized};
-    normalized.push(record);
-    return {duplicate:false,record,records:normalized};
+    if(!load?.actualTripKey&&load?.id)load.actualTripKey=String(load.id);
+    const nextRecord=withTripKey(load,record),normalized=normalizeTripRecords(load),existingIndex=normalized.findIndex(item=>tripRecordKey(load,item)===tripRecordKey(load,nextRecord));
+    if(existingIndex>=0){normalized[existingIndex]=nextRecord;return {duplicate:true,record:nextRecord,records:normalized};}
+    normalized.push(nextRecord);
+    return {duplicate:false,record:nextRecord,records:normalized};
   }
   const estimateFor=load=>{
     let snapshots=[];
@@ -102,13 +96,14 @@
   function normalizeStoredRecords(){
     let changed=false;
     (store.loads||[]).forEach(load=>{
-      const normalized=normalizeTripRecords(load);
-      if(normalized.length!==records(load).length){
+      if(!load?.actualTripKey&&load?.id){load.actualTripKey=String(load.id);changed=true;}
+      const prior=records(load),normalized=normalizeTripRecords(load),keyChanged=normalized.some((record,index)=>record.tripKey!==prior[index]?.tripKey);
+      if(normalized.length!==prior.length||keyChanged){
         load.actualTripRecords=normalized;
         changed=true;
       }
     });
-    if(changed&&typeof persist==='function')persist();
+    return changed;
   }
   function allVehicleRecords(truckId){
     return allVehicleRecordsForLoads(store.loads,truckId);
@@ -145,7 +140,6 @@
     return true;
   }
   function render(){
-    normalizeStoredRecords();
     const load=current(),record=latest(load),estimate=estimateFor(load),actualCost=ledgerTotal(load),assignment=assignedTruck(load),truckId=record?.truckId||assignment?.truckId||null,history=allVehicleRecords(truckId),tollsComplete=tollTotal(load)>0||Boolean(record?.noTollsIncurred);
     $('v36-record-status').textContent=record?'SNAPSHOT SAVED':'NOT RECORDED';$('v36-record-status').className='tag '+(record?'':'orange');
     $('v36-actual-mpg').textContent=record?record.actualMpg.toFixed(2):'—';
@@ -199,5 +193,6 @@
   const footer=$('clock')?.parentElement;if(footer)footer.childNodes[0].textContent='V3.8 COMMERCIAL COMMAND · ';
   const testTitle=document.querySelector('#test > .panel > .section-head h2');if(testTitle)testTitle.textContent='V3.8 Test Gate';
   const testNav=document.querySelector('[data-view="test"] .nav-label');if(testNav)testNav.textContent='V3.8 Test Gate';
+  if(normalizeStoredRecords()&&typeof persist==='function')persist();
   render();
 })();
