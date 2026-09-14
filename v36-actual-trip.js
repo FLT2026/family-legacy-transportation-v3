@@ -11,6 +11,34 @@
   const tollTotal=load=>(load.expenses||[]).filter(item=>/toll/i.test(String(item.category))).reduce((sum,item)=>sum+Number(item.amount||0),0);
   const receiptCount=load=>(load.expenses||[]).filter(item=>item.receipt).length;
   const actualFor=(load,categories)=>(load.expenses||[]).filter(item=>categories.includes(String(item.category))).reduce((sum,item)=>sum+Number(item.amount||0),0);
+  const tripRecordKey=(loadId,record)=>JSON.stringify([
+    String(loadId??record?.loadId??''),
+    String(record?.truckId??''),
+    number(record?.odometerStart),
+    number(record?.odometerEnd),
+    number(record?.actualMiles),
+    number(record?.actualGallons),
+    number(record?.averageFuelPrice),
+    number(record?.fuelCost),
+    Boolean(record?.noTollsIncurred),
+    String(record?.note??'').trim()
+  ]);
+  function normalizeTripRecords(load){
+    const source=records(load),seen=new Set(),normalized=[];
+    for(let index=source.length-1;index>=0;index-=1){
+      const record=source[index],key=tripRecordKey(load?.id,record);
+      if(seen.has(key))continue;
+      seen.add(key);
+      normalized.unshift(record);
+    }
+    return normalized;
+  }
+  function saveTripRecord(load,record){
+    const normalized=normalizeTripRecords(load),key=tripRecordKey(load?.id,record),existing=normalized.find(item=>tripRecordKey(load?.id,item)===key);
+    if(existing)return {duplicate:true,record:existing,records:normalized};
+    normalized.push(record);
+    return {duplicate:false,record,records:normalized};
+  }
   const estimateFor=load=>{
     let snapshots=[];
     try{const parsed=JSON.parse(localStorage.getItem('flt-v35-estimate-snapshots')||'[]');snapshots=Array.isArray(parsed)?parsed:[]}catch(error){}
@@ -30,6 +58,11 @@
       return [...locks].reverse().find(lock=>lock.loadId===load.id)||null;
     }catch(error){return null}
   };
+  const allVehicleRecordsForLoads=(loads,truckId)=>{
+    const history=(Array.isArray(loads)?loads:[]).flatMap(load=>normalizeTripRecords(load).map(record=>({...record,loadId:load.id})));
+    return history.filter(record=>truckId?record.truckId===truckId:true).sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt)));
+  };
+  window.FLTActualTrip={tripRecordKey,normalizeTripRecords,saveTripRecord,allVehicleRecordsForLoads};
 
   const finance=$('finance');
   if(!finance)return;
@@ -66,8 +99,19 @@
   gate.innerHTML='<div class="section-head"><div><div class="eyebrow">Blueprint-aligned gate</div><h2>V3.6 Actual Trip Cost</h2><p class="subtle" style="margin-top:5px">Validates actual mileage, fuel, expense evidence, variance, and vehicle efficiency history for the selected load.</p></div><span class="tag orange" id="v36-gate-status">PENDING</span></div><div id="v36-gate-checks"></div>';
   test.appendChild(gate);
 
+  function normalizeStoredRecords(){
+    let changed=false;
+    (store.loads||[]).forEach(load=>{
+      const normalized=normalizeTripRecords(load);
+      if(normalized.length!==records(load).length){
+        load.actualTripRecords=normalized;
+        changed=true;
+      }
+    });
+    if(changed&&typeof persist==='function')persist();
+  }
   function allVehicleRecords(truckId){
-    return store.loads.flatMap(load=>records(load).map(record=>({...record,loadId:load.id}))).filter(record=>truckId?record.truckId===truckId:true).sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt)));
+    return allVehicleRecordsForLoads(store.loads,truckId);
   }
   function setVariance(id,value,kind){
     const el=$(id);el.textContent=value;el.style.color=kind==='bad'?'var(--red)':kind==='good'?'var(--green)':'var(--ink)';
@@ -101,6 +145,7 @@
     return true;
   }
   function render(){
+    normalizeStoredRecords();
     const load=current(),record=latest(load),estimate=estimateFor(load),actualCost=ledgerTotal(load),assignment=assignedTruck(load),truckId=record?.truckId||assignment?.truckId||null,history=allVehicleRecords(truckId),tollsComplete=tollTotal(load)>0||Boolean(record?.noTollsIncurred);
     $('v36-record-status').textContent=record?'SNAPSHOT SAVED':'NOT RECORDED';$('v36-record-status').className='tag '+(record?'':'orange');
     $('v36-actual-mpg').textContent=record?record.actualMpg.toFixed(2):'—';
@@ -142,16 +187,16 @@
     if((start===null)!==(end===null)){toast('Enter both odometer readings or leave both blank.');return}
     if(start!==null&&end<=start){toast('Odometer end must be greater than odometer start.');return}
     if(start!==null&&Math.abs((end-start)-actualMiles)>1){toast('Actual miles must be within 1 mile of the odometer difference.');return}
-    const load=current(),assignment=assignedTruck(load),record={snapshotId:'ACT-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,7),version:'V3.6',createdAt:new Date().toISOString(),loadId:load.id,odometerStart:start,odometerEnd:end,actualMiles,actualGallons,averageFuelPrice,fuelCost,actualMpg:actualMiles/actualGallons,truckId:assignment?.truckId||null,truckUnit:assignment?.truckUnit||null,noTollsIncurred:data.get('noTollsIncurred')==='on',tollsAtSnapshot:tollTotal(load),ledgerCostAtSnapshot:ledgerTotal(load),receiptCountAtSnapshot:receiptCount(load),note:String(data.get('note')||'').trim()};
-    load.actualTripRecords=records(load);load.actualTripRecords.push(record);load.actualMiles=actualMiles;load.actualFuelGallons=actualGallons;load.actualFuelPrice=averageFuelPrice;load.actualMpg=record.actualMpg;persist();toast('Actual trip saved. Confirm the fuel vendor to post the expense.');renderFinance();form.reset();openFuelExpense(record);
+    const load=current(),assignment=assignedTruck(load),record={snapshotId:'ACT-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,7),version:'V3.6',createdAt:new Date().toISOString(),loadId:load.id,odometerStart:start,odometerEnd:end,actualMiles,actualGallons,averageFuelPrice,fuelCost,actualMpg:actualMiles/actualGallons,truckId:assignment?.truckId||null,truckUnit:assignment?.truckUnit||null,noTollsIncurred:data.get('noTollsIncurred')==='on',tollsAtSnapshot:tollTotal(load),ledgerCostAtSnapshot:ledgerTotal(load),receiptCountAtSnapshot:receiptCount(load),note:String(data.get('note')||'').trim()},saved=saveTripRecord(load,record);
+    load.actualTripRecords=saved.records;load.actualMiles=actualMiles;load.actualFuelGallons=actualGallons;load.actualFuelPrice=averageFuelPrice;load.actualMpg=saved.record.actualMpg;persist();toast(saved.duplicate?'This actual trip is already saved. Confirm the fuel vendor to post the expense.':'Actual trip saved. Confirm the fuel vendor to post the expense.');renderFinance();form.reset();openFuelExpense(saved.record);
   });
 
   const priorFinance=renderFinance;renderFinance=()=>{priorFinance();render()};
   const priorGate=renderGate;
   document.querySelectorAll('[data-view="test"],[data-view-jump="test"]').forEach(button=>button.addEventListener('click',()=>setTimeout(priorGate,0)));
-  document.title='Family Legacy Commercial Command™ V3.6';
-  const header=document.querySelector('header .eyebrow');if(header)header.textContent='Family Legacy Commercial Command™ / V3.6';
-  const footer=$('clock')?.parentElement;if(footer)footer.childNodes[0].textContent='V3.6 COMMERCIAL COMMAND · ';
+  document.title='Family Legacy Commercial Command™ V3.8';
+  const header=document.querySelector('header .eyebrow');if(header)header.textContent='Family Legacy Commercial Command™ / V3.8';
+  const footer=$('clock')?.parentElement;if(footer)footer.childNodes[0].textContent='V3.8 COMMERCIAL COMMAND · ';
   const testTitle=document.querySelector('#test > .panel > .section-head h2');if(testTitle)testTitle.textContent='V3.6 Test Gate';
   const testNav=document.querySelector('[data-view="test"] .nav-label');if(testNav)testNav.textContent='V3.6 Test Gate';
   render();
