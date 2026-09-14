@@ -1,5 +1,8 @@
 (() => {
-  const normalize=value=>Boolean(value&&value.pass!==false&&value.status!=='DO NOT DISPATCH'&&value.status!=='MORE INFORMATION REQUIRED'&&value.status!=='INCOMPLETE'&&value.status!=='REVIEW');
+  // Fail closed: only an explicit pass===true result is accepted. Any missing,
+  // undefined, empty, partial, or unrecognized result shape is treated as not
+  // evaluated and therefore blocked.
+  const normalize=value=>Boolean(value)&&value.pass===true;
   function evaluate(input={}){
     const checks={
       assignment:normalize(input.assignment),
