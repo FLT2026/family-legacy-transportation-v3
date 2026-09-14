@@ -17,6 +17,7 @@ const tests=[
   'v38-pickup-delivery-ui.test.js',
   'v38-autopopulate-audit.test.js',
   'v38-fast-load-workflow.test.js',
+  'v38-fleet-renewal-guidance.test.js',
   'v38-acceptance-gate.test.js'
 ];
 

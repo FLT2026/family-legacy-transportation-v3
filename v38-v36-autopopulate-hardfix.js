@@ -139,7 +139,12 @@
     }
     const select=$('v36-truck-repair-select');
     if(select){
-      select.innerHTML='<option value="">Select the truck used for this trip</option>'+trucks.map(truck=>'<option value="'+String(truck.id)+'">'+String(truck.unit||truck.name||truck.id)+'</option>').join('');
+      // Build options via the DOM Option constructor (not innerHTML string
+      // concatenation) so user-editable truck unit/name values can never be
+      // interpreted as markup.
+      select.innerHTML='';
+      select.appendChild(new Option('Select the truck used for this trip',''));
+      trucks.forEach(truck=>select.appendChild(new Option(String(truck.unit||truck.name||truck.id),String(truck.id))));
     }
   }
 

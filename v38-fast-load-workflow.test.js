@@ -17,3 +17,123 @@ assert.equal(api.proposalReady({pickupZip:'27601',deliveryZip:'2',offer:1240,car
 sandbox.localStorage.setItem('flt-v38-accepted-proposal',JSON.stringify({pickupZip:'27601',deliveryZip:'28301',offer:1240,cargoWeight:5000,loadedMiles:245,deadheadMiles:35}));
 assert.equal(api.canCompleteLoad(),true,'accepted proposal should unlock detailed load setup');
 console.log('V3.8 profitability-first quick decision and accepted-load gate checks passed.');
+
+// Hostile-input rendering check: the accepted-proposal banner interpolates
+// operator-entered proposal fields (source, sourceName). Build a minimal DOM
+// stub so applyProposalToLoadForm() actually runs (it only executes when
+// `document` exists), then confirm hostile values render as literal escaped
+// text and cannot inject elements or event-handler attributes.
+function buildDomStub() {
+  const elements = new Map();
+  function registerHtmlIds(owner, html) {
+    const seen = new Set();
+    const re = /id=["']([^"']+)["']/g;
+    let match;
+    while ((match = re.exec(String(html || '')))) {
+      const id = match[1];
+      if (seen.has(id)) continue;
+      seen.add(id);
+      if (!elements.has(id)) {
+        const child = el(id);
+        child.parentElement = owner;
+        elements.set(id, child);
+      }
+    }
+  }
+  function el(id = '') {
+    let html = '';
+    const node = {
+      id, className: '', style: {}, dataset: {}, value: '', hidden: false, textContent: '',
+      listeners: {}, parentElement: null, children: [],
+      addEventListener(type, fn) { (this.listeners[type] = this.listeners[type] || []).push(fn); },
+      appendChild(child) { this.children.push(child); child.parentElement = this; elements.set(child.id, child); return child; },
+      prepend(child) { this.children.unshift(child); child.parentElement = this; elements.set(child.id, child); return child; },
+      insertBefore(child) { this.children.push(child); child.parentElement = this; elements.set(child.id, child); return child; },
+      insertAdjacentElement(position, child) { child.parentElement = this.parentElement || this; elements.set(child.id, child); },
+      querySelector() { return null; },
+      querySelectorAll() { return []; },
+      setAttribute() {},
+      classList: { add() {}, remove() {} },
+      matches() { return false; }
+    };
+    Object.defineProperty(node, 'innerHTML', {
+      get() { return html; },
+      set(value) { html = String(value ?? ''); registerHtmlIds(node, html); }
+    });
+    return node;
+  }
+  const nav = el('nav');
+  const decisionForm = el('v35-decision-form');
+  const loadForm = el('load-form');
+  const head = el('head');
+  [nav, decisionForm, loadForm].forEach(x => elements.set(x.id, x));
+  const document = {
+    createElement: () => el(),
+    getElementById: id => elements.get(id) || null,
+    head,
+    addEventListener() {},
+    querySelector: () => null,
+    querySelectorAll: () => []
+  };
+  const storage = {};
+  const localStorage = {
+    getItem: key => storage[key] ?? null,
+    setItem: (key, value) => { storage[key] = String(value); }
+  };
+  return { elements, document, localStorage };
+}
+
+function loadWithAcceptedProposal(proposal) {
+  const { elements, document, localStorage } = buildDomStub();
+  localStorage.setItem('flt-v38-accepted-proposal', JSON.stringify(proposal));
+  const domSandbox = { window: {}, document, localStorage, Date, console, setTimeout: fn => fn(), globalThis: null };
+  domSandbox.globalThis = domSandbox;
+  vm.createContext(domSandbox);
+  vm.runInContext(fs.readFileSync('v38-fast-load-workflow.js', 'utf8'), domSandbox);
+  return elements.get('v38-accepted-proposal-banner');
+}
+
+{
+  const maliciousProposal = {
+    source: '<script>window.__flt_xss_source=true</script>',
+    sourceName: '"><img src=x onerror="window.__flt_xss_name=true">',
+    sourceReference: 'REF-1',
+    pickupZip: '27601',
+    deliveryZip: '28301',
+    offer: 1500,
+    cargoWeight: 6000,
+    loadedMiles: 200,
+    deadheadMiles: 20
+  };
+  const banner = loadWithAcceptedProposal(maliciousProposal);
+  assert.ok(banner, 'accepted-proposal banner must be created');
+  assert.doesNotMatch(banner.innerHTML, /<script>/i, 'raw <script> tag must not appear in rendered banner markup');
+  assert.doesNotMatch(banner.innerHTML, /<img /i, 'raw <img> tag must not appear in rendered banner markup');
+  assert.doesNotMatch(banner.innerHTML, /<[^&]*onerror=/i, 'onerror must never appear inside an actual (unescaped) HTML tag');
+  assert.match(banner.innerHTML, /&lt;script&gt;window\.__flt_xss_source=true&lt;\/script&gt;/, 'malicious source value must render as literal escaped text');
+  assert.match(banner.innerHTML, /&quot;&gt;&lt;img src=x onerror=&quot;window\.__flt_xss_name=true&quot;&gt;/, 'malicious sourceName value must render as literal escaped text');
+}
+
+{
+  // Normal values (including an ampersand and an apostrophe, which are HTML
+  // metacharacters but not attacks) must still render as readable text.
+  const normalProposal = {
+    source: 'Broker / Dispatcher',
+    sourceName: "O'Reilly Freight & Sons",
+    sourceReference: 'REF-2',
+    pickupZip: '27601',
+    deliveryZip: '28301',
+    offer: 2500,
+    cargoWeight: 8000,
+    loadedMiles: 300,
+    deadheadMiles: 40
+  };
+  const banner = loadWithAcceptedProposal(normalProposal);
+  assert.ok(banner, 'accepted-proposal banner must be created for normal input');
+  assert.match(banner.innerHTML, /Broker \/ Dispatcher/);
+  assert.match(banner.innerHTML, /O&#39;Reilly Freight &amp; Sons/);
+  assert.match(banner.innerHTML, /27601 → 28301/);
+  assert.match(banner.innerHTML, /Offer \$2,500/);
+}
+
+console.log('V3.8 fast-load accepted-proposal banner hostile-input and normal-input escaping checks passed.');

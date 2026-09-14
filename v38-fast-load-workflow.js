@@ -9,6 +9,7 @@
   window.FLTFastLoadWorkflow={fiveZip,decisionAccepted,proposalReady,acceptedProposal,canCompleteLoad};
   if(typeof document==='undefined')return;
   const $=id=>document.getElementById(id),nav=$('nav'),decisionForm=$('v35-decision-form'),loadForm=$('load-form');if(!nav||!decisionForm||!loadForm)return;
+  const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 
   const style=document.createElement('style');style.id='v38-fast-load-workflow-style';style.textContent=`
   .v38-quick-section{grid-column:1/-1;border:2px solid var(--green-2);background:#f5f9f4;border-radius:8px;padding:14px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.v38-quick-section .full{grid-column:1/-1}.v38-quick-title{grid-column:1/-1}.v38-quick-title h3{font-size:17px}.v38-quick-title p{margin-top:4px}
@@ -48,7 +49,7 @@
   function applyProposalToLoadForm(p=acceptedProposal()){
     if(!proposalReady(p))return false;
     let banner=$('v38-accepted-proposal-banner');if(!banner){banner=document.createElement('div');banner.id='v38-accepted-proposal-banner';banner.className='v38-accepted-banner';loadForm.prepend(banner)}
-    banner.innerHTML='<strong>Accepted estimate carried forward — no re-entry required.</strong><br><span class="subtle">'+[p.source,p.sourceName,p.pickupZip+' → '+p.deliveryZip,'Offer $'+Number(p.offer).toLocaleString()].filter(Boolean).join(' · ')+'</span><div class="v38-source-note">Miles, MPG, fuel price, rate, and cargo weight stay tied to the accepted estimate. Complete only customer, exact locations, dates, commodity, and exceptions below.</div>';
+    banner.innerHTML='<strong>Accepted estimate carried forward — no re-entry required.</strong><br><span class="subtle">'+[p.source,p.sourceName,p.pickupZip+' → '+p.deliveryZip,'Offer $'+Number(p.offer).toLocaleString()].filter(Boolean).map(esc).join(' · ')+'</span><div class="v38-source-note">Miles, MPG, fuel price, rate, and cargo weight stay tied to the accepted estimate. Complete only customer, exact locations, dates, commodity, and exceptions below.</div>';
     setValue('pickup-zip',p.pickupZip);setValue('pickup-city',p.pickupCity);setValue('pickup-state',p.pickupState);setValue('delivery-zip',p.deliveryZip);setValue('delivery-city',p.deliveryCity);setValue('delivery-state',p.deliveryState);
     setValue('quoted-revenue',p.offer,true);setValue('load-weight',p.cargoWeight,true);setValue('loaded-miles',p.loadedMiles,true);setValue('deadhead-miles',p.deadheadMiles,true);setValue('average-mpg',p.averageMpg||p.metrics?.mpg,true);setValue('fuel-price',p.fuelPrice||p.metrics?.fuelPrice,true);
     const ref=$('load-reference');if(ref&&!ref.value&&p.sourceReference)ref.value=p.sourceReference;['pickup-city','pickup-state','delivery-city','delivery-state'].forEach(id=>$(id)?.setAttribute('data-v38-autofill','true'));

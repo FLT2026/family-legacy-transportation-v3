@@ -15,6 +15,7 @@
   };
 
   function visible(el){return Boolean(el&&el.offsetParent!==null&&!el.disabled)}
+  const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
   function clearGuide(){
     document.querySelectorAll('.v38-authority-missing').forEach(el=>el.classList.remove('v38-authority-missing'));
     document.querySelectorAll('.v38-authority-wrap').forEach(el=>el.classList.remove('v38-authority-wrap'));
@@ -77,7 +78,7 @@
 
     if(notice){
       const label=item.label||kind;
-      notice.innerHTML='<strong>'+label+' is not ready: '+(item.reason||'verification required')+'.</strong><br>Use the saved record below. Do not create a duplicate '+kind+'. Click Load Record for Editing, correct the highlighted information, then update the record.';
+      notice.innerHTML='<strong>'+esc(label)+' is not ready: '+esc(item.reason||'verification required')+'.</strong><br>Use the saved record below. Do not create a duplicate '+esc(kind)+'. Click Load Record for Editing, correct the highlighted information, then update the record.';
     }
     return edit;
   }
