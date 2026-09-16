@@ -10,7 +10,6 @@
   if(typeof document==='undefined')return;
   const $=id=>document.getElementById(id),nav=$('nav'),decisionForm=$('v35-decision-form'),loadForm=$('load-form');if(!nav||!decisionForm||!loadForm)return;
   const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
-
   const style=document.createElement('style');style.id='v38-fast-load-workflow-style';style.textContent=`
   .v38-quick-section{grid-column:1/-1;border:2px solid var(--green-2);background:#f5f9f4;border-radius:8px;padding:14px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.v38-quick-section .full{grid-column:1/-1}.v38-quick-title{grid-column:1/-1}.v38-quick-title h3{font-size:17px}.v38-quick-title p{margin-top:4px}
   .v38-training-next{border:4px solid #d4b900!important;background:#fff9b8!important;box-shadow:0 0 0 6px rgba(207,232,106,.62)!important}.v38-training-note{display:block;margin-top:6px;color:#315c16;font-size:12px;font-weight:900}.v38-nav-next{background:#214f48!important;color:#fff!important;border-left:5px solid #d4d72f!important;box-shadow:inset 0 0 0 2px rgba(212,215,47,.65),0 0 0 2px rgba(212,215,47,.2)!important}.v38-nav-next .nav-label{font-weight:900!important}.v38-nav-next::after{content:'NEXT';margin-left:auto;background:#d4d72f;color:#173f39;font-size:9px;font-weight:900;padding:4px 7px;border-radius:999px}
@@ -49,7 +48,16 @@
   function applyProposalToLoadForm(p=acceptedProposal()){
     if(!proposalReady(p))return false;
     let banner=$('v38-accepted-proposal-banner');if(!banner){banner=document.createElement('div');banner.id='v38-accepted-proposal-banner';banner.className='v38-accepted-banner';loadForm.prepend(banner)}
-    banner.innerHTML='<strong>Accepted estimate carried forward — no re-entry required.</strong><br><span class="subtle">'+[p.source,p.sourceName,p.pickupZip+' → '+p.deliveryZip,'Offer $'+Number(p.offer).toLocaleString()].filter(Boolean).map(esc).join(' · ')+'</span><div class="v38-source-note">Miles, MPG, fuel price, rate, and cargo weight stay tied to the accepted estimate. Complete only customer, exact locations, dates, commodity, and exceptions below.</div>';
+    const details=[p.source,p.sourceName,p.pickupZip+' → '+p.deliveryZip,'Offer $'+Number(p.offer).toLocaleString()].filter(Boolean).join(' · ');
+    if(typeof banner.replaceChildren==='function'){
+      banner.replaceChildren();
+      const title=document.createElement('strong');title.textContent='Accepted estimate carried forward — no re-entry required.';
+      const detailText=document.createElement('span');detailText.className='subtle';detailText.textContent=details;
+      const note=document.createElement('div');note.className='v38-source-note';note.textContent='Miles, MPG, fuel price, rate, and cargo weight stay tied to the accepted estimate. Complete only customer, exact locations, dates, commodity, and exceptions below.';
+      banner.append(title,document.createElement('br'),detailText,note);
+    }else{
+      banner.innerHTML='<strong>Accepted estimate carried forward — no re-entry required.</strong><br><span class="subtle">'+esc(details)+'</span><div class="v38-source-note">Miles, MPG, fuel price, rate, and cargo weight stay tied to the accepted estimate. Complete only customer, exact locations, dates, commodity, and exceptions below.</div>';
+    }
     setValue('pickup-zip',p.pickupZip);setValue('pickup-city',p.pickupCity);setValue('pickup-state',p.pickupState);setValue('delivery-zip',p.deliveryZip);setValue('delivery-city',p.deliveryCity);setValue('delivery-state',p.deliveryState);
     setValue('quoted-revenue',p.offer,true);setValue('load-weight',p.cargoWeight,true);setValue('loaded-miles',p.loadedMiles,true);setValue('deadhead-miles',p.deadheadMiles,true);setValue('average-mpg',p.averageMpg||p.metrics?.mpg,true);setValue('fuel-price',p.fuelPrice||p.metrics?.fuelPrice,true);
     const ref=$('load-reference');if(ref&&!ref.value&&p.sourceReference)ref.value=p.sourceReference;['pickup-city','pickup-state','delivery-city','delivery-state'].forEach(id=>$(id)?.setAttribute('data-v38-autofill','true'));

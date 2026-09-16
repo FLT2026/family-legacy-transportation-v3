@@ -7,6 +7,7 @@
   const read=(key,fallback={})=>{try{return JSON.parse(localStorage.getItem(key)||JSON.stringify(fallback))}catch(error){return fallback}};
   const nav=document.getElementById('nav');
   if(!nav)return;
+  const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 
   const kindConfig={
     driver:{bucket:'drivers',typeValue:'drivers',formId:'fleet-driver-form',reason:'Renew driver license',focusName:'expiration'},
@@ -15,7 +16,6 @@
   };
 
   function visible(el){return Boolean(el&&el.offsetParent!==null&&!el.disabled)}
-  const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
   function clearGuide(){
     document.querySelectorAll('.v38-authority-missing').forEach(el=>el.classList.remove('v38-authority-missing'));
     document.querySelectorAll('.v38-authority-wrap').forEach(el=>el.classList.remove('v38-authority-wrap'));
@@ -78,7 +78,14 @@
 
     if(notice){
       const label=item.label||kind;
-      notice.innerHTML='<strong>'+esc(label)+' is not ready: '+esc(item.reason||'verification required')+'.</strong><br>Use the saved record below. Do not create a duplicate '+esc(kind)+'. Click Load Record for Editing, correct the highlighted information, then update the record.';
+      const reasonText=item.reason||'verification required';
+      if(typeof document.createElement==='function'&&typeof notice.replaceChildren==='function'){
+        const title=document.createElement('strong');
+        title.textContent=label+' is not ready: '+reasonText+'.';
+        notice.replaceChildren(title,document.createElement('br'),document.createTextNode('Use the saved record below. Do not create a duplicate '+kind+'. Click Load Record for Editing, correct the highlighted information, then update the record.'));
+      }else{
+        notice.innerHTML='<strong>'+esc(label)+' is not ready: '+esc(reasonText)+'.</strong><br>Use the saved record below. Do not create a duplicate '+esc(kind)+'. Click Load Record for Editing, correct the highlighted information, then update the record.';
+      }
     }
     return edit;
   }
