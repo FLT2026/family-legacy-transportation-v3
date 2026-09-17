@@ -53,7 +53,7 @@ function buildDomStub() {
       querySelector() { return null; },
       querySelectorAll() { return []; },
       setAttribute() {},
-      classList: { add() {}, remove() {}, contains(name) { return this.owner?.className.split(/\s+/).includes(name); } },
+      classList: { add(name) { this.owner.className+=(this.owner.className?' ':'')+name; }, remove(name) { this.owner.className=this.owner.className.split(/\s+/).filter(item=>item&&item!==name).join(' '); }, contains(name) { return this.owner?.className.split(/\s+/).includes(name); } },
       matches() { return false; }
     };
     node.classList.owner=node;
@@ -64,10 +64,19 @@ function buildDomStub() {
     return node;
   }
   const nav = el('nav');
+  const decisionNav=el('decision-nav');decisionNav.dataset.view='intelligence';decisionNav.className='active';
+  const loadNav=el('load-nav');loadNav.dataset.view='load';
+  loadNav.compareDocumentPosition=()=>0;
+  loadNav.click=()=>{};
+  nav.querySelector=selector=>selector==='[data-view="load"]'?loadNav:selector==='[data-view="intelligence"]'?decisionNav:selector==='button.active'?decisionNav:null;
+  nav.querySelectorAll=selector=>selector==='.v38-nav-next'?[decisionNav,loadNav].filter(item=>item.classList.contains('v38-nav-next')):[];
+  nav.insertBefore=()=>{};
+  nav.children=[decisionNav,loadNav];
   const decisionForm = el('v35-decision-form');
   const loadForm = el('load-form');
   const head = el('head');
   [nav, decisionForm, loadForm].forEach(x => elements.set(x.id, x));
+  elements.set(decisionNav.id,decisionNav);elements.set(loadNav.id,loadNav);
   const driverPanel=el('v35-master-selection');
   const nestedDriverField=el('nested-driver-field');nestedDriverField.className='field';nestedDriverField.parentElement=driverPanel;
   driverPanel.children=[nestedDriverField];
@@ -102,11 +111,11 @@ function buildDomStub() {
 function loadWithAcceptedProposal(proposal) {
   const { elements, document, localStorage } = buildDomStub();
   localStorage.setItem('flt-v38-accepted-proposal', JSON.stringify(proposal));
-  const domSandbox = { window: {}, document, localStorage, Date, console, setTimeout: fn => fn(), globalThis: null };
+  const domSandbox = { window: {}, document, localStorage, Date, console, Node: {DOCUMENT_POSITION_FOLLOWING: 4}, setTimeout: fn => fn(), globalThis: null };
   domSandbox.globalThis = domSandbox;
   vm.createContext(domSandbox);
   vm.runInContext(fs.readFileSync('v38-fast-load-workflow.js', 'utf8'), domSandbox);
-  return {banner:elements.get('v38-accepted-proposal-banner'),elements,localStorage,workflow:domSandbox.window.FLTFastLoadWorkflow};
+  return {banner:elements.get('v38-accepted-proposal-banner'),elements,localStorage,workflow:domSandbox.window.FLTFastLoadWorkflow,loadNav:document.getElementById('load-nav')};
 }
 
 ;(async()=>{
@@ -152,7 +161,7 @@ function loadWithAcceptedProposal(proposal) {
 
 console.log('V3.8 fast-load accepted-proposal banner hostile-input and normal-input escaping checks passed.');
 
-  const {banner:renderedBanner,elements,localStorage,workflow}=loadWithAcceptedProposal({
+  const {banner:renderedBanner,elements,localStorage,workflow,loadNav}=loadWithAcceptedProposal({
     pickupZip:'27601',
     deliveryZip:'28301',
     offer:1500,
@@ -177,6 +186,7 @@ console.log('V3.8 fast-load accepted-proposal banner hostile-input and normal-in
   assert.ok(accept,'Accept This Load action should render');
   decisionForm.listeners.change[0]();
   assert.equal(accept.hidden,true,'stale saved ACCEPT LOAD must remain hidden until a matching evaluation exists');
+  assert.equal(loadNav.classList.contains('v38-nav-next'),false,'stale ACCEPT LOAD must not highlight Complete Accepted Load');
   await accept.listeners.click[0]();
   assert.equal(localStorage.getItem('flt-v38-accepted-proposal'),JSON.stringify({
     pickupZip:'27601',
@@ -189,6 +199,10 @@ console.log('V3.8 fast-load accepted-proposal banner hostile-input and normal-in
   localStorage.setItem('flt-v38-evaluated-decision',JSON.stringify({decision:'ACCEPT LOAD',snapshotId:'stale-acceptance',key:workflow.evaluationFingerprint()}));
   decisionForm.listeners.change[0]();
   assert.equal(accept.hidden,false,'matching evaluated ACCEPT LOAD should reveal Accept This Load');
+  assert.equal(loadNav.classList.contains('v38-nav-next'),true,'matching current ACCEPT LOAD may highlight Complete Accepted Load');
+  elements.get('v38-quick-source-name').value='Central Dispatch updated';
+  decisionForm.listeners.input[0]();
+  assert.equal(loadNav.classList.contains('v38-nav-next'),false,'typing a source name must remove stale Complete Accepted Load highlight');
   elements.get('v38-quick-source').value='Load Board';
   decisionForm.listeners.change[0]();
   assert.equal(accept.hidden,true,'changing a decision-driving input must invalidate the prior acceptance');
@@ -202,6 +216,7 @@ console.log('V3.8 fast-load accepted-proposal banner hostile-input and normal-in
     deadheadMiles:20
   }),'invalidated acceptance must not authorize changed proposal inputs');
   elements.get('v38-quick-source').value='Broker';
+  elements.get('v38-quick-source-name').value='Central Dispatch';
   localStorage.setItem('flt-v38-evaluated-decision',JSON.stringify({decision:'ACCEPT LOAD',snapshotId:'stale-acceptance',key:workflow.evaluationFingerprint()}));
   decisionForm.listeners.change[0]();
   assert.equal(accept.hidden,false,'rerun matching ACCEPT LOAD should restore authorization');
