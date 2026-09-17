@@ -25,11 +25,20 @@
     return Boolean(p&&/^\d{5}$/.test(String(p.pickupZip||''))&&/^\d{5}$/.test(String(p.deliveryZip||''))&&Number(p.offer)>0&&Number(p.loadedMiles)>=0&&Number(p.deadheadMiles)>=0);
   }
   function acceptedDecision(){return readJson('flt-v35-last-decision',null)?.decision==='ACCEPT LOAD'}
+  // The persisted decision alone is not enough: it can go stale the moment a Fast Load
+  // evaluation input changes. Defer entirely to FLTFastLoadWorkflow's own fingerprint
+  // check (never recompute the fingerprint here) so this hardfix and the V3.8 authority
+  // controller can never disagree about whether ACCEPT LOAD is still current.
+  function currentAcceptedDecision(){
+    if(!acceptedDecision())return false;
+    const fastLoad=window.FLTFastLoadWorkflow;
+    return Boolean(typeof fastLoad?.evaluatedDecisionMatches==='function'&&fastLoad.evaluatedDecisionMatches());
+  }
   function prerequisite(){
     if(localStorage.getItem(dashboardKey)!=='true')return{view:'dashboard',label:'Dashboard'};
     if(!businessReady())return{view:'business-setup',label:'Business Setup'};
     if(!fleetReady())return{view:'fleet',label:'Drivers & Equipment'};
-    if(!acceptedDecision())return{view:'intelligence',label:'Evaluate Proposed Load'};
+    if(!currentAcceptedDecision())return{view:'intelligence',label:'Evaluate Proposed Load'};
     if(!hasRealLoad())return{view:'load',label:'Complete Accepted Load'};
     return null;
   }
@@ -41,7 +50,7 @@
   function blockedView(view){
     // Navigation guides but does not trap setup/fleet/dispatch/evaluation work.
     if(['dashboard','business-setup','fleet','dispatch-control','intelligence'].includes(view))return false;
-    if(view==='load'&&(acceptedProposalReady()||acceptedDecision()))return false;
+    if(view==='load'&&(acceptedProposalReady()||currentAcceptedDecision()))return false;
     if(!hasRealLoad()&&['load','pickup','delivery','finance','test'].includes(view))return true;
     return false;
   }
@@ -111,5 +120,5 @@
   new MutationObserver(()=>setTimeout(apply,0)).observe(nav,{subtree:true,attributes:true,attributeFilter:['class']});
   setTimeout(apply,120);
 
-  window.FLTNavigationPrerequisitesHardfix={apply,prerequisite,businessReady,fleetReady,markDashboardReviewed,blockedView,hasRealLoad,acceptedProposalReady,acceptedDecision,moveIntegrityBadge};
+  window.FLTNavigationPrerequisitesHardfix={apply,prerequisite,businessReady,fleetReady,markDashboardReviewed,blockedView,hasRealLoad,acceptedProposalReady,acceptedDecision,currentAcceptedDecision,moveIntegrityBadge};
 })();

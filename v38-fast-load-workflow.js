@@ -26,7 +26,7 @@
     if(activeView==='dashboard'){decisionNav?.classList.add('v38-nav-next');return}
     if(activeView==='intelligence'){
       const decision=read(lastDecisionKey,null);
-      if(decisionAccepted(decision)&&quickReady())loadNav?.classList.add('v38-nav-next');
+      if(decisionAccepted(decision)&&quickReady()&&evaluatedDecisionMatches())loadNav?.classList.add('v38-nav-next');
       return;
     }
     if(activeView==='load')return;
