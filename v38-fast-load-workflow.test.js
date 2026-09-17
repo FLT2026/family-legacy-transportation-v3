@@ -53,9 +53,10 @@ function buildDomStub() {
       querySelector() { return null; },
       querySelectorAll() { return []; },
       setAttribute() {},
-      classList: { add() {}, remove() {} },
+      classList: { add() {}, remove() {}, contains(name) { return this.owner?.className.split(/\s+/).includes(name); } },
       matches() { return false; }
     };
+    node.classList.owner=node;
     Object.defineProperty(node, 'innerHTML', {
       get() { return html; },
       set(value) { html = String(value ?? ''); registerHtmlIds(node, html); }
@@ -67,6 +68,21 @@ function buildDomStub() {
   const loadForm = el('load-form');
   const head = el('head');
   [nav, decisionForm, loadForm].forEach(x => elements.set(x.id, x));
+  const driverPanel=el('v35-master-selection');
+  const nestedDriverField=el('nested-driver-field');nestedDriverField.className='field';nestedDriverField.parentElement=driverPanel;
+  driverPanel.children=[nestedDriverField];
+  const directDecisionField=el('v35-loaded-miles-field');directDecisionField.className='field';
+  decisionForm.children=[driverPanel,directDecisionField];
+  decisionForm.firstElementChild=driverPanel;
+  decisionForm.querySelector=selector=>selector==='.field'?nestedDriverField:null;
+  decisionForm.insertBefore=(child,reference)=>{
+    assert.equal(reference,directDecisionField,'Fast Load must insert before a direct decision-form child');
+    decisionForm.children.splice(decisionForm.children.indexOf(reference),0,child);
+    child.parentElement=decisionForm;
+    return child;
+  };
+  const decisionCard=el('v35-decision-card');
+  elements.set(decisionCard.id,decisionCard);
   const document = {
     createElement: () => el(),
     getElementById: id => elements.get(id) || null,
@@ -90,10 +106,10 @@ function loadWithAcceptedProposal(proposal) {
   domSandbox.globalThis = domSandbox;
   vm.createContext(domSandbox);
   vm.runInContext(fs.readFileSync('v38-fast-load-workflow.js', 'utf8'), domSandbox);
-  return elements.get('v38-accepted-proposal-banner');
+  return {banner:elements.get('v38-accepted-proposal-banner'),elements,localStorage};
 }
 
-{
+;(async()=>{
   const maliciousProposal = {
     source: '<script>window.__flt_xss_source=true</script>',
     sourceName: '"><img src=x onerror="window.__flt_xss_name=true">',
@@ -105,15 +121,13 @@ function loadWithAcceptedProposal(proposal) {
     loadedMiles: 200,
     deadheadMiles: 20
   };
-  const banner = loadWithAcceptedProposal(maliciousProposal);
+  const {banner} = loadWithAcceptedProposal(maliciousProposal);
   assert.ok(banner, 'accepted-proposal banner must be created');
   assert.doesNotMatch(banner.innerHTML, /<script>/i, 'raw <script> tag must not appear in rendered banner markup');
   assert.doesNotMatch(banner.innerHTML, /<img /i, 'raw <img> tag must not appear in rendered banner markup');
   assert.doesNotMatch(banner.innerHTML, /<[^&]*onerror=/i, 'onerror must never appear inside an actual (unescaped) HTML tag');
   assert.match(banner.innerHTML, /&lt;script&gt;window\.__flt_xss_source=true&lt;\/script&gt;/, 'malicious source value must render as literal escaped text');
   assert.match(banner.innerHTML, /&quot;&gt;&lt;img src=x onerror=&quot;window\.__flt_xss_name=true&quot;&gt;/, 'malicious sourceName value must render as literal escaped text');
-}
-
 {
   // Normal values (including an ampersand and an apostrophe, which are HTML
   // metacharacters but not attacks) must still render as readable text.
@@ -128,7 +142,7 @@ function loadWithAcceptedProposal(proposal) {
     loadedMiles: 300,
     deadheadMiles: 40
   };
-  const banner = loadWithAcceptedProposal(normalProposal);
+  const {banner} = loadWithAcceptedProposal(normalProposal);
   assert.ok(banner, 'accepted-proposal banner must be created for normal input');
   assert.match(banner.innerHTML, /Broker \/ Dispatcher/);
   assert.match(banner.innerHTML, /O&#39;Reilly Freight &amp; Sons/);
@@ -137,3 +151,37 @@ function loadWithAcceptedProposal(proposal) {
 }
 
 console.log('V3.8 fast-load accepted-proposal banner hostile-input and normal-input escaping checks passed.');
+
+  const {banner:renderedBanner,elements,localStorage}=loadWithAcceptedProposal({
+    pickupZip:'27601',
+    deliveryZip:'28301',
+    offer:1500,
+    cargoWeight:6000,
+    loadedMiles:200,
+    deadheadMiles:20
+  });
+  assert.ok(elements.get('v38-quick-section')||elements.get('v38-quick-source'),'Step 1 Fast Load section should render');
+  assert.ok(elements.get('v38-quick-source'),'Load Source control should render');
+  assert.ok(elements.get('v38-quick-source-name'),'Source name control should render');
+  assert.ok(elements.get('v38-quick-pickup-zip'),'Pickup ZIP control should render');
+  assert.ok(elements.get('v38-quick-delivery-zip'),'Delivery ZIP control should render');
+  assert.ok(elements.get('v38-quick-reference'),'Reference control should render');
+  elements.get('v38-quick-source').value='Broker';
+  elements.get('v38-quick-source-name').value='Central Dispatch';
+  elements.get('v38-quick-pickup-zip').value='27601';
+  elements.get('v38-quick-delivery-zip').value='28301';
+  elements.get('v38-quick-reference').value='REF-FAST-1';
+  localStorage.setItem('flt-v35-last-decision',JSON.stringify({decision:'ACCEPT LOAD'}));
+  const accept=elements.get('v38-accept-proposal');
+  assert.ok(accept,'Accept This Load action should render');
+  await accept.listeners.click[0]();
+  const carried=JSON.parse(localStorage.getItem('flt-v38-accepted-proposal'));
+  assert.equal(carried.source,'Broker');
+  assert.equal(carried.sourceName,'Central Dispatch');
+  assert.equal(carried.pickupZip,'27601');
+  assert.equal(carried.deliveryZip,'28301');
+  assert.equal(carried.sourceReference,'REF-FAST-1');
+  assert.ok(renderedBanner,'Accepted-estimate banner should still render');
+})().catch(error=>{console.error(error);process.exitCode=1});
+
+console.log('V3.8 Fast Load section rendering and source carry-forward checks passed.');
