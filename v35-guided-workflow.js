@@ -149,7 +149,10 @@
   function defaultResolved(control){
     if(!control)return false;
     if(control.type==='checkbox'||control.type==='radio')return control.checked;
-    return String(control.value??'').trim()!=='';
+    const value=String(control.value??'').trim();
+    if(/(?:^|-)zip$/i.test(control.id||''))return /^\d{5}(?:-\d{4})?$/.test(value);
+    if(control.validity&&control.validity.valid===false)return false;
+    return value!=='';
   }
   function clearGuideVisuals(){
     document.querySelectorAll('.guided-current-control').forEach(x=>x.classList.remove('guided-current-control'));
@@ -169,7 +172,7 @@
       markError(control,item.message);control.classList.add('guided-current-control');
       const box=fieldContainer(control),banner=document.createElement('div');banner.className='guided-field-banner';
       const position=guidedTotal-guidedQueue.length+1;
-      banner.innerHTML='<strong>Next required field · '+position+' of '+guidedTotal+'</strong><span>'+item.message+'</span><small>Complete this highlighted box to move automatically to the next missing item.</small>';
+      banner.innerHTML='<strong>Next required field · '+position+' of '+guidedTotal+'</strong><span>'+item.message+'</span><small>Finish this field, then Tab or click away to move to the next missing item.</small>';
       box?.prepend(banner);box?.scrollIntoView({behavior:'smooth',block:'center'});setTimeout(()=>control.focus?.(),250);
     };
     if(item.view){
@@ -195,7 +198,7 @@
   }
   document.addEventListener('input',e=>{
     if(!e.target.matches('input,select,textarea'))return;
-    if(guidedQueue[0]?.control===e.target)advanceGuide(e.target);else clearError(e.target);
+    if(guidedQueue[0]?.control!==e.target)clearError(e.target);
   },true);
   document.addEventListener('change',e=>{
     if(!e.target.matches('input,select,textarea'))return;
@@ -247,8 +250,8 @@
       const identity=type==='driver'?['name','Enter the driver name or internal ID.']:['unit','Enter the '+type+' unit ID.'];
       if(!String(data.get(identity[0])||'').trim())errors.push({control:form.elements[identity[0]],message:identity[1]});
       if(active&&type==='driver'){if(!String(data.get('licenseState')||'').trim())errors.push({control:form.elements.licenseState,message:'Enter the driver license state.'});if(!data.get('expiration'))errors.push({control:form.elements.expiration,message:'Enter the driver license expiration date.'})}
-      if(active&&type==='truck'){[['vin','Enter the complete 17-character truck VIN.',validVin],['gvwr','Enter the verified truck GVWR.',v=>Number(v)>0],['gcwr','Enter the manufacturer GCWR.',v=>Number(v)>0],['emptyWeight','Enter the ready-to-work truck scale weight.',v=>Number(v)>0],['frontGawr','Enter the manufacturer front GAWR.',v=>Number(v)>0],['rearGawr','Enter the manufacturer rear GAWR.',v=>Number(v)>0],['frontTireCapacity','Enter the verified front-axle tire capacity.',v=>Number(v)>0],['rearTireCapacity','Enter the verified rear-axle tire capacity.',v=>Number(v)>0],['hitchCapacity','Enter the verified truck hitch rating.',v=>Number(v)>0],['verificationDate','Enter a truck scale date that is not in the future.',validScaleDate],['weightBasis','Select Scale ticket — full fuel and normal equipment.',v=>v==='scale-ticket']].forEach(([name,message,valid])=>{if(!valid(data.get(name)))errors.push({control:form.elements[name],message,resolved:()=>valid(form.elements[name]?.value)})})}
-      if(active&&type==='trailer'){[['vin','Enter the complete 17-character trailer VIN.',validVin],['gvwr','Enter the verified trailer GVWR.',v=>Number(v)>0],['emptyWeight','Enter the ready-to-work trailer scale weight.',v=>Number(v)>0],['axleCapacity','Enter the trailer combined axle rating.',v=>Number(v)>0],['tireCapacity','Enter the lowest verified trailer tire capacity.',v=>Number(v)>0],['hitchCapacity','Enter the verified hitch/coupler rating.',v=>Number(v)>0],['verificationDate','Enter a trailer scale date that is not in the future.',validScaleDate],['weightBasis','Select Scale ticket — normal equipment included.',v=>v==='scale-ticket']].forEach(([name,message,valid])=>{if(!valid(data.get(name)))errors.push({control:form.elements[name],message,resolved:()=>valid(form.elements[name]?.value)})})}
+      if(active&&type==='truck'){[['vin','Enter the complete 17-character truck VIN.',validVin],['gvwr','Enter the verified truck GVWR.',v=>Number(v)>0],['gcwr','Enter the manufacturer GCWR.',v=>Number(v)>0],['emptyWeight','Enter the ready-to-work truck scale weight.',v=>Number(v)>0],['frontGawr','Enter the manufacturer front GAWR.',v=>Number(v)>0],['rearGawr','Enter the manufacturer rear GAWR.',v=>Number(v)>0],['frontTireCapacity','Enter the verified front-axle tire capacity.',v=>Number(v)>0],['rearTireCapacity','Enter the verified rear-axle tire capacity.',v=>Number(v)>0],['hitchCapacity','Enter the verified truck hitch rating.',v=>Number(v)>0],['verificationDate','Enter a truck scale date that is not in the future.',validScaleDate],['weightBasis','Select Scale ticket — full fuel and normal equipment.',v=>v==='scale-ticket']].forEach(([name,message,valid])=>{if(!valid(data.get(name)))errors.push({control:form.elements[name],message,resolved:()=>valid(form.elements[name]?.value)})})
+      if(active&&type==='trailer'){[['vin','Enter the complete 17-character trailer VIN.',validVin],['gvwr','Enter the verified trailer GVWR.',v=>Number(v)>0],['emptyWeight','Enter the ready-to-work trailer scale weight.',v=>Number(v)>0],['axleCapacity','Enter the trailer combined axle rating.',v=>Number(v)>0],['tireCapacity','Enter the lowest verified trailer tire capacity.',v=>Number(v)>0],['hitchCapacity','Enter the verified hitch/coupler rating.',v=>Number(v)>0],['verificationDate','Enter a trailer scale date that is not in the future.',validScaleDate],['weightBasis','Select Scale ticket — normal equipment included.',v=>v==='scale-ticket']].forEach(([name,message,valid])=>{if(!valid(data.get(name)))errors.push({control:form.elements[name],message,resolved:()=>valid(form.elements[name]?.value)})})
       if(fail(form,errors)){e.preventDefault();e.stopImmediatePropagation()}
       else{guidedQueue=[];guidedTotal=0;clearGuideVisuals();form.querySelectorAll('.field-error-control').forEach(clearError)}
     },true)

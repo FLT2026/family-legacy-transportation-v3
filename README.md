@@ -2,18 +2,31 @@
 
 Family Legacy Transportation Business Operating System.
 
-Current development milestone: **V3.7 — Financial Close foundation**
+Current development milestone: **V3.8 — Operational Integrity**
+
+Completed foundation:
 
 - V3.5 preserves proposed-load estimates as immutable snapshots.
-- V3.6 records actual mileage, gallons, fuel price, fuel spend, tolls, expenses, and receipt evidence by Load ID.
-- Finance reports estimated-versus-actual cost and mileage variance.
-- Actual MPG history follows the truck assigned by the audited dispatch lock.
-- V3.7 reconciles POD, itemized invoices, payments, receivable, journal totals, and earned profit by Load ID.
-- Invoice drafts separate transportation, approved accessorials, and approved credits/adjustments; confirmation freezes the billing snapshot before finalization.
-- Payments receive stable IDs and invoice allocations; partial, paid, and overpaid receivables remain visible, while corrections append linked reversals.
-- Confirmed invoices, payments, reversals, expenses, credits, and adjustments post once to an immutable, source-linked double-entry journal for each Load ID.
-- V3.7 requires an explicit multi-load finance-isolation check before close actions are enabled.
+- V3.6 records actual mileage, gallons, fuel price, fuel spend, tolls, expenses, receipt evidence, and estimate-versus-actual variance by Load ID.
+- V3.7 Financial Close is complete through protected load closing, controlled correction/re-close, receipt protection, itemized invoices, payments/receivables, double-entry journal posting, and finance isolation by Load ID.
 
-The application is a browser-based prototype that persists its working records in local storage. See `V3.7_FINANCIAL_CLOSE_PLAN.md` for the release contract and `V3.7_FINANCIAL_CLOSE_SMOKE_TEST.md` for verification.
+Current V3.8 focus:
 
-Run `node v37-financial-close.test.js` before updating or merging the V3.7 financial-close module.
+- driver / truck / trailer assignment integrity
+- assignment-change reasons and audit history
+- weight and equipment-fit checks before dispatch
+- transportation-type document and compliance gates
+- screen-by-screen auto-populate verification so known data is never re-entered unnecessarily
+- owner-operator and 1–3 driver usability
+
+The application is still a browser-based prototype that persists working records in local storage. V4.0 will add authentication, database persistence, tenant isolation, durable document storage, backups, and production audit infrastructure.
+
+Reference documents:
+
+- `FLT_MARKET_LEADING_SYSTEM_BLUEPRINT.md` — overall product blueprint and build gates
+- `V3.7_FINANCIAL_CLOSE_PLAN.md` — completed V3.7 release contract
+- `V3.7_FINANCIAL_CLOSE_SMOKE_TEST.md` — V3.7 verification checklist
+- `V3.8_OPERATIONAL_INTEGRITY_PLAN.md` — current V3.8 release contract
+- `FLT_CARRY_FORWARD_REQUIREMENTS.md` — prior requirements that must remain tracked through V3.8 and V4.0
+
+Core product rule: **Enter once. Calculate once. Auto-populate everywhere. Verify before records become final.**
