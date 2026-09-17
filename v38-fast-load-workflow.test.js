@@ -106,7 +106,7 @@ function loadWithAcceptedProposal(proposal) {
   domSandbox.globalThis = domSandbox;
   vm.createContext(domSandbox);
   vm.runInContext(fs.readFileSync('v38-fast-load-workflow.js', 'utf8'), domSandbox);
-  return {banner:elements.get('v38-accepted-proposal-banner'),elements,localStorage};
+  return {banner:elements.get('v38-accepted-proposal-banner'),elements,localStorage,workflow:domSandbox.window.FLTFastLoadWorkflow};
 }
 
 ;(async()=>{
@@ -152,7 +152,7 @@ function loadWithAcceptedProposal(proposal) {
 
 console.log('V3.8 fast-load accepted-proposal banner hostile-input and normal-input escaping checks passed.');
 
-  const {banner:renderedBanner,elements,localStorage}=loadWithAcceptedProposal({
+  const {banner:renderedBanner,elements,localStorage,workflow}=loadWithAcceptedProposal({
     pickupZip:'27601',
     deliveryZip:'28301',
     offer:1500,
@@ -171,9 +171,40 @@ console.log('V3.8 fast-load accepted-proposal banner hostile-input and normal-in
   elements.get('v38-quick-pickup-zip').value='27601';
   elements.get('v38-quick-delivery-zip').value='28301';
   elements.get('v38-quick-reference').value='REF-FAST-1';
-  localStorage.setItem('flt-v35-last-decision',JSON.stringify({decision:'ACCEPT LOAD'}));
+  localStorage.setItem('flt-v35-last-decision',JSON.stringify({decision:'ACCEPT LOAD',snapshotId:'stale-acceptance'}));
   const accept=elements.get('v38-accept-proposal');
+  const decisionForm=elements.get('v35-decision-form');
   assert.ok(accept,'Accept This Load action should render');
+  decisionForm.listeners.change[0]();
+  assert.equal(accept.hidden,true,'stale saved ACCEPT LOAD must remain hidden until a matching evaluation exists');
+  await accept.listeners.click[0]();
+  assert.equal(localStorage.getItem('flt-v38-accepted-proposal'),JSON.stringify({
+    pickupZip:'27601',
+    deliveryZip:'28301',
+    offer:1500,
+    cargoWeight:6000,
+    loadedMiles:200,
+    deadheadMiles:20
+  }),'stale acceptance must not authorize the current proposal');
+  localStorage.setItem('flt-v38-evaluated-decision',JSON.stringify({decision:'ACCEPT LOAD',snapshotId:'stale-acceptance',key:workflow.evaluationFingerprint()}));
+  decisionForm.listeners.change[0]();
+  assert.equal(accept.hidden,false,'matching evaluated ACCEPT LOAD should reveal Accept This Load');
+  elements.get('v38-quick-source').value='Load Board';
+  decisionForm.listeners.change[0]();
+  assert.equal(accept.hidden,true,'changing a decision-driving input must invalidate the prior acceptance');
+  await accept.listeners.click[0]();
+  assert.equal(localStorage.getItem('flt-v38-accepted-proposal'),JSON.stringify({
+    pickupZip:'27601',
+    deliveryZip:'28301',
+    offer:1500,
+    cargoWeight:6000,
+    loadedMiles:200,
+    deadheadMiles:20
+  }),'invalidated acceptance must not authorize changed proposal inputs');
+  elements.get('v38-quick-source').value='Broker';
+  localStorage.setItem('flt-v38-evaluated-decision',JSON.stringify({decision:'ACCEPT LOAD',snapshotId:'stale-acceptance',key:workflow.evaluationFingerprint()}));
+  decisionForm.listeners.change[0]();
+  assert.equal(accept.hidden,false,'rerun matching ACCEPT LOAD should restore authorization');
   await accept.listeners.click[0]();
   const carried=JSON.parse(localStorage.getItem('flt-v38-accepted-proposal'));
   assert.equal(carried.source,'Broker');
