@@ -35,6 +35,11 @@
     return Boolean((fleet.drivers||[]).some(driverReady)&&(fleet.trucks||[]).some(truckReady)&&(fleet.trailers||[]).some(trailerReady));
   }
   function acceptedDecision(){return read('flt-v35-last-decision',null)?.decision==='ACCEPT LOAD'}
+  function currentAcceptedDecision(){
+    if(!acceptedDecision())return false;
+    const fastLoad=window.FLTFastLoadWorkflow;
+    return Boolean(typeof fastLoad?.evaluatedDecisionMatches==='function'&&fastLoad.evaluatedDecisionMatches());
+  }
   function acceptedProposal(){return read('flt-v38-accepted-proposal',null)}
   function acceptedProposalReady(){const p=acceptedProposal();return Boolean(p&&fiveZip(p.pickupZip)&&fiveZip(p.deliveryZip)&&Number(p.offer)>0&&Number(p.loadedMiles)>=0&&Number(p.deadheadMiles)>=0)}
   function hasRealLoad(){
@@ -61,7 +66,7 @@
   function nextView(){
     if(!businessReady())return'business-setup';
     if(!fleetReady())return'fleet';
-    if(!acceptedDecision())return'intelligence';
+    if(!currentAcceptedDecision())return'intelligence';
     if(!hasRealLoad())return'load';
     const load=selectedLoad();
     if(financiallyClosed(load))return liveReviewComplete(load)?null:'test';
