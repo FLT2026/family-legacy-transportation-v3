@@ -21,7 +21,15 @@
   if(decisionNav&&loadNav&&(loadNav.compareDocumentPosition(decisionNav)&Node.DOCUMENT_POSITION_FOLLOWING))nav.insertBefore(decisionNav,loadNav);
 
   function workflowNavHighlight(){
+    // V3.8 now has one source of truth for the sidebar NEXT marker:
+    // window.FLTWorkflowAuthority. Computing a second, independently-scheduled
+    // NEXT destination here previously caused the "1 · Evaluate Proposed Load"
+    // highlight to fight with the authoritative "2 · Complete Accepted Load"
+    // marker right after ACCEPT LOAD. Always clear this legacy class and defer
+    // to the authority when it is available; only fall back to the legacy
+    // calculation if the authority controller has not loaded.
     nav.querySelectorAll('.v38-nav-next').forEach(item=>item.classList.remove('v38-nav-next'));
+    if(window.FLTWorkflowAuthority?.apply){window.FLTWorkflowAuthority.apply();return}
     const activeView=nav.querySelector('button.active')?.dataset.view||'';
     if(activeView==='dashboard'){decisionNav?.classList.add('v38-nav-next');return}
     if(activeView==='intelligence'){
