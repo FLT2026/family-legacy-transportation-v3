@@ -19,6 +19,7 @@ const tests=[
   'v38-fast-load-workflow.test.js',
   'v38-workflow-authority.test.js',
   'v38-navigation-prerequisites-hardfix.test.js',
+  'v38-navigation-highlight-integration.test.js',
   'v38-fleet-renewal-guidance.test.js',
   'v38-acceptance-gate.test.js'
 ];
