@@ -42,15 +42,20 @@
   }
   function acceptedProposal(){return read('flt-v38-accepted-proposal',null)}
   function acceptedProposalReady(){const p=acceptedProposal();return Boolean(p&&fiveZip(p.pickupZip)&&fiveZip(p.deliveryZip)&&Number(p.offer)>0&&Number(p.loadedMiles)>=0&&Number(p.deadheadMiles)>=0)}
-  function hasRealLoad(){
-    try{if(typeof store!=='undefined'&&Array.isArray(store.loads))return store.loads.some(load=>load&&load.id&&!String(load.id).startsWith('DEMO-'))}catch(error){}
-    const loads=read('flt-v32-loads',[]);return Array.isArray(loads)&&loads.some(load=>load&&load.id&&!String(load.id).startsWith('DEMO-'));
-  }
   function allLoads(){
     try{if(typeof store!=='undefined'&&Array.isArray(store.loads))return store.loads}catch(error){}
     const loads=read('flt-v32-loads',[]);return Array.isArray(loads)?loads:[];
   }
+  function currentCycleLoad(){
+    const proposal=acceptedProposal();
+    if(!proposal?.loadId)return null;
+    return allLoads().find(load=>load?.id===proposal.loadId)||null;
+  }
+  function hasCurrentCycleLoad(){return Boolean(currentCycleLoad())}
+  function hasRealLoad(){return allLoads().some(load=>load&&load.id&&!String(load.id).startsWith('DEMO-'))}
   function selectedLoad(){
+    const cycle=currentCycleLoad();
+    if(cycle)return cycle;
     try{if(typeof current==='function'){const load=current();if(load)return load}}catch(error){}
     const loads=allLoads();
     const selectedIds=[localStorage.getItem('flt-selected-load-id'),localStorage.getItem('flt-v32-loads-selected')].filter(Boolean);
@@ -67,8 +72,8 @@
     if(!businessReady())return'business-setup';
     if(!fleetReady())return'fleet';
     if(!currentAcceptedDecision())return'intelligence';
-    if(!hasRealLoad())return'load';
-    const load=selectedLoad();
+    const load=currentCycleLoad();
+    if(!load)return'load';
     if(financiallyClosed(load))return liveReviewComplete(load)?null:'test';
     if(load&&!load.pickupProof?.signature)return'pickup';
     if(load?.pickupProof?.signature&&!load.deliveryProof?.signature)return'delivery';
@@ -172,5 +177,5 @@
   apply();
   setTimeout(apply,200);
 
-  window.FLTWorkflowAuthority={apply,nextView,businessReady,fleetReady,acceptedDecision,acceptedProposalReady,hasRealLoad,selectedLoad,financiallyClosed,liveReviewComplete,syncDashboardCallToAction};
+  window.FLTWorkflowAuthority={apply,nextView,businessReady,fleetReady,acceptedDecision,acceptedProposalReady,hasRealLoad,hasCurrentCycleLoad,currentCycleLoad,selectedLoad,financiallyClosed,liveReviewComplete,syncDashboardCallToAction};
 })();
