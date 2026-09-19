@@ -76,14 +76,19 @@
   }
   function apply(){
     const required=prerequisite();
-    // Remove stale NEXT markers created by older workflow logic before applying the current one.
-    nav.querySelectorAll('button[data-view]').forEach(button=>button.classList.remove('nav-required','nav-waiting'));
+    // V3.8 now has one source of truth for the sidebar NEXT marker:
+    // window.FLTWorkflowAuthority. This hardfix used to compute and toggle its
+    // own nav-required/nav-waiting classes on the same buttons, which could
+    // disagree with the authoritative controller (for example immediately
+    // after ACCEPT LOAD) and leave "1 · Evaluate Proposed Load" visually
+    // highlighted while "2 · Complete Accepted Load" was also marked NEXT.
+    // Only aria-disabled (access control, not visual highlight) is still
+    // owned here; the highlight itself is delegated to the authority.
     nav.querySelectorAll('button[data-view]').forEach(button=>{
-      const view=button.dataset.view,isRequired=Boolean(required&&view===required.view);
-      button.classList.toggle('nav-required',isRequired);
-      button.classList.toggle('nav-waiting',Boolean(required)&&!isRequired);
-      button.setAttribute('aria-disabled',blockedView(view)?'true':'false');
+      button.classList.remove('nav-required','nav-waiting');
+      button.setAttribute('aria-disabled',blockedView(button.dataset.view)?'true':'false');
     });
+    if(window.FLTWorkflowAuthority?.apply)window.FLTWorkflowAuthority.apply();
     clearTraining();
     moveIntegrityBadge();
     const active=nav.querySelector('button.active')?.dataset.view||'';

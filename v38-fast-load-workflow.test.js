@@ -3,7 +3,7 @@ const fs=require('node:fs');
 const vm=require('node:vm');
 
 const code=fs.readFileSync('v38-fast-load-workflow.js','utf8');
-const sandbox={window:{},localStorage:{data:{},getItem(k){return this.data[k]??null},setItem(k,v){this.data[k]=String(v)}},console};
+const sandbox={window:{},localStorage:{data:{},getItem(k){return this.data[k]??null},setItem(k,v){this.data[k]=String(v)},removeItem(k){delete this.data[k]}},console};
 vm.createContext(sandbox);vm.runInContext(code,sandbox);
 const api=sandbox.window.FLTFastLoadWorkflow;
 assert.ok(api,'fast load workflow API should load without a DOM');
@@ -93,17 +93,19 @@ function buildDomStub() {
   const decisionCard=el('v35-decision-card');
   elements.set(decisionCard.id,decisionCard);
   const document = {
+    listeners:{},
     createElement: () => el(),
     getElementById: id => elements.get(id) || null,
     head,
-    addEventListener() {},
+    addEventListener(type,fn,opts) { (this.listeners[type]=this.listeners[type]||[]).push({fn,opts}); },
     querySelector: () => null,
     querySelectorAll: () => []
   };
   const storage = {};
   const localStorage = {
     getItem: key => storage[key] ?? null,
-    setItem: (key, value) => { storage[key] = String(value); }
+    setItem: (key, value) => { storage[key] = String(value); },
+    removeItem: key => { delete storage[key]; }
   };
   return { elements, document, localStorage };
 }
@@ -115,7 +117,7 @@ function loadWithAcceptedProposal(proposal) {
   domSandbox.globalThis = domSandbox;
   vm.createContext(domSandbox);
   vm.runInContext(fs.readFileSync('v38-fast-load-workflow.js', 'utf8'), domSandbox);
-  return {banner:elements.get('v38-accepted-proposal-banner'),elements,localStorage,workflow:domSandbox.window.FLTFastLoadWorkflow,loadNav:document.getElementById('load-nav')};
+  return {banner:elements.get('v38-accepted-proposal-banner'),elements,document,localStorage,workflow:domSandbox.window.FLTFastLoadWorkflow,loadNav:document.getElementById('load-nav')};
 }
 
 ;(async()=>{
@@ -161,7 +163,7 @@ function loadWithAcceptedProposal(proposal) {
 
 console.log('V3.8 fast-load accepted-proposal banner hostile-input and normal-input escaping checks passed.');
 
-  const {banner:renderedBanner,elements,localStorage,workflow,loadNav}=loadWithAcceptedProposal({
+  const {banner:renderedBanner,elements,document,localStorage,workflow,loadNav}=loadWithAcceptedProposal({
     pickupZip:'27601',
     deliveryZip:'28301',
     offer:1500,
@@ -184,8 +186,17 @@ console.log('V3.8 fast-load accepted-proposal banner hostile-input and normal-in
   const accept=elements.get('v38-accept-proposal');
   const decisionForm=elements.get('v35-decision-form');
   assert.ok(accept,'Accept This Load action should render');
+  const submitCapture=elements.get('v35-decision-form')&&elements.get('v35-decision-form').listeners.submit;
+  assert.equal(submitCapture,undefined,'Fast Load must not rely on a form submit listener that V3.5 can stop');
+  const docSubmit=elements.get('v35-decision-form')&&globalThis; // keep test scope explicit
+
+  const captureSubmit=document.listeners.submit?.find(entry=>entry.opts===true);
+  assert.ok(captureSubmit,'Fast Load must register a document capture submit listener');
+  captureSubmit.fn({target:decisionForm});
+  const recorded=JSON.parse(localStorage.getItem('flt-v38-evaluated-decision')||'null');
+  assert.equal(recorded?.snapshotId,'stale-acceptance','document-capture submit path must persist the current evaluated decision');
   decisionForm.listeners.change[0]();
-  assert.equal(accept.hidden,true,'stale saved ACCEPT LOAD must remain hidden until a matching evaluation exists');
+  assert.equal(accept.hidden,false,'matching evaluated ACCEPT LOAD should be available after the real submit path');
   assert.equal(loadNav.classList.contains('v38-nav-next'),false,'stale ACCEPT LOAD must not highlight Complete Accepted Load');
   await accept.listeners.click[0]();
   assert.equal(localStorage.getItem('flt-v38-accepted-proposal'),JSON.stringify({

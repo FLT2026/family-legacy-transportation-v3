@@ -80,8 +80,23 @@ const vm=require('node:vm');
   hardfix.apply();
   assert.equal(hardfix.prerequisite().view,'load','matching evaluated ACCEPT LOAD should authorize Complete Accepted Load');
   activeButton=intelligenceButton;
+
+  // apply() must delegate the visual NEXT highlight to window.FLTWorkflowAuthority
+  // (the single source of truth) instead of toggling its own nav-required/nav-waiting
+  // classes. Toggling both independently is what previously left "1 · Evaluate Proposed
+  // Load" highlighted at the same time the authority marked "2 · Complete Accepted Load".
   hardfix.apply();
-  assert.equal(loadButton.classList.contains('nav-required'),true,'matching evaluated ACCEPT LOAD should mark Complete Accepted Load nav-required');
+  assert.equal(loadButton.classList.contains('nav-required'),false,'apply() must no longer set nav-required itself (delegated to FLTWorkflowAuthority)');
+  assert.equal(intelligenceButton.classList.contains('nav-waiting'),false,'apply() must no longer set nav-waiting itself (delegated to FLTWorkflowAuthority)');
+  assert.equal(loadButton.attributes['aria-disabled'],'false','Complete Accepted Load must be enabled once the evaluation matches');
+  assert.equal(intelligenceButton.attributes['aria-disabled'],'false','Evaluate Proposed Load must remain reachable');
+
+  // When window.FLTWorkflowAuthority is present, apply() must call it exactly once per
+  // apply() so the authority's own class/attribute state is the only visual signal.
+  let authorityCalls=0;
+  window.FLTWorkflowAuthority={apply(){authorityCalls++}};
+  hardfix.apply();
+  assert.equal(authorityCalls,1,'apply() must delegate the NEXT highlight to FLTWorkflowAuthority.apply() exactly once');
 
   console.log('V3.8 navigation-prerequisites-hardfix stale-decision and keystroke checks passed.');
 })();

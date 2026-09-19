@@ -21,7 +21,15 @@
   if(decisionNav&&loadNav&&(loadNav.compareDocumentPosition(decisionNav)&Node.DOCUMENT_POSITION_FOLLOWING))nav.insertBefore(decisionNav,loadNav);
 
   function workflowNavHighlight(){
+    // V3.8 now has one source of truth for the sidebar NEXT marker:
+    // window.FLTWorkflowAuthority. Computing a second, independently-scheduled
+    // NEXT destination here previously caused the "1 · Evaluate Proposed Load"
+    // highlight to fight with the authoritative "2 · Complete Accepted Load"
+    // marker right after ACCEPT LOAD. Always clear this legacy class and defer
+    // to the authority when it is available; only fall back to the legacy
+    // calculation if the authority controller has not loaded.
     nav.querySelectorAll('.v38-nav-next').forEach(item=>item.classList.remove('v38-nav-next'));
+    if(window.FLTWorkflowAuthority?.apply){window.FLTWorkflowAuthority.apply();return}
     const activeView=nav.querySelector('button.active')?.dataset.view||'';
     if(activeView==='dashboard'){decisionNav?.classList.add('v38-nav-next');return}
     if(activeView==='intelligence'){
@@ -48,7 +56,14 @@
   const quickReady=()=>Boolean(fields.source.value&&fiveZip(fields.pickupZip.value)&&fiveZip(fields.deliveryZip.value));
   function recordEvaluation(){const d=read(lastDecisionKey,null);if(d?.snapshotId)write(evaluationKey,{snapshotId:d.snapshotId,decision:d.decision,key:evaluationFingerprint()})}
   function syncDecisionAction(){const d=read(lastDecisionKey,null),b=$('v38-accept-proposal'),n=$('v38-decision-next'),currentDecision=decisionAccepted(d)&&evaluatedDecisionMatches();b.hidden=!(currentDecision&&quickReady());if(!quickReady())n.textContent='Complete Load Source, Pickup ZIP, and Delivery ZIP before accepting the decision.';else if(currentDecision)n.textContent='Profitable and eligible. Accept the proposal, then enter operational details.';else if(d?.decision==='NEGOTIATE RATE')n.textContent='Negotiate first. Update the offered rate and rerun the decision.';else if(d?.decision==='PASS ON LOAD')n.textContent='Do not spend time building a load record for this offer.';else if(d?.decision==='DO NOT DISPATCH')n.textContent='Hard safety/compliance stop. Detailed load setup remains blocked.';else n.textContent='Run the load decision before entering detailed customer/facility information.';trainingHighlight();workflowNavHighlight()}
-  decisionForm.addEventListener('submit',()=>setTimeout(()=>{recordEvaluation();syncDecisionAction()},25));decisionForm.addEventListener('input',syncDecisionAction);decisionForm.addEventListener('change',syncDecisionAction);
+  // v35-proposed-load.js owns the form's capture-phase submit handler and calls
+  // stopImmediatePropagation(). A submit listener attached directly to the form
+  // therefore never runs in the real browser. Listen from document capture
+  // instead: it runs before the form handler, then records the decision after
+  // that handler has synchronously written flt-v35-last-decision.
+  document.addEventListener('submit',event=>{if(event.target!==decisionForm)return;setTimeout(()=>{recordEvaluation();syncDecisionAction();window.dispatchEvent(new Event('flt:workflow-state-changed'))},25)},true);
+  function invalidateEvaluationIfInputsChanged(){const evaluated=read(evaluationKey,null);if(evaluated&&evaluated.key!==evaluationFingerprint())localStorage.removeItem(evaluationKey)}
+  decisionForm.addEventListener('input',()=>{invalidateEvaluationIfInputsChanged();syncDecisionAction()});decisionForm.addEventListener('change',()=>{invalidateEvaluationIfInputsChanged();syncDecisionAction()});
   function addCarriedNote(control){if(!control||control.parentElement?.querySelector('.v38-carried-note'))return;const note=document.createElement('span');note.className='v38-carried-note';note.textContent='Carried forward from accepted estimate · change the estimate to revise';control.insertAdjacentElement('afterend',note)}
   function setValue(id,value,locked=false){const c=$(id);if(!c||value==null||value===''||Number.isNaN(value))return;c.value=String(value);if(locked){c.readOnly=true;c.setAttribute('aria-readonly','true');c.classList.add('auto-filled-control','v38-carried-forward');addCarriedNote(c)}}
   function applyProposalToLoadForm(p=acceptedProposal()){
