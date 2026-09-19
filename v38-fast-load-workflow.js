@@ -62,7 +62,8 @@
   // instead: it runs before the form handler, then records the decision after
   // that handler has synchronously written flt-v35-last-decision.
   document.addEventListener('submit',event=>{if(event.target!==decisionForm)return;setTimeout(()=>{recordEvaluation();syncDecisionAction();window.dispatchEvent(new Event('flt:workflow-state-changed'))},25)},true);
-  decisionForm.addEventListener('input',syncDecisionAction);decisionForm.addEventListener('change',syncDecisionAction);
+  function invalidateEvaluationIfInputsChanged(){const evaluated=read(evaluationKey,null);if(evaluated&&evaluated.key!==evaluationFingerprint())localStorage.removeItem(evaluationKey)}
+  decisionForm.addEventListener('input',()=>{invalidateEvaluationIfInputsChanged();syncDecisionAction()});decisionForm.addEventListener('change',()=>{invalidateEvaluationIfInputsChanged();syncDecisionAction()});
   function addCarriedNote(control){if(!control||control.parentElement?.querySelector('.v38-carried-note'))return;const note=document.createElement('span');note.className='v38-carried-note';note.textContent='Carried forward from accepted estimate · change the estimate to revise';control.insertAdjacentElement('afterend',note)}
   function setValue(id,value,locked=false){const c=$(id);if(!c||value==null||value===''||Number.isNaN(value))return;c.value=String(value);if(locked){c.readOnly=true;c.setAttribute('aria-readonly','true');c.classList.add('auto-filled-control','v38-carried-forward');addCarriedNote(c)}}
   function applyProposalToLoadForm(p=acceptedProposal()){
