@@ -3,7 +3,7 @@ const fs=require('node:fs');
 const vm=require('node:vm');
 
 const code=fs.readFileSync('v38-fast-load-workflow.js','utf8');
-const sandbox={window:{},localStorage:{data:{},getItem(k){return this.data[k]??null},setItem(k,v){this.data[k]=String(v)}},console};
+const sandbox={window:{},localStorage:{data:{},getItem(k){return this.data[k]??null},setItem(k,v){this.data[k]=String(v)},removeItem(k){delete this.data[k]}},console};
 vm.createContext(sandbox);vm.runInContext(code,sandbox);
 const api=sandbox.window.FLTFastLoadWorkflow;
 assert.ok(api,'fast load workflow API should load without a DOM');
@@ -104,7 +104,8 @@ function buildDomStub() {
   const storage = {};
   const localStorage = {
     getItem: key => storage[key] ?? null,
-    setItem: (key, value) => { storage[key] = String(value); }
+    setItem: (key, value) => { storage[key] = String(value); },
+    removeItem: key => { delete storage[key]; }
   };
   return { elements, document, localStorage };
 }
@@ -116,7 +117,7 @@ function loadWithAcceptedProposal(proposal) {
   domSandbox.globalThis = domSandbox;
   vm.createContext(domSandbox);
   vm.runInContext(fs.readFileSync('v38-fast-load-workflow.js', 'utf8'), domSandbox);
-  return {banner:elements.get('v38-accepted-proposal-banner'),elements,localStorage,workflow:domSandbox.window.FLTFastLoadWorkflow,loadNav:document.getElementById('load-nav')};
+  return {banner:elements.get('v38-accepted-proposal-banner'),elements,document,localStorage,workflow:domSandbox.window.FLTFastLoadWorkflow,loadNav:document.getElementById('load-nav')};
 }
 
 ;(async()=>{
@@ -162,7 +163,7 @@ function loadWithAcceptedProposal(proposal) {
 
 console.log('V3.8 fast-load accepted-proposal banner hostile-input and normal-input escaping checks passed.');
 
-  const {banner:renderedBanner,elements,localStorage,workflow,loadNav}=loadWithAcceptedProposal({
+  const {banner:renderedBanner,elements,document,localStorage,workflow,loadNav}=loadWithAcceptedProposal({
     pickupZip:'27601',
     deliveryZip:'28301',
     offer:1500,
