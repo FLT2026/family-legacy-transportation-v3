@@ -3,6 +3,9 @@ const fs=require('node:fs');
 const vm=require('node:vm');
 
 const code=fs.readFileSync('v38-fast-load-workflow.js','utf8');
+const proposedLoadCode=fs.readFileSync('v35-proposed-load.js','utf8');
+assert.match(code,/id="v38-quick-source-name"[^>]*data-v38-required="true"/,'Source / broker / app name must be part of the guided required-field sequence');
+assert.match(proposedLoadCode,/flt:v35-decision-evaluated/,'The decision engine must publish a completed-evaluation signal even when it stops form propagation');
 const sandbox={window:{},localStorage:{data:{},getItem(k){return this.data[k]??null},setItem(k,v){this.data[k]=String(v)}},console};
 vm.createContext(sandbox);vm.runInContext(code,sandbox);
 const api=sandbox.window.FLTFastLoadWorkflow;
@@ -111,11 +114,17 @@ function buildDomStub() {
 function loadWithAcceptedProposal(proposal) {
   const { elements, document, localStorage } = buildDomStub();
   localStorage.setItem('flt-v38-accepted-proposal', JSON.stringify(proposal));
-  const domSandbox = { window: {}, document, localStorage, Date, console, Node: {DOCUMENT_POSITION_FOLLOWING: 4}, setTimeout: fn => fn(), globalThis: null };
+  const windowListeners={};
+  const domWindow={
+    addEventListener(type,fn){(windowListeners[type]=windowListeners[type]||[]).push(fn)},
+    dispatchEvent(event){(windowListeners[event.type]||[]).forEach(fn=>fn(event));return true}
+  };
+  class TestEvent{constructor(type){this.type=type}}
+  const domSandbox = { window: domWindow, document, localStorage, Date, Event:TestEvent, console, Node: {DOCUMENT_POSITION_FOLLOWING: 4}, setTimeout: fn => fn(), globalThis: null };
   domSandbox.globalThis = domSandbox;
   vm.createContext(domSandbox);
   vm.runInContext(fs.readFileSync('v38-fast-load-workflow.js', 'utf8'), domSandbox);
-  return {banner:elements.get('v38-accepted-proposal-banner'),elements,localStorage,workflow:domSandbox.window.FLTFastLoadWorkflow,loadNav:document.getElementById('load-nav')};
+  return {banner:elements.get('v38-accepted-proposal-banner'),elements,localStorage,workflow:domSandbox.window.FLTFastLoadWorkflow,loadNav:document.getElementById('load-nav'),domWindow};
 }
 
 ;(async()=>{
@@ -161,7 +170,7 @@ function loadWithAcceptedProposal(proposal) {
 
 console.log('V3.8 fast-load accepted-proposal banner hostile-input and normal-input escaping checks passed.');
 
-  const {banner:renderedBanner,elements,localStorage,workflow,loadNav}=loadWithAcceptedProposal({
+  const {banner:renderedBanner,elements,localStorage,workflow,loadNav,domWindow}=loadWithAcceptedProposal({
     pickupZip:'27601',
     deliveryZip:'28301',
     offer:1500,
@@ -196,10 +205,15 @@ console.log('V3.8 fast-load accepted-proposal banner hostile-input and normal-in
     loadedMiles:200,
     deadheadMiles:20
   }),'stale acceptance must not authorize the current proposal');
-  localStorage.setItem('flt-v38-evaluated-decision',JSON.stringify({decision:'ACCEPT LOAD',snapshotId:'stale-acceptance',key:workflow.evaluationFingerprint()}));
-  decisionForm.listeners.change[0]();
-  assert.equal(accept.hidden,false,'matching evaluated ACCEPT LOAD should reveal Accept This Load');
-  assert.equal(loadNav.classList.contains('v38-nav-next'),true,'matching current ACCEPT LOAD may highlight Complete Accepted Load');
+  elements.get('v38-quick-source-name').value='';
+  domWindow.dispatchEvent({type:'flt:v35-decision-evaluated'});
+  assert.equal(accept.hidden,true,'a completed decision must still require Source / Broker / App Name');
+  assert.equal(loadNav.classList.contains('v38-nav-next'),false,'missing source name must keep NEXT on Evaluate Proposed Load');
+  elements.get('v38-quick-source-name').value='Central Dispatch';
+  domWindow.dispatchEvent({type:'flt:v35-decision-evaluated'});
+  assert.equal(accept.hidden,false,'the completed-decision signal should reveal Accept This Load without relying on submit propagation');
+  assert.equal(loadNav.classList.contains('v38-nav-next'),true,'the completed-decision signal should move NEXT to Complete Accepted Load');
+  assert.equal(workflow.evaluatedDecisionMatches(),true,'the completed-decision signal must record the exact current evaluation fingerprint');
   elements.get('v38-quick-source-name').value='Central Dispatch updated';
   decisionForm.listeners.input[0]();
   assert.equal(loadNav.classList.contains('v38-nav-next'),false,'typing a source name must remove stale Complete Accepted Load highlight');
