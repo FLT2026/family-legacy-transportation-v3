@@ -264,6 +264,7 @@
     const snapshot={snapshotId:'EST-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,7),version:'V3.5',createdAt:new Date().toISOString(),decision,economicDecision,dispatchStatus,reasons:[...reasons],classification:classification?{...classification}:null,selectedFleet:selectedFleet?{...selectedFleet}:null,inputs:{loadedMiles:loaded,deadheadToPickup,returnDeadhead,offer,cargoWeight,fuelPrice,mpgMode,blendedMpg,loadedMpg,emptyMpg,accessorialRevenue:accessorials,minimumProfit,targetProfit,targetMargin,profitMileFloor,tripHours,hourlyFloor,negotiationAllowance:negotiation},costs:{fuel,mileageCosts,baseCost,dispatchRate,factoringRate,feeRate,dispatcher,factoring,...flatCosts},metrics:{...metrics}};
     const count=saveSnapshot(snapshot);
     localStorage.setItem('flt-v35-last-decision',JSON.stringify({decision,economicDecision,dispatchStatus,reasons,metrics,at:snapshot.createdAt,snapshotId:snapshot.snapshotId}));
+    window.dispatchEvent(new CustomEvent('flt:v35-decision-evaluated',{detail:{snapshotId:snapshot.snapshotId,decision}}));
     recordGateEvidence(decision,reasons,fleet.driver?.qualification);
     renderDecision(decision,reasons,metrics,economicDecision,dispatchStatus);updateSnapshotCount();renderOfficialGate();
     if(typeof toast==='function')toast('V3.5 estimate snapshot saved · '+count+' total.');
