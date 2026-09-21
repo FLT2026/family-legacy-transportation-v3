@@ -73,7 +73,7 @@
     const test=document.getElementById('test');if(!test||document.getElementById('v38-live-acceptance-note'))return;
     const firstPanel=test.querySelector('.panel');if(!firstPanel)return;
     const note=document.createElement('div');note.id='v38-live-acceptance-note';note.className='notice';note.style.margin='12px 0';
-    note.innerHTML='<strong>Live end-to-end acceptance:</strong> operator workflow requirements are evaluated here. Negative-path safety checks marked <strong>AUTOMATED TEST</strong> are regression checks and must be rerun before PR #37 is merged.';
+    note.innerHTML='<strong>Live end-to-end acceptance:</strong> complete the operator workflow here before V3.8 is signed off. Negative-path safety checks marked <strong>AUTOMATED TEST</strong> are protected by the full V3.7 + V3.8 regression suite.';
     firstPanel.insertAdjacentElement('afterbegin',note);
   }
   function normalizeLegacyNegativePathTests(){
