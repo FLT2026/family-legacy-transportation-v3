@@ -70,7 +70,7 @@ function buildDomStub() {
   const decisionNav=el('decision-nav');decisionNav.dataset.view='intelligence';decisionNav.className='active';
   const loadNav=el('load-nav');loadNav.dataset.view='load';
   loadNav.compareDocumentPosition=()=>0;
-  loadNav.click=()=>{};
+  loadNav.click=()=>elements.get('load-form')?.reset?.();
   nav.querySelector=selector=>selector==='[data-view="load"]'?loadNav:selector==='[data-view="intelligence"]'?decisionNav:selector==='button.active'?decisionNav:null;
   nav.querySelectorAll=selector=>selector==='.v38-nav-next'?[decisionNav,loadNav].filter(item=>item.classList.contains('v38-nav-next')):[];
   nav.insertBefore=()=>{};
@@ -79,6 +79,9 @@ function buildDomStub() {
   const loadForm = el('load-form');
   const head = el('head');
   [nav, decisionForm, loadForm].forEach(x => elements.set(x.id, x));
+  const carriedIds=['pickup-zip','pickup-city','pickup-state','delivery-zip','delivery-city','delivery-state','v38-load-source-type','v38-load-source-name','v38-load-source-reference'];
+  carriedIds.forEach(id=>{const control=el(id);control.parentElement=loadForm;elements.set(id,control)});
+  loadForm.reset=()=>carriedIds.forEach(id=>{elements.get(id).value=''});
   elements.set(decisionNav.id,decisionNav);elements.set(loadNav.id,loadNav);
   const driverPanel=el('v35-master-selection');
   const nestedDriverField=el('nested-driver-field');nestedDriverField.className='field';nestedDriverField.parentElement=driverPanel;
@@ -113,6 +116,10 @@ function buildDomStub() {
 
 function loadWithAcceptedProposal(proposal) {
   const { elements, document, localStorage } = buildDomStub();
+  [['v35-offer',proposal.offer],['v35-cargo-weight',proposal.cargoWeight],['v35-loaded-miles',proposal.loadedMiles],['v35-deadhead-miles',proposal.deadheadMiles],['v35-mpg',proposal.averageMpg||0],['v35-fuel-price',proposal.fuelPrice||0]].forEach(([id,value])=>{
+    const control={id,value:String(value??0),listeners:{},addEventListener(){},dispatchEvent(){},setAttribute(){},classList:{add(){},remove(){}}};
+    elements.set(id,control);
+  });
   localStorage.setItem('flt-v38-accepted-proposal', JSON.stringify(proposal));
   const windowListeners={};
   const domWindow={
@@ -241,6 +248,11 @@ console.log('V3.8 fast-load accepted-proposal banner hostile-input and normal-in
   assert.equal(carried.pickupZip,'27601');
   assert.equal(carried.deliveryZip,'28301');
   assert.equal(carried.sourceReference,'REF-FAST-1');
+  assert.equal(elements.get('pickup-zip').value,'27601','Step 2 pickup ZIP must be restored after the legacy view reset');
+  assert.equal(elements.get('delivery-zip').value,'28301','Step 2 delivery ZIP must be restored after the legacy view reset');
+  assert.equal(elements.get('v38-load-source-type').value,'Broker / Dispatcher','accepted Broker source must map to the Step 2 source option');
+  assert.equal(elements.get('v38-load-source-name').value,'Central Dispatch','accepted source name must carry into Step 2');
+  assert.equal(elements.get('v38-load-source-reference').value,'REF-FAST-1','accepted source reference must carry into Step 2');
   assert.ok(renderedBanner,'Accepted-estimate banner should still render');
 })().catch(error=>{console.error(error);process.exitCode=1});
 
