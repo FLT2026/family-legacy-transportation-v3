@@ -1,6 +1,8 @@
 const assert=require('node:assert');
 const fs=require('node:fs');
 const vm=require('node:vm');
+const now=new Date();
+const todayISO=[now.getFullYear(),String(now.getMonth()+1).padStart(2,'0'),String(now.getDate()).padStart(2,'0')].join('-');
 
 // --- Part 1: v38-navigation-prerequisites-hardfix.js must never send the
 // operator to "Complete Accepted Load" on a stale persisted ACCEPT LOAD. ---
@@ -37,8 +39,8 @@ const vm=require('node:vm');
     'flt-v35-classification':JSON.stringify({insuranceStatus:'verified',authorityStatus:'verified',equipmentStatus:'verified'}),
     'flt-v35-fleet':JSON.stringify({
       drivers:[{status:'active',licenseState:'NC',expiration:'2099-01-01'}],
-      trucks:[{status:'active',vin:'1HGBH41JXMN109186',weightBasis:'scale-ticket',verificationDate:'2025-01-01',gvwr:20000,gcwr:30000,emptyWeight:10000,frontGawr:10000,rearGawr:10000,frontTireCapacity:10000,rearTireCapacity:10000,hitchCapacity:20000}],
-      trailers:[{status:'active',vin:'1HGBH41JXMN109187',weightBasis:'scale-ticket',verificationDate:'2025-01-01',gvwr:10000,emptyWeight:4000,axleCapacity:10000,tireCapacity:10000,hitchCapacity:10000}]
+      trucks:[{status:'active',vin:'1HGBH41JXMN109186',weightBasis:'scale-ticket',verificationDate:todayISO,gvwr:20000,gcwr:30000,emptyWeight:10000,frontGawr:10000,rearGawr:10000,frontTireCapacity:10000,rearTireCapacity:10000,hitchCapacity:20000}],
+      trailers:[{status:'active',vin:'1HGBH41JXMN109187',weightBasis:'scale-ticket',verificationDate:todayISO,gvwr:10000,emptyWeight:4000,axleCapacity:10000,tireCapacity:10000,hitchCapacity:10000}]
     }),
     'flt-v35-last-decision':JSON.stringify({decision:'ACCEPT LOAD',snapshotId:'stale-snapshot'})
   };

@@ -3,6 +3,8 @@ const fs=require('node:fs');
 const vm=require('node:vm');
 
 const elements=new Map();
+const now=new Date();
+const todayISO=[now.getFullYear(),String(now.getMonth()+1).padStart(2,'0'),String(now.getDate()).padStart(2,'0')].join('-');
 const makeElement=(id='')=>{
   const node={
     id,
@@ -40,8 +42,8 @@ const storage={
   'flt-v36-regular-rig':JSON.stringify({driverId:'d1',truckId:'t1',trailerId:'tr1'}),
   'flt-v35-fleet':JSON.stringify({
     drivers:[{id:'d1',status:'active',licenseState:'NC',expiration:'2099-01-01'}],
-    trucks:[{id:'t1',status:'active',vin:'1HGBH41JXMN109186',weightBasis:'scale-ticket',verificationDate:'2025-01-01',gvwr:20000,gcwr:30000,emptyWeight:10000,frontGawr:10000,rearGawr:10000,frontTireCapacity:10000,rearTireCapacity:10000,hitchCapacity:20000}],
-    trailers:[{id:'tr1',status:'active',vin:'1HGBH41JXMN109187',weightBasis:'scale-ticket',verificationDate:'2025-01-01',gvwr:10000,emptyWeight:4000,axleCapacity:10000,tireCapacity:10000,hitchCapacity:10000}]
+    trucks:[{id:'t1',status:'active',vin:'1HGBH41JXMN109186',weightBasis:'scale-ticket',verificationDate:todayISO,gvwr:20000,gcwr:30000,emptyWeight:10000,frontGawr:10000,rearGawr:10000,frontTireCapacity:10000,rearTireCapacity:10000,hitchCapacity:20000}],
+    trailers:[{id:'tr1',status:'active',vin:'1HGBH41JXMN109187',weightBasis:'scale-ticket',verificationDate:todayISO,gvwr:10000,emptyWeight:4000,axleCapacity:10000,tireCapacity:10000,hitchCapacity:10000}]
   })
 };
 const localStorage={getItem:key=>storage[key]??null,setItem:(key,value)=>{storage[key]=String(value)}};
