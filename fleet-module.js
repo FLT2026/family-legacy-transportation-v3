@@ -38,6 +38,7 @@
     'v38-master-record-hub.js?v=20260913a',
     'v38-master-record-recovery.js?v=20260913a',
     'v38-business-fleet-bridge.js?v=20260913a',
+    'v38-protected-master-backup.js?v=20260923a',
     'v38-next-needed-ui.js?v=20260910a',
     'v38-dashboard-close-state-hardfix.js?v=20260910a'
   ];
