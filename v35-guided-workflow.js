@@ -115,7 +115,11 @@
     const selectedDeliveryComplete=Boolean(s.load?.deliveryProof?.signature);
     const selectedInvoiceComplete=Boolean(s.load?.invoice?.number&&Array.isArray(s.load.expenses)&&s.load.expenses.every(item=>Number.isFinite(Number(item.amount))));
     const complete={dashboard:false,'business-setup':Boolean(s.profile&&s.classification&&complianceReady(s.classification)),fleet:fleetReady(s.fleet),intelligence:Boolean(s.snapshots.length),load:selectedLoadComplete,pickup:selectedPickupComplete,delivery:selectedDeliveryComplete,finance:selectedInvoiceComplete,test:false};
-    nav?.querySelectorAll('button').forEach(button=>{const required=button.dataset.view===next.view;button.classList.toggle('nav-required',required);button.classList.toggle('nav-complete',Boolean(complete[button.dataset.view]));button.classList.toggle('nav-waiting',!required&&!complete[button.dataset.view]&&button.dataset.view!=='dashboard'&&button.dataset.view!=='test')});
+    // V3.8 workflow authority owns the single NEXT marker. This legacy guide may
+    // still compute completion state for its dashboard card, but it must never
+    // mark navigation buttons as NEXT or waiting; doing so can contradict the
+    // authoritative prerequisite order after setup data is cleared/restored.
+    nav?.querySelectorAll('button').forEach(button=>{button.classList.toggle('nav-complete',Boolean(complete[button.dataset.view]));button.classList.remove('nav-required','nav-waiting')});
     const card=document.getElementById('v35-next-action');if(!card)return;
     card.innerHTML='<div><div class="eyebrow">Next required action</div><h2>'+next.title+'</h2><p class="subtle" style="margin-top:5px">'+next.detail+'</p><div class="workflow-map">'+steps.map((s,i)=>'<span class="'+(i+1===next.step?'current':'')+'">'+(i+1)+' · '+s+'</span>').join('')+'</div></div><button class="btn primary" id="v35-next-button">Continue →</button>';
     card.querySelector('#v35-next-button').addEventListener('click',()=>nav?.querySelector('[data-view="'+next.view+'"]')?.click());
