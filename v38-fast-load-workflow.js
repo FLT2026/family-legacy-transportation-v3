@@ -21,16 +21,12 @@
   if(decisionNav&&loadNav&&(loadNav.compareDocumentPosition(decisionNav)&Node.DOCUMENT_POSITION_FOLLOWING))nav.insertBefore(decisionNav,loadNav);
 
   function workflowNavHighlight(){
+    // V3.8 Workflow Authority is the only owner of the left-navigation NEXT marker.
+    // Fast Load may update workflow state, but it must never choose the global NEXT
+    // destination itself. The old logic forced Evaluate Proposed Load whenever the
+    // Dashboard was active, even when Business Setup or fleet master data was missing.
     nav.querySelectorAll('.v38-nav-next').forEach(item=>item.classList.remove('v38-nav-next'));
-    const activeView=nav.querySelector('button.active')?.dataset.view||'';
-    if(activeView==='dashboard'){decisionNav?.classList.add('v38-nav-next');return}
-    if(activeView==='intelligence'){
-      const decision=read(lastDecisionKey,null);
-      if(decisionAccepted(decision)&&quickReady()&&evaluatedDecisionMatches())loadNav?.classList.add('v38-nav-next');
-      return;
-    }
-    if(activeView==='load')return;
-    if(!canCompleteLoad())decisionNav?.classList.add('v38-nav-next');
+    window.FLTWorkflowAuthority?.apply?.();
   }
 
   const firstDecisionField=[...decisionForm.children].find(child=>child.classList.contains('field'))||decisionForm.firstElementChild,quick=document.createElement('div');quick.className='v38-quick-section';quick.innerHTML=`<div class="v38-quick-title"><div class="eyebrow">Step 1 · Fast load decision</div><h3>Enter only what changes for this proposed load</h3><p class="subtle">Driver, truck, trailer, verified weights, ratings, MPG, and recurring cost assumptions are reusable setup data. Decide profitability before entering detailed customer/facility information.</p></div><div class="field"><label>Load source</label><select id="v38-quick-source" data-v38-required="true"><option value="">Select source</option><option>Load Board</option><option>Load App</option><option>Auto Auction</option><option>Broker</option><option>Direct Customer</option><option>Internal / Own Customer</option><option>Other</option></select></div><div class="field"><label>Source / broker / app name</label><input id="v38-quick-source-name" placeholder="e.g. Central Dispatch" data-v38-required="true"></div><div class="field"><label>Pickup ZIP</label><input id="v38-quick-pickup-zip" inputmode="numeric" maxlength="10" data-v38-required="true"><span class="v38-source-note" id="v38-quick-pickup-place"></span></div><div class="field"><label>Delivery ZIP</label><input id="v38-quick-delivery-zip" inputmode="numeric" maxlength="10" data-v38-required="true"><span class="v38-source-note" id="v38-quick-delivery-place"></span></div><div class="field full"><label>Load / auction / broker reference</label><input id="v38-quick-reference" placeholder="Optional until known"></div>`;decisionForm.insertBefore(quick,firstDecisionField);
