@@ -4,11 +4,21 @@
 
   const freshStartKey='commercial-command-fresh-start';
   const isCommercialCommandKey=key=>/^flt-/i.test(String(key||''));
+  // Durable owner-operator setup must survive acceptance-test resets. These are
+  // reusable master records, not disposable test transactions.
+  const durableKeys=new Set([
+    'flt-v34-business-profile',
+    'flt-v35-classification',
+    'flt-v35-fleet',
+    'flt-v36-regular-rig',
+    'flt-v35-default-fleet-selection'
+  ]);
+  const isResettableCommercialCommandKey=key=>isCommercialCommandKey(key)&&!durableKeys.has(String(key||''));
   const matchingKeys=storage=>{
     const keys=[];
     for(let i=0;i<storage.length;i++){
       const key=storage.key(i);
-      if(isCommercialCommandKey(key))keys.push(key);
+      if(isResettableCommercialCommandKey(key))keys.push(key);
     }
     return keys;
   };
@@ -32,9 +42,9 @@
 
   function confirmReset(){
     const before=preview(),count=before.localStorage.length+before.sessionStorage.length;
-    const first=globalThis.confirm?.('Reset Commercial Command TEST DATA?\n\nThis will delete '+count+' Commercial Command browser data item'+(count===1?'':'s')+' including loads, fleet records, invoices, payments, documents, audit/test records, saved addresses, and acceptance history.\n\nGitHub code and unrelated browser/site data will NOT be deleted.');
+    const first=globalThis.confirm?.('Reset Commercial Command TEST TRANSACTIONS?\n\nThis will delete '+count+' disposable Commercial Command browser data item'+(count===1?'':'s')+' such as loads, invoices, payments, documents, estimates, and acceptance-test history.\n\nBusiness Setup, classification, Driver/Truck/Trailer master records, My Regular Rig, and the fleet audit trail will be preserved. GitHub code and unrelated browser/site data will NOT be deleted.');
     if(!first)return false;
-    const second=globalThis.confirm?.('FINAL CONFIRMATION\n\nStart a completely fresh Family Legacy Commercial Command end-to-end test?\n\nThis cannot restore the browser test records after they are cleared.');
+    const second=globalThis.confirm?.('FINAL CONFIRMATION\n\nStart a fresh transaction test while keeping saved owner-operator setup and master records?\n\nCleared transaction/test records cannot be restored unless you exported a backup.');
     if(!second)return false;
     reset();location.reload();return true;
   }
@@ -50,7 +60,8 @@
   function setFreshNext(){
     const nav=document.getElementById('nav');if(!nav)return;
     nav.querySelectorAll('.v38-nav-next').forEach(item=>item.classList.remove('v38-nav-next'));
-    nav.querySelector('[data-view="business-setup"]')?.classList.add('v38-nav-next');
+    const hasSetup=Boolean(localStorage.getItem('flt-v34-business-profile')&&localStorage.getItem('flt-v35-classification')&&localStorage.getItem('flt-v35-fleet'));
+    nav.querySelector(hasSetup?'[data-view="intelligence"]':'[data-view="business-setup"]')?.classList.add('v38-nav-next');
   }
   function clearFreshBusinessPlanningDefaults(){
     if(!isFreshStartMode()||localStorage.getItem('flt-v35-classification'))return;
@@ -72,7 +83,7 @@
   function showEmptyDashboard(){
     const heroTitle=document.getElementById('hero-title'),heroRoute=document.getElementById('hero-route');
     if(heroTitle)heroTitle.textContent='Commercial Command is ready for a fresh test.';
-    if(heroRoute)heroRoute.textContent='Start with Business Setup, then Drivers & Equipment, then evaluate the first proposed load.';
+    if(heroRoute)heroRoute.textContent=localStorage.getItem('flt-v34-business-profile')?'Saved setup is intact. Evaluate the next proposed load when ready.':'Start with Business Setup, then Drivers & Equipment, then evaluate the first proposed load.';
     setStat('Open loads','0','No loads yet');
     setStat('Revenue in motion','$0','No active revenue');
     setStat('Fleet utilization','0%','Setup not completed');
@@ -115,11 +126,11 @@
     const business=document.getElementById('business-setup')||document.querySelector('.view#business-setup')||document.querySelector('.view[data-view="business-setup"]');
     if(!business)return;
     const panel=document.createElement('div');panel.id='v38-test-data-reset';panel.className='panel';panel.style.marginTop='18px';
-    panel.innerHTML='<div class="section-head"><div><div class="eyebrow">Acceptance testing</div><h2>Fresh End-to-End Test</h2><p class="subtle" style="margin-top:5px">Clear only Family Legacy Commercial Command browser test data, then restart at Dashboard. GitHub code is untouched.</p></div><span class="tag orange">TEST DATA ONLY</span></div><div class="notice" style="margin-top:12px"><strong>Use this only when intentionally starting a fresh system test.</strong><br>Driver, truck, trailer, loads, invoices, payments, documents, saved addresses, and Commercial Command audit/test records stored in this browser will be cleared.</div><div class="form-actions" style="margin-top:14px"><button class="btn danger" id="v38-reset-test-data" type="button">Reset Commercial Command Test Data</button></div>';
+    panel.innerHTML='<div class="section-head"><div><div class="eyebrow">Acceptance testing</div><h2>Fresh Transaction Test</h2><p class="subtle" style="margin-top:5px">Clear disposable Commercial Command transaction/test data, then restart at Dashboard. GitHub code is untouched.</p></div><span class="tag orange">TEST DATA ONLY</span></div><div class="notice" style="margin-top:12px"><strong>Saved owner-operator setup is protected.</strong><br>Business Setup, classification, Driver/Truck/Trailer master records, My Regular Rig, and the fleet audit trail remain saved. Loads, invoices, payments, documents, estimates, and acceptance-test records are cleared.</div><div class="form-actions" style="margin-top:14px"><button class="btn danger" id="v38-reset-test-data" type="button">Reset Transaction Test Data</button></div>';
     business.appendChild(panel);document.getElementById('v38-reset-test-data')?.addEventListener('click',confirmReset);
   }
 
-  window.FLTTestDataReset={preview,reset,confirmReset,mount,isCommercialCommandKey,applyFreshStart,isFreshStartMode,clearFreshStartMode};
+  window.FLTTestDataReset={preview,reset,confirmReset,mount,isCommercialCommandKey,isResettableCommercialCommandKey,durableKeys:[...durableKeys],applyFreshStart,isFreshStartMode,clearFreshStartMode};
   applyFreshStart();watchForFirstRealLoad();mount();
   new MutationObserver(()=>{if(isFreshStartMode())protectAgainstHardcodedPlanningDefault()}).observe(document.body,{childList:true,subtree:true});
   window.addEventListener('flt:modules-loaded',()=>{applyFreshStart();mount();protectAgainstHardcodedPlanningDefault()},{once:true});
