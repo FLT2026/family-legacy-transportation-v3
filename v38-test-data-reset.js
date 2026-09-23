@@ -58,10 +58,11 @@
     const trendNode=card.querySelector('.trend');if(trendNode)trendNode.textContent=trend;
   }
   function setFreshNext(){
-    const nav=document.getElementById('nav');if(!nav)return;
-    nav.querySelectorAll('.v38-nav-next').forEach(item=>item.classList.remove('v38-nav-next'));
-    const hasSetup=Boolean(localStorage.getItem('flt-v34-business-profile')&&localStorage.getItem('flt-v35-classification')&&localStorage.getItem('flt-v35-fleet'));
-    nav.querySelector(hasSetup?'[data-view="intelligence"]':'[data-view="business-setup"]')?.classList.add('v38-nav-next');
+    // V3.8 workflow authority is the only owner of the NEXT navigation marker.
+    // A fresh transaction reset may change workflow state, but must not create a
+    // second legacy NEXT marker that can disagree with missing setup/fleet data.
+    document.getElementById('nav')?.querySelectorAll('.v38-nav-next').forEach(item=>item.classList.remove('v38-nav-next'));
+    window.FLTWorkflowAuthority?.apply?.();
   }
   function clearFreshBusinessPlanningDefaults(){
     if(!isFreshStartMode()||localStorage.getItem('flt-v35-classification'))return;
