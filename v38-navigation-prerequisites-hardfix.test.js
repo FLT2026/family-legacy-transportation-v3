@@ -187,7 +187,7 @@ const todayISO=[now.getFullYear(),String(now.getMonth()+1).padStart(2,'0'),Strin
   // Recording a matching evaluation for the CURRENT inputs restores next-step highlighting.
   localStorage.setItem('flt-v38-evaluated-decision',JSON.stringify({decision:'ACCEPT LOAD',snapshotId:'stale-snapshot',key:workflow.evaluationFingerprint()}));
   decisionForm.listeners.change[0]();
-  assert.equal(loadButton.classList.contains('v38-nav-next'),true,'matching evaluated ACCEPT LOAD should restore v38-nav-next on Complete Accepted Load');
+  assert.equal(loadButton.classList.contains('v38-nav-next'),false,'Fast Load must not own the global NEXT marker after a matching evaluation');
 
   // Editing the source name again after a matching evaluation must immediately revoke it.
   sourceNameField.value=typed+'!';

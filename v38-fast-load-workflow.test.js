@@ -219,7 +219,7 @@ console.log('V3.8 fast-load accepted-proposal banner hostile-input and normal-in
   elements.get('v38-quick-source-name').value='Central Dispatch';
   domWindow.dispatchEvent({type:'flt:v35-decision-evaluated'});
   assert.equal(accept.hidden,false,'the completed-decision signal should reveal Accept This Load without relying on submit propagation');
-  assert.equal(loadNav.classList.contains('v38-nav-next'),true,'the completed-decision signal should move NEXT to Complete Accepted Load');
+  assert.equal(loadNav.classList.contains('v38-nav-next'),false,'Fast Load must not own the global NEXT marker; Workflow Authority controls the next step');
   assert.equal(workflow.evaluatedDecisionMatches(),true,'the completed-decision signal must record the exact current evaluation fingerprint');
   elements.get('v38-quick-source-name').value='Central Dispatch updated';
   decisionForm.listeners.input[0]();
