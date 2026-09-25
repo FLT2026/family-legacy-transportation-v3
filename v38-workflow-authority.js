@@ -9,7 +9,7 @@
   const write=(key,value)=>{try{localStorage.setItem(key,JSON.stringify(value));return true}catch(error){return false}};
   const validVin=value=>/^[A-HJ-NPR-Z0-9]{17}$/i.test(String(value||'').trim());
   const fiveZip=value=>{const match=String(value||'').trim().match(/^(\d{5})(?:-\d{4})?$/);return match?match[1]:''};
-  const notFuture=value=>window.FLTDate?.isNotFuture?window.FLTDate.isNotFuture(value):(()=>{if(!value)return false;const raw=String(value).trim();const match=raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);if(!match)return false;const year=Number(match[1]),month=Number(match[2]),day=Number(match[3]),date=new Date(year,month-1,day),now=new Date();return date.getFullYear()===year&&date.getMonth()===month-1&&date.getDate()===day&&(year*10000+month*100+day)<=(now.getFullYear()*10000+(now.getMonth()+1)*100+now.getDate())})()};
+  const notFuture=value=>window.FLTDate?.isNotFuture?window.FLTDate.isNotFuture(value):(()=>{if(!value)return false;const raw=String(value).trim();const match=raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);if(!match)return false;const year=Number(match[1]),month=Number(match[2]),day=Number(match[3]),date=new Date(year,month-1,day),now=new Date();return date.getFullYear()===year&&date.getMonth()===month-1&&date.getDate()===day&&(year*10000+month*100+day)<=(now.getFullYear()*10000+(now.getMonth()+1)*100+now.getDate())})();
   const driverReady=x=>{if(x?.status!=='active'||!x.licenseState||!x.expiration)return false;const d=new Date(x.expiration+'T23:59:59');return Number.isFinite(d.getTime())&&d>=new Date()};
   const truckReady=x=>Boolean(x?.status==='active'&&validVin(x.vin)&&x.weightBasis==='scale-ticket'&&notFuture(x.verificationDate)&&Number(x.gvwr)>0&&Number(x.gcwr)>=Number(x.gvwr)&&Number(x.emptyWeight)>0&&Number(x.emptyWeight)<Number(x.gvwr)&&Number(x.frontGawr)>0&&Number(x.rearGawr)>0&&Number(x.frontGawr)+Number(x.rearGawr)>=Number(x.gvwr)&&Number(x.frontTireCapacity)>=Number(x.frontGawr)&&Number(x.rearTireCapacity)>=Number(x.rearGawr)&&Number(x.hitchCapacity)>0);
   const trailerReady=x=>Boolean(x?.status==='active'&&validVin(x.vin)&&x.weightBasis==='scale-ticket'&&notFuture(x.verificationDate)&&Number(x.gvwr)>0&&Number(x.emptyWeight)>0&&Number(x.emptyWeight)<Number(x.gvwr)&&Number(x.axleCapacity)>=Number(x.gvwr)&&Number(x.tireCapacity)>=Number(x.gvwr)&&Number(x.hitchCapacity)>=Number(x.gvwr));
@@ -42,15 +42,20 @@
   }
   function acceptedProposal(){return read('flt-v38-accepted-proposal',null)}
   function acceptedProposalReady(){const p=acceptedProposal();return Boolean(p&&fiveZip(p.pickupZip)&&fiveZip(p.deliveryZip)&&Number(p.offer)>0&&Number(p.loadedMiles)>=0&&Number(p.deadheadMiles)>=0)}
-  function hasRealLoad(){
-    try{if(typeof store!=='undefined'&&Array.isArray(store.loads))return store.loads.some(load=>load&&load.id&&!String(load.id).startsWith('DEMO-'))}catch(error){}
-    const loads=read('flt-v32-loads',[]);return Array.isArray(loads)&&loads.some(load=>load&&load.id&&!String(load.id).startsWith('DEMO-'));
-  }
   function allLoads(){
     try{if(typeof store!=='undefined'&&Array.isArray(store.loads))return store.loads}catch(error){}
     const loads=read('flt-v32-loads',[]);return Array.isArray(loads)?loads:[];
   }
+  function currentCycleLoad(){
+    const proposal=acceptedProposal();
+    if(!proposal?.loadId)return null;
+    return allLoads().find(load=>load?.id===proposal.loadId)||null;
+  }
+  function hasCurrentCycleLoad(){return Boolean(currentCycleLoad())}
+  function hasRealLoad(){return allLoads().some(load=>load&&load.id&&!String(load.id).startsWith('DEMO-'))}
   function selectedLoad(){
+    const cycle=currentCycleLoad();
+    if(cycle)return cycle;
     try{if(typeof current==='function'){const load=current();if(load)return load}}catch(error){}
     const loads=allLoads();
     const selectedIds=[localStorage.getItem('flt-selected-load-id'),localStorage.getItem('flt-v32-loads-selected')].filter(Boolean);
@@ -67,8 +72,8 @@
     if(!businessReady())return'business-setup';
     if(!fleetReady())return'fleet';
     if(!currentAcceptedDecision())return'intelligence';
-    if(!hasRealLoad())return'load';
-    const load=selectedLoad();
+    const load=currentCycleLoad();
+    if(!load)return'load';
     if(financiallyClosed(load))return liveReviewComplete(load)?null:'test';
     if(load&&!load.pickupProof?.signature)return'pickup';
     if(load?.pickupProof?.signature&&!load.deliveryProof?.signature)return'delivery';
@@ -172,5 +177,5 @@
   apply();
   setTimeout(apply,200);
 
-  window.FLTWorkflowAuthority={apply,nextView,businessReady,fleetReady,acceptedDecision,acceptedProposalReady,hasRealLoad,selectedLoad,financiallyClosed,liveReviewComplete,syncDashboardCallToAction};
+  window.FLTWorkflowAuthority={apply,nextView,businessReady,fleetReady,acceptedDecision,acceptedProposalReady,hasRealLoad,hasCurrentCycleLoad,currentCycleLoad,selectedLoad,financiallyClosed,liveReviewComplete,syncDashboardCallToAction};
 })();
