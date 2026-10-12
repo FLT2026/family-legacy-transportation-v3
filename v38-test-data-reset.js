@@ -11,7 +11,8 @@
     'flt-v35-classification',
     'flt-v35-fleet',
     'flt-v36-regular-rig',
-    'flt-v35-default-fleet-selection'
+    'flt-v35-default-fleet-selection',
+    'flt-v38-operating-assumptions'
   ]);
   const isResettableCommercialCommandKey=key=>isCommercialCommandKey(key)&&!durableKeys.has(String(key||''));
   const matchingKeys=storage=>{
