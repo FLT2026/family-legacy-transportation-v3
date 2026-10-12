@@ -41,7 +41,8 @@
     'v38-protected-master-backup.js?v=20260923a',
     'v38-next-needed-ui.js?v=20260910a',
     'v38-dashboard-close-state-hardfix.js?v=20260910a',
-    'v38-first-load-cleanup-hardfix.js?v=20261011a'
+    'v38-first-load-cleanup-hardfix.js?v=20261011a',
+    'v38-scroll-position-hardfix.js?v=20261011a'
   ];
 
   const pageBuildToken=Date.now().toString(36);
