@@ -1,0 +1,14 @@
+const assert=require('node:assert/strict');
+const {resolve}=require('./v38-business-fleet-bridge.js');
+const fleet={drivers:[{id:'D1',qualification:'CDL Class A',area:'Interstate'}],trucks:[{id:'T1',status:'active',vehicleType:'Pickup',gvwr:14000,emptyWeight:8000,gcwr:33000}],trailers:[{id:'R1',status:'active',configuration:'Gooseneck trailer',gvwr:20000,emptyWeight:6000}]};
+const ready=(kind,item)=>Boolean(item?.status==='active');
+let state=resolve(fleet,[],ready);
+assert.equal(state.driver.id,'D1');assert.equal(state.configuration,'Pickup and gooseneck trailer');
+assert.deepEqual(state.references,{truckGvwr:14000,truckEmpty:8000,gcwr:33000,trailerGvwr:20000,trailerEmpty:6000});
+fleet.drivers.push({id:'D2',qualification:'Non-CDL Driver',area:'Intrastate Only'});
+fleet.trucks.push({id:'T2',status:'planned',gvwr:99999});
+state=resolve(fleet,[{driverId:'D1',truckId:'T1',trailerId:'R1'}],ready,{driver:'D2',truck:'T2'});
+assert.equal(state.driver.id,'D2');assert.equal(state.references.truckGvwr,'','Planned equipment must not supply actual ratings.');
+assert.equal(resolve({drivers:[],trucks:[],trailers:[]},[],ready).references.gcwr,'');
+assert.equal(fleet.trucks[0].gvwr,14000,'Reference selection must not mutate the master or dispatch.');
+console.log('Business master references, default/regular selection, alternate driver selection, actual-only ratings, and neutral first-use checks passed.');

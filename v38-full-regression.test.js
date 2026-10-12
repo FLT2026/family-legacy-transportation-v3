@@ -21,7 +21,10 @@ const tests=[
   'v38-navigation-prerequisites-hardfix.test.js',
   'v38-fleet-renewal-guidance.test.js',
   'v38-test-gate-integrity-hardfix.test.js',
-  'v38-acceptance-gate.test.js'
+  'v38-acceptance-gate.test.js',
+  'v38-test-data-reset.test.js',
+  'v38-customer-master.test.js',
+  'v38-business-fleet-bridge.test.js'
 ];
 
 const missingTests=tests.filter(file=>!fs.existsSync(path.join(process.cwd(),file)));
@@ -31,7 +34,7 @@ if(missingTests.length){
 }
 
 const discovered=fs.readdirSync(process.cwd()).filter(file=>/^(v37|v38)-.*\.js$/i.test(file));
-const preflight=[...new Set(discovered)].sort();
+const preflight=[...new Set([...discovered,'fleet-module.js','v35-fleet-master.js','zip-autofill.js'])].sort();
 console.log('=== V3.8 SYNTAX PREFLIGHT ===');
 for(const file of preflight){
   const result=spawnSync(process.execPath,['--check',file],{encoding:'utf8'});

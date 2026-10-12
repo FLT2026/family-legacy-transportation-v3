@@ -23,7 +23,7 @@
   function readBook(){try{return JSON.parse(localStorage.getItem(addressBookKey)||'[]')||[]}catch(error){return[]}}
   function saveBook(book){try{localStorage.setItem(addressBookKey,JSON.stringify(book.slice(-150)))}catch(error){}}
   function normalizedAddress(item={},type='saved'){
-    return{type,customer:String(item.customer||item.customerName||item.company||'').trim(),facility:String(item.facility||item.name||'').trim(),street:String(item.street||item.address||'').trim(),zip:String(item.zip||item.postalCode||'').trim(),city:String(item.city||'').trim(),state:String(item.state||'').trim().toUpperCase()};
+    return{type,customerId:String(item.customerId||'').trim(),customer:String(item.customer||item.customerName||item.company||'').trim(),facility:String(item.facility||item.name||'').trim(),street:String(item.street||item.address||'').trim(),zip:String(item.zip||item.postalCode||'').trim(),city:String(item.city||'').trim(),state:String(item.state||'').trim().toUpperCase()};
   }
   function remember(address){
     const item=normalizedAddress(address,address.type||'saved');
@@ -43,13 +43,18 @@
     const items=[];
     loads.forEach(load=>['billing','pickup','delivery'].forEach(type=>{
       const raw=type==='billing'?(load.billingAddress||load.customerAddress||{}):(load[type+'Address']||{});
-      const item=normalizedAddress({...raw,customer:raw.customer||load.customer||''},type);
+      const item=normalizedAddress({...raw,customerId:load.customerId,customer:raw.customer||load.customer||''},type);
       if(item.street&&fiveDigitZip(item.zip)&&item.city&&item.state)items.push(item);
     }));
     return items;
   }
   function savedAddresses(type,zip){
-    const all=[...readBook(),...loadHistory()].map(item=>normalizedAddress(item,item.type||'saved'));
+    const masters=(window.FLTCustomerMaster?.list()||[]).flatMap(customer=>[
+      {...customer.billingAddress,type:'billing',customerId:customer.id,customer:customer.name},
+      ...['pickup','delivery'].flatMap(kind=>customer[kind+'Locations'].map(location=>({...location,type:kind,customerId:customer.id,customer:customer.name})))
+    ]);
+    const customerId=window.FLTCustomerMaster?.selectedId,name=currentCustomer().toLowerCase();
+    const all=[...masters,...readBook(),...loadHistory()].map(item=>normalizedAddress(item,item.type||'saved')).filter(item=>!name||(customerId&&item.customerId?item.customerId===customerId:item.customer.toLowerCase()===name));
     const byKey=new Map();
     all.forEach(item=>{
       if(fiveDigitZip(item.zip)!==zip||!item.street)return;
@@ -68,7 +73,7 @@
     const city=document.getElementById(prefix+'city');
     const state=document.getElementById(prefix+'state');
     if(!street||!zip||!city||!state)return;
-    remember({type,customer:currentCustomer(),facility:facility?.value||'',street:street.value,zip:zip.value,city:city.value,state:state.value});
+    remember({type,customerId:window.FLTCustomerMaster?.selectedId,customer:currentCustomer(),facility:facility?.value||'',street:street.value,zip:zip.value,city:city.value,state:state.value});
   }
   function connect(zipId,cityId,stateId,type){
     const zip=document.getElementById(zipId),city=document.getElementById(cityId),state=document.getElementById(stateId);if(!zip||!city||!state)return;
@@ -102,6 +107,7 @@
       });suggestions.style.display=matches.length?'block':'none';
     };
     let requestNumber=0;
+    zip.addEventListener('flt:address-selected',()=>{lastCommittedZip=fiveDigitZip(zip.value);requestNumber++;hideSuggestions();status.textContent='Saved customer address selected.'});
     const update=async()=>{
       const normalized=fiveDigitZip(zip.value);if(!normalized){status.textContent=zip.value.trim()?'Enter a valid 5-digit ZIP code.':'';hideSuggestions();return}
       clearStaleAddress(normalized);

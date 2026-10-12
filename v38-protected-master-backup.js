@@ -8,7 +8,8 @@
     'flt-v35-classification',
     'flt-v35-fleet',
     'flt-v36-regular-rig',
-    'flt-v35-default-fleet-selection'
+    'flt-v35-default-fleet-selection',
+    'flt-v32-customers'
   ];
 
   const readRaw=key=>localStorage.getItem(key);
@@ -17,7 +18,8 @@
     const classification=readRaw('flt-v35-classification');
     let fleet=null;
     try{fleet=JSON.parse(readRaw('flt-v35-fleet')||'null')}catch(error){}
-    return Boolean(profile||classification||(fleet&&['drivers','trucks','trailers'].some(bucket=>Array.isArray(fleet[bucket])&&fleet[bucket].length)));
+    let customers=[];try{customers=JSON.parse(readRaw('flt-v32-customers')||'[]')}catch(error){}
+    return Boolean(profile||classification||(fleet&&['drivers','trucks','trailers'].some(bucket=>Array.isArray(fleet[bucket])&&fleet[bucket].length))||(Array.isArray(customers)&&customers.length));
   };
 
   function collect(){
@@ -46,11 +48,11 @@
   function restore(){
     const backup=readBackup();
     if(!backup)return false;
-    const ok=globalThis.confirm?.('Restore the protected Commercial Command master backup?\n\nThis restores Business Setup, classification, Driver/Truck/Trailer master records, My Regular Rig, and fleet audit history from the protected browser backup.');
+    const ok=globalThis.confirm?.('Restore the protected Commercial Command master backup?\n\nThis restores Business Setup, classification, Driver/Truck/Trailer master records, My Regular Rig, Customer Master records, and fleet audit history from the protected browser backup. Historical loads and invoices are not rewritten.');
     if(!ok)return false;
     DURABLE_KEYS.forEach(key=>{
       if(Object.prototype.hasOwnProperty.call(backup.data,key))localStorage.setItem(key,backup.data[key]);
-      else localStorage.removeItem(key);
+      else if(key!=='flt-v32-customers')localStorage.removeItem(key);
     });
     localStorage.setItem('flt-v35-resume-view','fleet');
     location.reload();
@@ -119,6 +121,7 @@
   document.getElementById('v36-rig-save')?.addEventListener('click',()=>schedule('regular-rig',120),true);
   document.getElementById('v36-rig-clear')?.addEventListener('click',()=>schedule('regular-rig-cleared',120),true);
   window.addEventListener('flt:workflow-state-changed',()=>schedule('workflow-change',300));
+  window.addEventListener('flt:customer-master-saved',()=>schedule('customer-master',250));
   window.addEventListener('beforeunload',()=>snapshot('page-close'));
   window.addEventListener('flt:modules-loaded',()=>{mount();schedule('modules-loaded',500)});
 

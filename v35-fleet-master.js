@@ -4,14 +4,118 @@
   const key='flt-v35-fleet',read=()=>{try{return {...{drivers:[],trucks:[],trailers:[],locks:[],audit:[]},...JSON.parse(localStorage.getItem(key)||'{}')}}catch(error){return{drivers:[],trucks:[],trailers:[],locks:[],audit:[]}}};
   const esc=value=>String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
   const numeric=['gvwr','gcwr','emptyWeight','frontGawr','rearGawr','frontTireCapacity','rearTireCapacity','tireCapacity','hitchCapacity','axleCapacity','manufacturerPayload','frontColdPsi','rearColdPsi'];
+  const vehicleCatalog={
+    truck:{Ford:['F-250','F-350','F-450','F-550','F-650','F-750'],Ram:['2500','3500','4500','5500'],Chevrolet:['Silverado 2500HD','Silverado 3500HD','Silverado 4500HD','Silverado 5500HD','Silverado 6500HD'],GMC:['Sierra 2500HD','Sierra 3500HD'],Freightliner:['M2','Cascadia'],International:['CV','MV','HX','LT'],Kenworth:['T280','T380','T480','T680','W900'],Peterbilt:['536','537','548','579','589'],Volvo:['VNL','VNR'],Mack:['MD','Anthem','Pinnacle']},
+    trailer:{'Big Tex':['14GN','14LP','22GN','25GN'],'Diamond C':['FMAX210','FMAX212','FMAX216','LPX','LPT'],PJ:['CC','CE','FD','LD','LS'],'MAXX-D':['LHX','YDX','D9X','T8X','T6X'],'Load Trail':['CH','DL','GN'],Lamar:['DK','DS','CD','CC'],'Sure-Trac':[],'Iron Bull':['DTB','DTG','ETB','FHG'],Kaufman:[],Gatormade:[],'Texas Pride':[],'Carry-On':[],'H&H':[],Featherlite:['1610','3110','3150'],Haulmark:[],LOOK:[],'Wells Cargo':[],'Pace American':[],'Cargo Express':[],'Continental Cargo':[],Aluma:['7816','8218','8220'],Utility:['3000R','4000D-X'],'Great Dane':['Champion','Everest'],Wabash:['DuraPlate','Refrigerated']}
+  };
+  const trailerTypes={
+    Gatormade:['Gooseneck / hotshot','Equipment / flatbed','Car hauler','Dump','Utility'],
+    'Texas Pride':['Gooseneck / hotshot','Equipment / flatbed','Car hauler','Dump','Deckover'],
+    'Big Tex':['Gooseneck / hotshot','Equipment / flatbed','Car hauler','Dump','Utility'],
+    'Diamond C':['Gooseneck / hotshot','Equipment / flatbed','Dump','Deckover'],
+    PJ:['Gooseneck / hotshot','Equipment / flatbed','Car hauler','Dump','Utility'],
+    'MAXX-D':['Gooseneck / hotshot','Equipment / flatbed','Car hauler','Dump','Deckover'],
+    'Load Trail':['Gooseneck / hotshot','Equipment / flatbed','Car hauler','Dump','Utility'],
+    Lamar:['Gooseneck / hotshot','Equipment / flatbed','Car hauler','Dump','Utility'],
+    'Iron Bull':['Gooseneck / hotshot','Equipment / flatbed','Dump','Deckover'],
+    Kaufman:['Gooseneck / hotshot','Equipment / flatbed','Car hauler','Enclosed','Deckover'],
+    'Sure-Trac':['Equipment / flatbed','Car hauler','Dump','Enclosed','Utility'],
+    'H&H':['Equipment / flatbed','Car hauler','Dump','Enclosed','Utility'],
+    Featherlite:['Car hauler','Equipment / flatbed','Enclosed','Livestock'],
+    Aluma:['Car hauler','Equipment / flatbed','Utility'],
+    'Carry-On':['Utility','Car hauler','Equipment / flatbed','Enclosed'],
+    Haulmark:['Enclosed','Car hauler'],LOOK:['Enclosed','Car hauler'],
+    'Wells Cargo':['Enclosed','Car hauler'],'Pace American':['Enclosed','Car hauler'],
+    'Cargo Express':['Enclosed','Car hauler'],'Continental Cargo':['Enclosed','Car hauler'],
+    Utility:['Dry van','Refrigerated','Equipment / flatbed'],'Great Dane':['Dry van','Refrigerated','Equipment / flatbed'],Wabash:['Dry van','Refrigerated','Equipment / flatbed']
+  };
+  const trailerConfigurations={
+    'Gooseneck / hotshot':['Low-profile hotshot gooseneck','Dual-wheel gooseneck','Tandem-axle gooseneck','Triple-axle gooseneck','Gooseneck with hydraulic dovetail','Gooseneck with full-width ramps'],
+    'Equipment / flatbed':['Tandem-axle equipment trailer','Triple-axle equipment trailer','Tilt-deck equipment trailer','Equipment trailer with hydraulic dovetail','Flatbed with stand-up ramps','Flatbed with full-width ramps'],
+    'Car hauler':['Open single-car hauler','Open multi-car hauler','Gooseneck car hauler','Enclosed car hauler','Tilt-deck car hauler'],
+    Dump:['Bumper-pull dump','Gooseneck dump','Tandem-axle dump','Triple-axle dump','Roll-off dump'],
+    Deckover:['Tandem-axle deckover','Dual-wheel deckover','Hydraulic tilt deckover','Deckover with dovetail and ramps'],
+    Enclosed:['Enclosed cargo with rear ramp','Enclosed cargo with barn doors','Enclosed car / race trailer','Enclosed gooseneck'],
+    Utility:['Single-axle utility','Tandem-axle utility','Landscape utility with ramp gate','Aluminum utility'],
+    Livestock:['Bumper-pull livestock','Gooseneck livestock'],
+    'Dry van':['Dry van - tandem axle','Dry van - custom length'],Refrigerated:['Refrigerated van - tandem axle','Refrigerated van - custom configuration']
+  };
+  const states={AL:'Alabama',AK:'Alaska',AZ:'Arizona',AR:'Arkansas',CA:'California',CO:'Colorado',CT:'Connecticut',DE:'Delaware',DC:'District of Columbia',FL:'Florida',GA:'Georgia',HI:'Hawaii',ID:'Idaho',IL:'Illinois',IN:'Indiana',IA:'Iowa',KS:'Kansas',KY:'Kentucky',LA:'Louisiana',ME:'Maine',MD:'Maryland',MA:'Massachusetts',MI:'Michigan',MN:'Minnesota',MS:'Mississippi',MO:'Missouri',MT:'Montana',NE:'Nebraska',NV:'Nevada',NH:'New Hampshire',NJ:'New Jersey',NM:'New Mexico',NY:'New York',NC:'North Carolina',ND:'North Dakota',OH:'Ohio',OK:'Oklahoma',OR:'Oregon',PA:'Pennsylvania',RI:'Rhode Island',SC:'South Carolina',SD:'South Dakota',TN:'Tennessee',TX:'Texas',UT:'Utah',VT:'Vermont',VA:'Virginia',WA:'Washington',WV:'West Virginia',WI:'Wisconsin',WY:'Wyoming'};
+  const driverChoices={
+    endorsements:{None:'None',T:'T - Double/Triple Trailers',P:'P - Passenger',N:'N - Tank Vehicle',H:'H - Hazardous Materials',X:'X - Tank + Hazmat',S:'S - School Bus',Other:'Other / State-specific'},
+    restrictions:{None:'None',E:'E - No manual transmission CMV',L:'L - No air brake equipped CMV',Z:'Z - No full air brake equipped CMV',O:'O - No tractor-trailer CMV',M:'M - No Class A passenger vehicle',N:'N - No Class A or B passenger vehicle',V:'V - Medical variance',Other:'Other / State-specific'}
+  };
+  const driverForm=document.getElementById('fleet-driver-form'),licenseState=driverForm.elements.licenseState;
+  const stateSelect=document.createElement('select');stateSelect.name='licenseState';
+  stateSelect.innerHTML='<option value="">Select state</option>'+Object.entries(states).map(([code,label])=>'<option value="'+code+'">'+code+' - '+label+'</option>').join('');
+  stateSelect.value=String(licenseState.value||'').toUpperCase();licenseState.replaceWith(stateSelect);
+  Object.entries(driverChoices).forEach(([name,choices])=>{
+    const input=driverForm.elements[name],field=input.closest('.field');
+    input.type='hidden';input.removeAttribute('placeholder');
+    field.style.position='relative';
+    field.insertAdjacentHTML('beforeend','<details data-driver-dropdown style="border:1px solid var(--line);border-radius:6px"><summary style="cursor:pointer;padding:10px"><span data-driver-summary>Select '+name+'…</span></summary><div role="group" aria-label="'+name+'" data-driver-selection="'+name+'" style="display:grid;gap:8px;position:absolute;left:0;right:0;z-index:40;background:white;border:1px solid var(--line);border-radius:6px;padding:12px;max-height:350px;overflow:auto">'+Object.entries(choices).map(([code,label])=>'<label style="display:flex;align-items:center;gap:8px;font-weight:normal"><input type="checkbox" value="'+code+'" style="width:18px;height:18px;flex:none">'+esc(label)+'</label>').join('')+'<label hidden data-driver-other-label>'+esc('Other '+name)+'<input data-driver-other type="text" disabled></label></div></details><div data-driver-tags style="display:flex;flex-wrap:wrap;gap:5px;margin-top:6px" aria-live="polite"></div>');
+    const group=field.querySelector('[data-driver-selection]');
+    group.addEventListener('change',event=>{
+      if(event.target.type==='checkbox'&&event.target.checked){
+        group.querySelectorAll('input[type="checkbox"]').forEach(box=>{if(event.target.value==='None'?box!==event.target:box.value==='None')box.checked=false});
+      }
+      syncDriverSelections(driverForm);
+    });
+    group.querySelector('[data-driver-other]').addEventListener('input',()=>syncDriverSelections(driverForm));
+  });
+  function syncDriverSelections(form,record){
+    if(record)form.elements.licenseState.value=String(record.licenseState||'').toUpperCase();
+    Object.entries(driverChoices).forEach(([name,choices])=>{
+      const group=form.querySelector('[data-driver-selection="'+name+'"]'),boxes=[...group.querySelectorAll('input[type="checkbox"]')],other=group.querySelector('[data-driver-other]');
+      if(record){
+        const raw=record[name]??'',text=Array.isArray(raw)?raw.join(', '):String(raw),customIndex=text.indexOf('Other:'),standard=customIndex<0?text:text.slice(0,customIndex),values=standard.split(/[,;]+/).map(value=>value.trim()).filter(Boolean),custom=customIndex<0?[]:[text.slice(customIndex+6).trim()];
+        boxes.forEach(box=>box.checked=false);
+        values.forEach(value=>{
+          const code=Object.keys(choices).find(code=>code!=='Other'&&(value.toLowerCase()===code.toLowerCase()||value===choices[code]));
+          if(code)boxes.find(box=>box.value===code).checked=true;
+          else custom.push(value.replace(/^Other:\s*/i,''));
+        });
+        other.value=custom.join('; ');boxes.find(box=>box.value==='Other').checked=custom.length>0;
+      }
+      if(boxes.some(box=>box.checked&&box.value!=='None'))boxes.find(box=>box.value==='None').checked=false;
+      const manual=boxes.find(box=>box.value==='Other').checked;
+      other.disabled=!manual;group.querySelector('[data-driver-other-label]').hidden=!manual;
+      if(!manual)other.value='';
+      form.elements[name].value=boxes.filter(box=>box.checked).map(box=>box.value==='Other'?'Other: '+other.value.trim():box.value).join(', ');
+      const selected=boxes.filter(box=>box.checked),field=group.closest('.field');
+      field.querySelector('[data-driver-summary]').textContent=selected.length?selected.map(box=>box.value).join(', '):'Select '+name+'…';
+      field.querySelector('[data-driver-tags]').innerHTML=selected.map(box=>'<span class="tag gray" style="white-space:normal;overflow-wrap:anywhere">'+esc(box.value==='Other'?other.value||'Other / State-specific':choices[box.value])+'</span>').join('');
+    });
+  }
+  driverForm.addEventListener('submit',event=>{
+    syncDriverSelections(driverForm);
+    const missing=[...driverForm.querySelectorAll('[data-driver-other]')].find(input=>!input.disabled&&!input.value.trim());
+    if(!missing)return;
+    event.preventDefault();event.stopImmediatePropagation();missing.focus();
+    if(typeof toast==='function')toast('Enter the Other / State-specific endorsement or restriction.');
+  },true);
+  driverForm.addEventListener('reset',()=>{driverForm.querySelectorAll('[data-driver-dropdown]').forEach(menu=>menu.open=false);setTimeout(()=>syncDriverSelections(driverForm),0)});
+  document.addEventListener('click',event=>driverForm.querySelectorAll('[data-driver-dropdown]').forEach(menu=>{if(!menu.contains(event.target))menu.open=false}));
+  driverForm.addEventListener('keydown',event=>{if(event.key==='Escape')driverForm.querySelectorAll('[data-driver-dropdown]').forEach(menu=>menu.open=false)});
+  syncDriverSelections(driverForm);
+  const axleRatings=[[7000,'7,000 (2 x 3,500)'],[10400,'10,400 (2 x 5,200)'],[12000,'12,000 (2 x 6,000)'],[14000,'14,000 (2 x 7,000)'],[16000,'16,000 (2 x 8,000)'],[20000,'20,000 (2 x 10,000)'],[24000,'24,000 (2 x 12,000)']];
+  const identityFields=kind=>`
+    <div class="field"><label>Year</label><select name="year"><option value="">Select year</option>${Array.from({length:new Date().getFullYear()+2-1900},(_,index)=>new Date().getFullYear()+1-index).map(year=>'<option value="'+year+'">'+year+'</option>').join('')}</select></div>
+    <div class="field"><label>Make</label><select name="make"><option value="">Select make</option>${Object.keys(vehicleCatalog[kind]).map(make=>'<option value="'+esc(make)+'">'+esc(make)+'</option>').join('')}<option value="other">Other / Not Listed</option></select></div>
+    ${kind==='trailer'?'<div class="field"><label>Series / Type</label><select name="series" disabled><option value="">Select series / type</option></select></div>':''}
+    <div class="field"><label>Model</label><select name="model" disabled><option value="">Select model</option></select></div>
+    ${kind==='trailer'?'<div class="field"><label>Deck length (ft)</label><input name="deckLength" type="number" min="1" step="0.1"></div><div class="field"><label>Axle / wheel configuration</label><select name="axleConfiguration"><option value="">Select axle / wheel configuration</option><option>Tandem axle</option><option>Triple axle</option><option>Dual wheel</option><option>Single axle</option><option>Other / Custom</option></select></div>':''}
+    <div class="field" hidden><label>Other make</label><input name="makeOther" disabled></div>
+    <div class="field" hidden><label>Other model</label><input name="modelOther" disabled></div>
+    <input name="makeModel" type="hidden">`;
   const truckFields=`
-    <div class="field"><label>Year</label><input name="year" inputmode="numeric" placeholder="2016"></div>
-    <div class="field"><label>Make / Model</label><input name="makeModel" placeholder="Ford F-250"></div>
+    ${identityFields('truck')}
+    <div class="field"><label>Vehicle type</label><select name="vehicleType"><option value="">Select vehicle type</option><option>Pickup</option><option>Box truck</option><option>Straight truck</option><option>Cargo van</option><option>Tractor</option><option>Tow truck</option><option>Dump truck</option><option>Other</option></select></div>
     <div class="field"><label>Front GAWR (lb) <span class="subtle">(Active)</span></label><input name="frontGawr" type="number" min="1"></div>
     <div class="field"><label>Rear GAWR (lb) <span class="subtle">(Active)</span></label><input name="rearGawr" type="number" min="1"></div>
-    <div class="field"><label>Manufacturer payload label (lb)</label><input name="manufacturerPayload" type="number" min="1" placeholder="Reference only"></div>
-    <div class="field"><label>Front tire size</label><input name="frontTireSize" placeholder="LT245/75R17E 121/118S"></div>
-    <div class="field"><label>Rear tire size</label><input name="rearTireSize" placeholder="LT245/75R17E 121/118S"></div>
+    <div class="field"><label>Manufacturer Payload Label (lb)</label><input name="manufacturerPayload" type="number" min="1"><span class="subtle">Enter exact payload value from the truck's Tire &amp; Loading / manufacturer door label. Manufacturer-rated occupant-and-cargo capacity, not estimated hauling capacity.</span></div>
+    <div class="field"><label>Front tire size</label><input name="frontTireSize"></div>
+    <div class="field"><label>Rear tire size</label><input name="rearTireSize"></div>
     <div class="field"><label>Front cold pressure (PSI)</label><input name="frontColdPsi" type="number" min="1"></div>
     <div class="field"><label>Rear cold pressure (PSI)</label><input name="rearColdPsi" type="number" min="1"></div>
     <div class="field"><label>Front-axle tire capacity (lb) <span class="subtle">(Active)</span></label><input name="frontTireCapacity" type="number" min="1"></div>
@@ -20,9 +124,9 @@
     <div class="field"><label>Ready-to-work scale date <span class="subtle">(Active)</span></label><input name="verificationDate" type="date"></div>
     <div class="field"><label>Weight verification</label><select name="weightBasis"><option value="planned">Planned / estimate</option><option value="scale-ticket">Scale ticket · full fuel and normal equipment</option><option value="manufacturer">Manufacturer document</option></select></div>`;
   const trailerFields=`
-    <div class="field"><label>Year</label><input name="year" inputmode="numeric"></div>
-    <div class="field"><label>Make / Model</label><input name="makeModel"></div>
-    <div class="field"><label>Combined axle rating (lb) <span class="subtle">(Active)</span></label><input name="axleCapacity" type="number" min="1"></div>
+    ${identityFields('trailer')}
+    <div class="field"><label>Combined axle rating (lb) <span class="subtle">(Active)</span></label><select name="axleCapacity"><option value="">Select actual axle rating</option>${axleRatings.map(([rating,label])=>'<option value="'+rating+'">'+label+'</option>').join('')}<option value="" data-custom-axle>Other / Enter actual rating</option></select></div>
+    <div class="field" hidden><label for="fleet-trailer-axle-actual">Actual manufacturer/axle rating (lb)</label><input id="fleet-trailer-axle-actual" type="number" min="1" step="1" disabled></div>
     <div class="field"><label>Combined tire capacity (lb) <span class="subtle">(Active)</span></label><input name="tireCapacity" type="number" min="1"></div>
     <div class="field"><label>Hitch / coupler rating (lb) <span class="subtle">(Active)</span></label><input name="hitchCapacity" type="number" min="1"></div>
     <div class="field"><label>Ready-to-work scale date <span class="subtle">(Active)</span></label><input name="verificationDate" type="date"></div>
@@ -30,6 +134,87 @@
   const truckForm=document.getElementById('fleet-truck-form'),trailerForm=document.getElementById('fleet-trailer-form');
   truckForm.querySelector('.form-actions').insertAdjacentHTML('beforebegin',truckFields);
   trailerForm.querySelector('.form-actions').insertAdjacentHTML('beforebegin',trailerFields);
+
+  function syncAxleRating(form,record){
+    const select=form.elements.axleCapacity,actual=form.querySelector('#fleet-trailer-axle-actual'),custom=select.querySelector('[data-custom-axle]');
+    if(record){
+      const value=record.axleCapacity==null?'':String(record.axleCapacity);
+      const common=axleRatings.some(([rating])=>String(rating)===value);
+      actual.value=common?'':value;custom.value=common?'':value;
+      select.value=value;
+      if(value&&!common)custom.selected=true;
+    }
+    const manual=select.selectedOptions[0]===custom;
+    actual.disabled=!manual;actual.closest('.field').hidden=!manual;
+    if(manual)custom.value=actual.value;
+    else{actual.value='';custom.value=''}
+  }
+  trailerForm.elements.axleCapacity.addEventListener('change',()=>syncAxleRating(trailerForm));
+  trailerForm.querySelector('#fleet-trailer-axle-actual').addEventListener('input',()=>syncAxleRating(trailerForm));
+  trailerForm.addEventListener('reset',()=>setTimeout(()=>syncAxleRating(trailerForm),0));
+  syncAxleRating(trailerForm);
+
+  function syncIdentity(form,kind,record){
+    const fields=form.elements,make=fields.make,model=fields.model;
+    if(record){
+      if(record.year&&![...fields.year.options].some(option=>option.value===String(record.year)))fields.year.add(new Option(String(record.year),String(record.year)));
+      fields.year.value=record.year??'';
+      const aliases={DiamondC:'Diamond C',LoadTrail:'Load Trail',SureTrac:'Sure-Trac',GreatDane:'Great Dane'};
+      const legacy=String(record.makeModel||'').trim(),rawMake=record.make||Object.keys({...vehicleCatalog[kind],...aliases}).find(value=>legacy.startsWith(value+' ')),knownMake=aliases[rawMake]||rawMake;
+      make.value=knownMake&&vehicleCatalog[kind][knownMake]?knownMake:(legacy||record.make?'other':'');
+      fields.makeOther.value=record.makeOther||(make.value==='other'?record.make||'':'');
+      const savedModel=record.model||(rawMake?legacy.slice(rawMake.length).trim():legacy);
+      model.dataset.savedModel=savedModel;
+      fields.modelOther.value=record.modelOther||(savedModel==='other'?'':savedModel);
+    }
+    let models=vehicleCatalog[kind][make.value]||[];
+    if(kind==='trailer'){
+      const series=fields.series,selectedSeries=record?.series??series.value,types=trailerTypes[make.value]||[];
+      series.innerHTML='<option value="">Select series / type</option>'+['Manufacturer model',...types,'Other / Custom'].map(value=>'<option>'+esc(value)+'</option>').join('');
+      if(selectedSeries&&![...series.options].some(option=>option.value===selectedSeries))series.add(new Option(selectedSeries,selectedSeries));
+      series.value=selectedSeries;series.disabled=!make.value;
+      const configurations=selectedSeries?trailerConfigurations[selectedSeries]||[]:types.flatMap(type=>trailerConfigurations[type]||[]);
+      models=[...new Set([...models,...configurations])];
+    }
+    const savedModel=model.dataset.savedModel??model.value;
+    model.innerHTML='<option value="">Select model</option>'+models.map(value=>'<option value="'+esc(value)+'">'+esc(value)+'</option>').join('')+(make.value?'<option value="other">'+(kind==='trailer'?'Other / Custom Model or Configuration':'Other / Not Listed')+'</option>':'');
+    model.disabled=!make.value;
+    model.value=models.includes(savedModel)?savedModel:(savedModel?'other':'');
+    delete model.dataset.savedModel;
+    const manualMake=make.value==='other',manualModel=model.value==='other';
+    fields.makeOther.disabled=!manualMake;fields.makeOther.closest('.field').hidden=!manualMake;
+    fields.modelOther.disabled=!manualModel;fields.modelOther.closest('.field').hidden=!manualModel;
+    fields.makeOther.required=manualMake;fields.modelOther.required=manualModel;
+    if(!manualMake)fields.makeOther.value='';
+    if(!manualModel)fields.modelOther.value='';
+    fields.makeModel.value=[manualMake?fields.makeOther.value:make.value,manualModel?fields.modelOther.value:model.value].filter(Boolean).join(' ').trim();
+  }
+  [[truckForm,'truck'],[trailerForm,'trailer']].forEach(([form,kind])=>{
+    form.elements.make.addEventListener('change',()=>{form.elements.model.value='';form.elements.makeOther.value='';form.elements.modelOther.value='';if(form.elements.series)form.elements.series.value='';syncIdentity(form,kind)});
+    form.elements.series?.addEventListener('change',()=>{form.elements.model.value='';form.elements.modelOther.value='';syncIdentity(form,kind)});
+    form.elements.model.addEventListener('change',()=>syncIdentity(form,kind));
+    ['makeOther','modelOther'].forEach(name=>form.elements[name].addEventListener('input',()=>syncIdentity(form,kind)));
+    form.addEventListener('submit',event=>{
+      syncIdentity(form,kind);
+      const missing=fieldsForIdentity(form).find(control=>!control.value.trim());
+      if(!missing)return;
+      event.preventDefault();event.stopImmediatePropagation();missing.focus();
+      if(typeof toast==='function')toast('Complete the selected vehicle make and model.');
+    },true);
+    form.addEventListener('reset',()=>setTimeout(()=>syncIdentity(form,kind),0));
+    syncIdentity(form,kind);
+  });
+  function fieldsForIdentity(form){
+    return [form.elements.model,form.elements.makeOther,form.elements.modelOther].filter(control=>!control.disabled&&(control.required||control===form.elements.model&&form.elements.make.value));
+  }
+  function restoreFleetControls(form,kind,record){
+    if(kind==='driver')syncDriverSelections(form,record);
+    else{syncIdentity(form,kind,record);if(kind==='trailer')syncAxleRating(form,record)}
+  }
+  window.FLTFleetIdentity={restore:restoreFleetControls};
+  fleet.querySelectorAll('select').forEach(select=>{
+    if(![...select.options].some(option=>option.value===''))select.insertBefore(new Option('Select...', '',true,true),select.firstChild);
+  });
 
   const firstGrid=fleet.querySelector('.grid.three');
   const manager=document.createElement('div');manager.id='v35-fleet-master-manager';manager.className='panel';manager.style.marginTop='14px';
@@ -58,6 +243,18 @@
   const driverReady=x=>{if(x?.status!=='active'||!x.licenseState||!x.expiration)return false;const expiration=new Date(x.expiration+'T23:59:59');return Number.isFinite(expiration.getTime())&&expiration>=new Date()};
   const truckReady=x=>Boolean(x?.status==='active'&&validVin(x.vin)&&x.weightBasis==='scale-ticket'&&window.FLTDate.isNotFuture(x.verificationDate)&&Number(x.gvwr)>0&&Number(x.gcwr)>=Number(x.gvwr)&&Number(x.emptyWeight)>0&&Number(x.emptyWeight)<Number(x.gvwr)&&Number(x.frontGawr)+Number(x.rearGawr)>=Number(x.gvwr)&&Number(x.frontTireCapacity)>=Number(x.frontGawr)&&Number(x.rearTireCapacity)>=Number(x.rearGawr)&&Number(x.hitchCapacity)>0);
   const trailerReady=x=>Boolean(x?.status==='active'&&validVin(x.vin)&&x.weightBasis==='scale-ticket'&&window.FLTDate.isNotFuture(x.verificationDate)&&Number(x.gvwr)>0&&Number(x.emptyWeight)>0&&Number(x.emptyWeight)<Number(x.gvwr)&&Number(x.axleCapacity)>=Number(x.gvwr)&&Number(x.tireCapacity)>=Number(x.gvwr)&&Number(x.hitchCapacity)>=Number(x.gvwr));
+  function syncTruckPlanningReference(){
+    if(window.FLTBusinessFleetBridge){window.FLTBusinessFleetBridge.apply();return}
+    const field=document.getElementById('v35-truck-gvwr');if(!field)return;
+    const trucks=read().trucks.filter(truckReady),ids=['flt-v38-current-working-rig','flt-v36-regular-rig','flt-v35-default-fleet-selection'].map(key=>{try{return JSON.parse(localStorage.getItem(key)||'{}').truckId}catch(error){return''}});
+    const truck=ids.map(id=>trucks.find(item=>item.id===id)).find(Boolean)||(trucks.length===1?trucks[0]:null);
+    field.value=truck?String(truck.gvwr):'';
+  }
+  syncTruckPlanningReference();
+  window.addEventListener('flt:modules-loaded',syncTruckPlanningReference);
+  window.addEventListener('flt:workflow-state-changed',syncTruckPlanningReference);
+  document.addEventListener('submit',()=>setTimeout(syncTruckPlanningReference,400),true);
+  document.getElementById('v36-rig-save')?.addEventListener('click',()=>setTimeout(syncTruckPlanningReference,0));
   const changeReasons={
     drivers:['Complete planned record with verified information','Correct a data-entry mistake','Renew driver license','Update qualification, endorsement, or restriction','Change operating area','Change driver status'],
     trucks:['Complete planned record with verified information','Correct a data-entry mistake','Add or update scale ticket','Update manufacturer ratings','Update tires, wheels, or pressures','Update hitch or installed equipment','Change truck status'],
@@ -122,6 +319,7 @@
         const saved=(data[bucket]||[]).find(item=>item.id===form.dataset.editId);
         form.reset();
         if(saved)Object.entries(saved).forEach(([name,value])=>{if(form.elements[name])form.elements[name].value=value??''});
+        restoreFleetControls(form,kind,saved);
         setActiveRequirements(form,kind);
       }
       delete form.dataset.editId;delete form.dataset.editReason;
@@ -144,6 +342,7 @@
     clearEditState(true,false);
     const kind=bucketLabel[bucket],form=document.getElementById('fleet-'+kind+'-form');
     Object.entries(record).forEach(([name,value])=>{if(form.elements[name])form.elements[name].value=value??''});
+    restoreFleetControls(form,kind,record);
     form.dataset.editId=record.id;form.dataset.editReason=selectedReason;setActiveRequirements(form,kind);
     form.querySelector('button[type="submit"],button:not([type])').textContent='Update '+kind;
     document.getElementById('v35-master-cancel').hidden=false;

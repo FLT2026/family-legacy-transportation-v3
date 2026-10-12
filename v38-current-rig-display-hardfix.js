@@ -100,6 +100,8 @@
       control.value=value??'';
       control.dispatchEvent(new Event('change',{bubbles:true}));
     });
+    const kind=kindForForm(form);
+    if(kind)window.FLTFleetIdentity?.restore(form,kind,record);
     form.dataset.currentRecordId=record.id||'';
     const button=form.querySelector('button[type="submit"],button:not([type])');
     if(button)button.textContent='Saved · Current '+(form.id.includes('driver')?'driver':form.id.includes('truck')?'truck':'trailer');
