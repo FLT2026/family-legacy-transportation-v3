@@ -50,7 +50,10 @@
   document.addEventListener('input',e=>{if(e.target.matches('input,select,textarea')){if(decisionInputIds.has(e.target.id))decisionRunThisPage=false;schedule(false)}},true);
   document.addEventListener('change',e=>{if(e.target.matches('input,select,textarea')){if(decisionInputIds.has(e.target.id))decisionRunThisPage=false;schedule(false)}},true);
   document.addEventListener('submit',e=>{if(e.target.id==='v35-decision-form'){decisionRunThisPage=true;setTimeout(()=>schedule(false),80)}},true);
-  nav.addEventListener('click',()=>schedule(true),true);
+  nav.addEventListener('click',event=>{
+    const target=event.target.closest?.('button[data-view]');
+    schedule(!target||target.dataset.view===activeView());
+  },true);
   window.addEventListener('flt:modules-loaded',()=>schedule(false));
   window.addEventListener('flt:proposed-load-layout-ready',()=>schedule(false));
   window.addEventListener('flt:unit-affixes-ready',()=>schedule(false));

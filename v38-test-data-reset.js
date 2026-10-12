@@ -18,7 +18,8 @@
     'flt-v36-regular-rig',
     'flt-v35-default-fleet-selection',
     'flt-v32-customers',
-    'flt-address-book-v1'
+    'flt-address-book-v1',
+    'flt-v38-operating-assumptions'
   ]);
   const isResettableCommercialCommandKey=key=>isCommercialCommandKey(key)&&!durableKeys.has(String(key||''));
   const matchingKeys=storage=>{

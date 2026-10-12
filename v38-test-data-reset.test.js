@@ -41,6 +41,7 @@ const localStorage=createStorage({
   'flt-v35-fleet':'{"drivers":[{"id":"D1","licenseState":"TX","endorsements":"T, X, Other: State-specific, permit","restrictions":"E, V"}],"trucks":[{"id":"T1","gvwr":14000}],"trailers":[{"id":"R1","make":"Diamond C","model":"FMAX210","axleCapacity":18000}],"audit":[{}]}',
   'flt-v36-regular-rig':'{"driverId":"D1","truckId":"T1","trailerId":"R1"}',
   'flt-v35-default-fleet-selection':'{"truckId":"T1"}',
+  'flt-v38-operating-assumptions':'{"averageMpg":9,"maintenanceReserve":0.2,"tireReserve":0.05,"fixedCpm":0.35,"targetProfit":350}',
   'flt-v32-customers':'[{"id":"REAL-C","name":"Permanent Customer","isTest":false,"billingAddress":{"street":"1 Real St","city":"Raleigh","state":"NC","zip":"27601"},"pickupLocations":[{"id":"REAL-P","street":"2 Real St","city":"Raleigh","state":"NC","zip":"27601"}]},{"id":"TEST-C","name":"Fictitious Customer","isTest":true,"pickupLocations":[{"id":"TEST-P","street":"3 Test St"}]}]',
   'flt-address-book-v1':'[{"customerId":"REAL-C","street":"2 Real St","city":"Raleigh","state":"NC","zip":"27601"},{"customerId":"TEST-C","street":"3 Test St"}]',
   'flt-v38-current-working-rig':'{"driverId":"D1","truckId":"T1","trailerId":"R1"}',
@@ -64,11 +65,12 @@ assert.equal(scrollPosition.top,1800,'Ordinary startup must not force window scr
 assert.equal(window.history.scrollRestoration,'auto');
 assert.ok(fleetInputs.every(input=>input.value==='old/demo/default'),'Ordinary startup must preserve form values.');
 
-const savedFleet=localStorage.getItem('flt-v35-fleet'),savedBackup=localStorage.getItem('commercial-command-master-backup-v1'),savedCustomers=localStorage.getItem('flt-v32-customers'),savedBook=localStorage.getItem('flt-address-book-v1');
+const savedFleet=localStorage.getItem('flt-v35-fleet'),savedBackup=localStorage.getItem('commercial-command-master-backup-v1'),savedCustomers=localStorage.getItem('flt-v32-customers'),savedBook=localStorage.getItem('flt-address-book-v1'),savedAssumptions=localStorage.getItem('flt-v38-operating-assumptions');
 api.reset();
 assert.equal(localStorage.getItem('flt-v32-customers'),savedCustomers,'Transaction reset must preserve customer masters exactly.');
 assert.equal(localStorage.getItem('flt-address-book-v1'),savedBook,'Transaction reset must preserve saved customer addresses.');
 assert.equal(localStorage.getItem('flt-v35-fleet'),savedFleet,'Transaction reset must preserve driver selections, actual truck GVWR, trailer identity, and actual axle rating exactly.');
+assert.equal(localStorage.getItem('flt-v38-operating-assumptions'),savedAssumptions,'Transaction reset must preserve recurring operating assumptions.');
 assert.equal(localStorage.getItem('commercial-command-master-backup-v1'),savedBackup,'Transaction reset must preserve the protected backup.');
 assert.ok(localStorage.getItem('flt-v34-business-profile'),'Transaction reset must preserve Business Setup.');
 assert.ok(localStorage.getItem('flt-v35-fleet'),'Transaction reset must preserve fleet master records.');
@@ -99,7 +101,7 @@ assert.deepEqual(retainedCustomers.map(customer=>customer.id),['REAL-C'],'Full d
 assert.equal(retainedCustomers[0].pickupLocations[0].id,'REAL-P','Legitimate customer locations must survive.');
 assert.deepEqual(JSON.parse(localStorage.getItem('flt-address-book-v1')).map(item=>item.customerId),['REAL-C']);
 assert.equal([...Array(sessionStorage.length)].some((_,index)=>/^flt-/i.test(sessionStorage.key(index))),false);
-['flt-v34-business-profile','flt-v35-classification','flt-v35-fleet','flt-v36-regular-rig','flt-v35-default-fleet-selection','flt-v38-current-working-rig','flt-v38-suspended-regular-rig'].forEach(key=>assert.equal(localStorage.getItem(key),null,key+' must be removed by full reset.'));
+['flt-v34-business-profile','flt-v35-classification','flt-v35-fleet','flt-v36-regular-rig','flt-v35-default-fleet-selection','flt-v38-operating-assumptions','flt-v38-current-working-rig','flt-v38-suspended-regular-rig'].forEach(key=>assert.equal(localStorage.getItem(key),null,key+' must be removed by full reset.'));
 
 delete window.FLTTestDataReset;
 sandbox.showView=name=>{activeView=name;scrollPosition={left:120,top:900}};
