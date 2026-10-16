@@ -67,7 +67,15 @@
   test.appendChild(gate);
 
   function allVehicleRecords(truckId){
-    return store.loads.flatMap(load=>records(load).map(record=>({...record,loadId:load.id}))).filter(record=>truckId?record.truckId===truckId:true).sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt)));
+    const latestByLoad=new Map();
+    store.loads.forEach(load=>records(load).forEach(record=>latestByLoad.set(load.id,{...record,loadId:load.id})));
+    return [...latestByLoad.values()].filter(record=>truckId?record.truckId===truckId:true).sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt)));
+  }
+  function sameTripSnapshot(record,candidate){
+    const sameValue=(left,right)=>left===right||(left==null&&right==null);
+    return ['loadId','odometerStart','odometerEnd','actualMiles','actualGallons','averageFuelPrice','fuelCost','truckId','truckUnit'].every(key=>sameValue(record?.[key],candidate[key]))
+      &&Boolean(record?.noTollsIncurred)===Boolean(candidate.noTollsIncurred)
+      &&String(record?.note||'')===String(candidate.note||'');
   }
   function setVariance(id,value,kind){
     const el=$(id);el.textContent=value;el.style.color=kind==='bad'?'var(--red)':kind==='good'?'var(--green)':'var(--ink)';
@@ -142,8 +150,12 @@
     if((start===null)!==(end===null)){toast('Enter both odometer readings or leave both blank.');return}
     if(start!==null&&end<=start){toast('Odometer end must be greater than odometer start.');return}
     if(start!==null&&Math.abs((end-start)-actualMiles)>1){toast('Actual miles must be within 1 mile of the odometer difference.');return}
-    const load=current(),assignment=assignedTruck(load),record={snapshotId:'ACT-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,7),version:'V3.6',createdAt:new Date().toISOString(),loadId:load.id,odometerStart:start,odometerEnd:end,actualMiles,actualGallons,averageFuelPrice,fuelCost,actualMpg:actualMiles/actualGallons,truckId:assignment?.truckId||null,truckUnit:assignment?.truckUnit||null,noTollsIncurred:data.get('noTollsIncurred')==='on',tollsAtSnapshot:tollTotal(load),ledgerCostAtSnapshot:ledgerTotal(load),receiptCountAtSnapshot:receiptCount(load),note:String(data.get('note')||'').trim()};
-    load.actualTripRecords=records(load);load.actualTripRecords.push(record);load.actualMiles=actualMiles;load.actualFuelGallons=actualGallons;load.actualFuelPrice=averageFuelPrice;load.actualMpg=record.actualMpg;persist();toast('Actual trip saved. Confirm the fuel vendor to post the expense.');renderFinance();form.reset();openFuelExpense(record);
+    const load=current(),assignment=assignedTruck(load),candidate={snapshotId:'ACT-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,7),version:'V3.6',createdAt:new Date().toISOString(),loadId:load.id,odometerStart:start,odometerEnd:end,actualMiles,actualGallons,averageFuelPrice,fuelCost,actualMpg:actualMiles/actualGallons,truckId:assignment?.truckId||null,truckUnit:assignment?.truckUnit||null,noTollsIncurred:data.get('noTollsIncurred')==='on',tollsAtSnapshot:tollTotal(load),ledgerCostAtSnapshot:ledgerTotal(load),receiptCountAtSnapshot:receiptCount(load),note:String(data.get('note')||'').trim()};
+    load.actualTripRecords=records(load);const existing=latest(load),record=existing&&sameTripSnapshot(existing,candidate)?existing:candidate;
+    if(record===candidate)load.actualTripRecords.push(record);
+    load.actualMiles=actualMiles;load.actualFuelGallons=actualGallons;load.actualFuelPrice=averageFuelPrice;load.actualMpg=record.actualMpg;persist();
+    toast(record===existing?'Actual trip snapshot already saved. Confirm or update the fuel expense.':'Actual trip saved. Confirm the fuel vendor to post the expense.');
+    renderFinance();form.reset();form.elements.noTollsIncurred.checked=Boolean(record.noTollsIncurred);openFuelExpense(record);
   });
 
   const priorFinance=renderFinance;renderFinance=()=>{priorFinance();render()};

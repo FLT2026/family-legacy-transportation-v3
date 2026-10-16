@@ -133,7 +133,7 @@
     let host=existing;
     if(!host){
       host=document.createElement('div');host.id='v36-truck-repair-field';host.className='field full';
-      host.innerHTML='<label for="v36-truck-repair-select">Dispatched truck <span class="subtle">— required to complete V3.6</span></label><select id="v36-truck-repair-select"><option value="">Select the truck used for this trip</option></select><div class="subtle" style="margin-top:6px">Historical assignment data is missing for this saved trip. Selecting the actual truck repairs the link and records the change in audit history.</div>';
+      host.innerHTML='<label for="v36-truck-repair-select">Dispatched truck <span class="subtle">— required to complete Actual Trip Cost</span></label><select id="v36-truck-repair-select"><option value="">Select the truck used for this trip</option></select><div class="subtle" style="margin-top:6px">Historical assignment data is missing for this saved trip. Selecting the actual truck repairs the link and records the change in audit history.</div>';
       form.querySelector('.form-actions')?.insertAdjacentElement('beforebegin',host);
       $('v36-truck-repair-select')?.addEventListener('change',event=>{if(event.target.value)linkTruckToSnapshot(event.target.value)});
     }
