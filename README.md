@@ -30,3 +30,24 @@ Reference documents:
 - `FLT_CARRY_FORWARD_REQUIREMENTS.md` — prior requirements that must remain tracked through V3.8 and V4.0
 
 Core product rule: **Enter once. Calculate once. Auto-populate everywhere. Verify before records become final.**
+
+## Proposed-load navigation verification
+
+Dashboard **Continue to Evaluate Proposed Load** routes once through the existing
+gated navigation button. The Evaluate Proposed Load heading and saved
+driver/truck/trailer selection precede Fast Load inputs. NEXT guidance highlights
+unfinished fields without automatically focusing or scrolling to them; explicit
+validation on submission still guides the operator to invalid inputs.
+
+Run `node v38-full-regression.test.js` for the automated regression suite, including
+[the proposed-load navigation regression](./v38-proposed-load-navigation.test.js).
+For browser verification, use a separate test origin with saved, verified setup
+and fleet records:
+
+1. Reload Dashboard and click **Continue to Evaluate Proposed Load**.
+2. Confirm the heading and saved rig section are at the top, and stay there after
+   delayed guidance updates finish.
+3. Complete the source, source name, and ZIP inputs; confirm NEXT advances without
+   stealing focus. Return to Dashboard and repeat, including after another reload.
+4. Confirm saved setup, fleet, estimates, customer records, and recurring
+   assumptions remain unchanged.

@@ -37,7 +37,7 @@
     ['delivery-date','Enter the delivery date','Confirm when the load must be delivered.',c=>String(c.value||'').trim()!=='' ]
   ]};
 
-  let scheduled=false,lastKey='';
+  let scheduled=false;
   const activeView=()=>nav.querySelector('button.active')?.dataset.view||'';
   const usable=c=>Boolean(c&&!c.disabled&&!c.readOnly&&c.offsetParent!==null);
   const normalize=a=>({id:a[0],label:a[1],instruction:a[2],valid:a[3]});
@@ -45,18 +45,15 @@
   function explicit(){for(const raw of steps[activeView()]||[]){const s=normalize(raw),c=document.getElementById(s.id);if(usable(c)){let ok=false;try{ok=!!s.valid(c)}catch(e){}if(!ok)return{...s,control:c}}}return null}
   function generic(){const view=activeView();if(!['intelligence','load'].includes(view))return null;const root=document.getElementById(view)||document.querySelector('.view.active');if(!root)return null;const c=[...root.querySelectorAll('input,select,textarea')].filter(usable).find(x=>x.type!=='hidden'&&x.type!=='button'&&x.type!=='submit'&&((/zip/i.test(x.id||'')&&String(x.value||'').trim()&&!/^\d{5}$/.test(String(x.value||'').trim()))||(x.required&&String(x.value||'').trim()==='')));if(c)return{id:c.id,control:c,label:'Complete this required field',instruction:'Commercial Command found the next required item on this screen.'};if(view==='intelligence'&&!decisionRunThisPage){const a=root.querySelector('button[type="submit"],.form-actions .btn,#v35-run-decision,[data-run-decision]');if(usable(a))return{control:a,label:'Run Load Decision',instruction:'Owner operator / fleet driver: required profitability inputs are present. Run the decision now.',action:true}}return null}
   function clear(){document.querySelectorAll('.v38-hard-field-next,.v38-hard-action-next').forEach(e=>e.classList.remove('v38-hard-field-next','v38-hard-action-next'));document.querySelectorAll('.v38-hard-field-wrap').forEach(e=>e.classList.remove('v38-hard-field-wrap'));document.getElementById('v38-hard-training-banner')?.remove()}
-  function apply(scroll=false){scheduled=false;rename();clear();const view=activeView();if(!['intelligence','load'].includes(view)){lastKey='';return}const s=explicit()||generic();if(!s?.control)return;const c=s.control;c.classList.add(s.action?'v38-hard-action-next':'v38-hard-field-next');if(!s.action)(c.closest('.field')||c.parentElement)?.classList.add('v38-hard-field-wrap');const root=c.closest('form')||document.getElementById(view)||c.parentElement;if(root){const b=document.createElement('div');b.id='v38-hard-training-banner';b.innerHTML='OWNER OPERATOR / FLEET DRIVER — NEXT: '+s.label+'<small>'+s.instruction+'</small>';root.insertBefore(b,root.firstElementChild)}const key=s.id||s.label;if(scroll)setTimeout(()=>c.scrollIntoView({behavior:'smooth',block:'center'}),60);lastKey=key}
-  function schedule(scroll=false){if(scheduled)return;scheduled=true;setTimeout(()=>apply(scroll),40)}
-  document.addEventListener('input',e=>{if(e.target.matches('input,select,textarea')){if(decisionInputIds.has(e.target.id))decisionRunThisPage=false;schedule(false)}},true);
-  document.addEventListener('change',e=>{if(e.target.matches('input,select,textarea')){if(decisionInputIds.has(e.target.id))decisionRunThisPage=false;schedule(false)}},true);
-  document.addEventListener('submit',e=>{if(e.target.id==='v35-decision-form'){decisionRunThisPage=true;setTimeout(()=>schedule(false),80)}},true);
-  nav.addEventListener('click',event=>{
-    const target=event.target.closest?.('button[data-view]');
-    schedule(!target||target.dataset.view===activeView());
-  },true);
-  window.addEventListener('flt:modules-loaded',()=>schedule(false));
-  window.addEventListener('flt:proposed-load-layout-ready',()=>schedule(false));
-  window.addEventListener('flt:unit-affixes-ready',()=>schedule(false));
-  document.addEventListener('visibilitychange',()=>{if(!document.hidden)schedule(false)});
-  setTimeout(()=>apply(false),150);
+  function apply(){scheduled=false;rename();clear();const view=activeView();if(!['intelligence','load'].includes(view))return;const s=explicit()||generic();if(!s?.control)return;const c=s.control;c.classList.add(s.action?'v38-hard-action-next':'v38-hard-field-next');if(!s.action)(c.closest('.field')||c.parentElement)?.classList.add('v38-hard-field-wrap');const root=c.closest('form')||document.getElementById(view)||c.parentElement;if(root){const b=document.createElement('div');b.id='v38-hard-training-banner';b.innerHTML='OWNER OPERATOR / FLEET DRIVER — NEXT: '+s.label+'<small>'+s.instruction+'</small>';root.insertBefore(b,root.firstElementChild)}}
+  function schedule(){if(scheduled)return;scheduled=true;setTimeout(apply,40)}
+  document.addEventListener('input',e=>{if(e.target.matches('input,select,textarea')){if(decisionInputIds.has(e.target.id))decisionRunThisPage=false;schedule()}},true);
+  document.addEventListener('change',e=>{if(e.target.matches('input,select,textarea')){if(decisionInputIds.has(e.target.id))decisionRunThisPage=false;schedule()}},true);
+  document.addEventListener('submit',e=>{if(e.target.id==='v35-decision-form'){decisionRunThisPage=true;setTimeout(schedule,80)}},true);
+  nav.addEventListener('click',schedule,true);
+  window.addEventListener('flt:modules-loaded',schedule);
+  window.addEventListener('flt:proposed-load-layout-ready',schedule);
+  window.addEventListener('flt:unit-affixes-ready',schedule);
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)schedule()});
+  setTimeout(apply,150);
 })();

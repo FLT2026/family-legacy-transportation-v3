@@ -135,13 +135,13 @@
   }
 
   function reorderFirstTimeFlow(){
-    const quick=$('v38-quick-section');
+    const quick=form.querySelector('.v38-quick-section');
     const core=$('v38-core-load-decision-fields');
     const master=$('v35-master-selection');
 
-    if(quick&&form.firstElementChild!==quick)form.insertBefore(quick,form.firstElementChild);
+    if(master&&form.firstElementChild!==master)form.insertBefore(master,form.firstElementChild);
+    if(quick&&master&&master.nextElementSibling!==quick)master.insertAdjacentElement('afterend',quick);
     if(core&&quick&&quick.nextElementSibling!==core)quick.insertAdjacentElement('afterend',core);
-    if(master&&core&&core.nextElementSibling!==master)core.insertAdjacentElement('afterend',master);
 
     const banner=document.querySelector('#intelligence .v35-banner');
     if(banner){
@@ -149,7 +149,7 @@
       const title=banner.querySelector('h2');
       const copy=banner.querySelector('.subtle');
       if(eyebrow)eyebrow.textContent='Evaluate Proposed Load';
-      if(title)title.textContent='Fast Load Decision';
+      if(title)title.textContent='Evaluate Proposed Load';
       if(copy)copy.textContent='Enter only what changes for this load. Saved driver, equipment, ratings, and recurring assumptions are reused automatically.';
     }
 

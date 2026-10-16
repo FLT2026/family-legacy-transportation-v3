@@ -331,6 +331,7 @@
   }
   function cancelEdit(){
     clearEditState(true,true);notice.textContent='Edit cancelled. No saved record was changed.';
+    window.dispatchEvent(new CustomEvent('flt:master-record-edit-end'));
   }
   document.getElementById('v35-master-cancel').addEventListener('click',cancelEdit);
   document.getElementById('v35-master-edit').addEventListener('click',()=>{
@@ -347,7 +348,9 @@
     form.querySelector('button[type="submit"],button:not([type])').textContent='Update '+kind;
     document.getElementById('v35-master-cancel').hidden=false;
     notice.innerHTML='<strong>Editing '+esc(record.name||record.unit)+'.</strong><br>Review every highlighted Active / Verified field, then press Update '+kind+'.';
-    form.scrollIntoView({behavior:'smooth',block:'start'});form.querySelector('input,select')?.focus();
+    // Layout modules (e.g. the V3.8 master-record hub) may have collapsed the entry forms; they must reveal this form synchronously before it is scrolled into view.
+    window.dispatchEvent(new CustomEvent('flt:master-record-edit-start',{detail:{kind,bucket,id:record.id,formId:form.id}}));
+    form.scrollIntoView({behavior:'smooth',block:'start'});form.querySelector('input,select')?.focus({preventScroll:true});
   });
   document.getElementById('v35-master-remove').addEventListener('click',()=>{
     const data=read(),bucket=type.value,index=(data[bucket]||[]).findIndex(x=>x.id===recordSelect.value),record=data[bucket]?.[index];
