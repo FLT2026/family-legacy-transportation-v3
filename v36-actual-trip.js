@@ -37,7 +37,7 @@
   const panel=document.createElement('div');
   panel.id='v36-actual-trip';panel.className='panel';panel.style.cssText='margin-bottom:14px;position:relative;z-index:2';
   panel.innerHTML=`
-    <div class="section-head"><div><div class="eyebrow">V3.6 · Actual Trip Cost</div><h2>Close the trip with actual operating facts</h2><p class="subtle" style="margin-top:5px">Save an immutable mileage and fuel snapshot. Tolls, other expenses, and receipt evidence come from this load's ledger.</p></div><span class="tag orange" id="v36-record-status">NOT RECORDED</span></div>
+    <div class="section-head"><div><div class="eyebrow">Actual Trip Cost</div><h2>Close the trip with actual operating facts</h2><p class="subtle" style="margin-top:5px">Save an immutable mileage and fuel snapshot. Tolls, other expenses, and receipt evidence come from this load's ledger.</p></div><span class="tag orange" id="v36-record-status">NOT RECORDED</span></div>
     <form id="v36-actual-form" class="form-grid">
       <div class="field"><label for="v36-odometer-start">Odometer start</label><input id="v36-odometer-start" name="odometerStart" type="number" min="0" step="0.1" inputmode="decimal" placeholder="Optional"></div>
       <div class="field"><label for="v36-odometer-end">Odometer end</label><input id="v36-odometer-end" name="odometerEnd" type="number" min="0" step="0.1" inputmode="decimal" placeholder="Optional"></div>
