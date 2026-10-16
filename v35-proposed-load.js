@@ -247,12 +247,17 @@
       const driver=fleet.driver,truck=fleet.truck,trailer=fleet.trailer;
       selectedFleet={driverId:driver.id,driverName:driver.name,truckId:truck.id,truckUnit:truck.unit,trailerId:trailer.id,trailerUnit:trailer.unit};
       const actualCombination=Number(truck.emptyWeight)+Number(trailer.emptyWeight)+cargoWeight,combinationRating=Number(truck.gvwr)+Number(trailer.gvwr),legalCapacity=Math.min(combinationRating,Number(truck.gcwr)),hard=[];
-      payload=Math.max(0,legalCapacity-Number(truck.emptyWeight)-Number(trailer.emptyWeight));
+      const combinationCargoAllowance=Math.max(0,legalCapacity-Number(truck.emptyWeight)-Number(trailer.emptyWeight));
+      const trailerGvwrCargoAllowance=Math.max(0,Number(trailer.gvwr)-Number(trailer.emptyWeight));
+      // Display only the lower of the combination and trailer-GVWR allowances.
+      // Axle, tire, hitch and actual weight distribution are separate dispatch gates.
+      payload=Math.min(combinationCargoAllowance,trailerGvwrCargoAllowance);
       if(driver.qualification==='Non-CDL Driver'&&combinationRating>=26001)hard.push('The '+combinationRating.toLocaleString()+' lb combined GVWR requires a CDL evaluation; the selected Non-CDL driver cannot be dispatched.');
       if(actualCombination>Number(truck.gcwr))hard.push('Estimated combination weight exceeds the selected truck manufacturer GCWR.');
       if(actualCombination>combinationRating)hard.push('Estimated combination weight exceeds the selected truck-plus-trailer GVWR limit.');
       const estimatedTrailerWeight=Number(trailer.emptyWeight)+cargoWeight;
-      if(cargoWeight>payload)hard.push('Cargo weight exceeds the calculated remaining payload for the selected verified truck and trailer.');
+      if(cargoWeight>payload)hard.push('Cargo weight exceeds the lower of the combination allowance and trailer GVWR cargo allowance.');
+      if(estimatedTrailerWeight>Number(trailer.gvwr))hard.push('Estimated loaded trailer weight exceeds the trailer GVWR.');
       if(estimatedTrailerWeight>Number(trailer.axleCapacity))hard.push('Estimated loaded trailer weight exceeds the trailer combined axle rating.');
       if(estimatedTrailerWeight>Number(trailer.tireCapacity))hard.push('Estimated loaded trailer weight exceeds the trailer combined tire capacity.');
       if(estimatedTrailerWeight>Number(trailer.hitchCapacity))hard.push('Estimated loaded trailer weight exceeds the trailer hitch/coupler rating.');
