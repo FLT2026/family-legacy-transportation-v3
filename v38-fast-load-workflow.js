@@ -67,7 +67,7 @@
     }else{
       banner.innerHTML='<strong>Accepted estimate carried forward — no re-entry required.</strong><br><span class="subtle">'+esc(details)+'</span><div class="v38-source-note">Miles, MPG, fuel price, rate, and cargo weight stay tied to the accepted estimate. Complete only customer, exact locations, dates, commodity, and exceptions below.</div>';
     }
-    setValue('pickup-zip',p.pickupZip);setValue('pickup-city',p.pickupCity);setValue('pickup-state',p.pickupState);setValue('delivery-zip',p.deliveryZip);setValue('delivery-city',p.deliveryCity);setValue('delivery-state',p.deliveryState);applyAcceptedOrigin(p);
+    setValue('pickup-zip',p.pickupZip);setValue('pickup-city',p.pickupCity);setValue('pickup-state',p.pickupState);setValue('delivery-zip',p.deliveryZip);setValue('delivery-city',p.deliveryCity);setValue('delivery-state',p.deliveryState);['pickup','delivery'].forEach(type=>{const input=$(type+'-zip');if(input&&typeof input.dispatchEvent==='function')input.dispatchEvent(new Event('flt:address-restored'))});applyAcceptedOrigin(p);
     setValue('quoted-revenue',p.offer,true);setValue('load-weight',p.cargoWeight,true);setValue('loaded-miles',p.loadedMiles,true);setValue('deadhead-miles',p.deadheadMiles,true);setValue('average-mpg',p.averageMpg||p.metrics?.mpg,true);setValue('fuel-price',p.fuelPrice||p.metrics?.fuelPrice,true);
     const ref=$('load-reference');if(ref&&!ref.value&&p.sourceReference)ref.value=p.sourceReference;['pickup-city','pickup-state','delivery-city','delivery-state'].forEach(id=>$(id)?.setAttribute('data-v38-autofill','true'));
     ['loaded-miles','deadhead-miles','average-mpg','fuel-price','quoted-revenue','load-weight'].forEach(id=>$(id)?.dispatchEvent(new Event('input',{bubbles:true})));
