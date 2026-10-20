@@ -82,6 +82,8 @@
     const status=document.createElement('span');status.className='subtle zip-lookup-status';status.style.fontSize='12px';status.setAttribute('aria-live','polite');zip.insertAdjacentElement('afterend',status);
     const suggestions=document.createElement('div');suggestions.className='autocomplete-list zip-address-suggestions';suggestions.setAttribute('role','listbox');Object.assign(suggestions.style,{display:'none',position:'absolute',zIndex:'30',left:'0',right:'0',background:'#fff',border:'1px solid #d8ddd6',borderRadius:'8px',padding:'6px',boxShadow:'0 8px 24px rgba(0,0,0,.12)',maxHeight:'220px',overflowY:'auto'});zip.parentElement.style.position='relative';zip.parentElement.appendChild(suggestions);
     const hideSuggestions=()=>{suggestions.style.display='none'};
+    // Outside clicks must dismiss suggestions; clicking a suggestion itself must remain possible.
+    document.addEventListener('pointerdown',event=>{if(!zip.parentElement.contains(event.target))hideSuggestions()});
     const clearStaleAddress=normalized=>{
       if(!normalized||!lastCommittedZip||normalized===lastCommittedZip)return;
       if(facility)facility.value='';
@@ -113,10 +115,10 @@
       clearStaleAddress(normalized);
       const currentRequest=++requestNumber;status.textContent='Finding city and state…';const result=await findZip(normalized);if(currentRequest!==requestNumber||fiveDigitZip(zip.value)!==normalized)return;
       if(!result){status.textContent='ZIP not found. Enter city and state manually.';renderSuggestions(normalized);return}
-      city.value=result.city;state.value=result.state.toUpperCase();lastCommittedZip=normalized;city.dispatchEvent(new Event('change',{bubbles:true}));state.dispatchEvent(new Event('change',{bubbles:true}));zip.dispatchEvent(new CustomEvent('flt:zip-resolved',{bubbles:true,detail:{zip:normalized,city:result.city,state:result.state.toUpperCase()}}));status.textContent=`${result.city}, ${result.state} filled automatically.`;rememberFromForm(type);renderSuggestions(normalized);
+      city.value=result.city;state.value=result.state.toUpperCase();lastCommittedZip=normalized;city.dispatchEvent(new Event('change',{bubbles:true}));state.dispatchEvent(new Event('change',{bubbles:true}));zip.dispatchEvent(new CustomEvent('flt:zip-resolved',{bubbles:true,detail:{zip:normalized,city:result.city,state:result.state.toUpperCase()}}));status.textContent=`${result.city}, ${result.state} filled automatically.`;rememberFromForm(type);if(document.activeElement===zip)renderSuggestions(normalized);else hideSuggestions();
     };
     zip.addEventListener('input',()=>{zip.value=zip.value.replace(/[^\d-]/g,'').slice(0,10);const normalized=fiveDigitZip(zip.value);if(normalized){clearStaleAddress(normalized);update()}else{status.textContent=zip.value?'Enter a valid 5-digit ZIP code.':'';hideSuggestions()}});
-    zip.addEventListener('change',()=>{update();rememberFromForm(type)});zip.addEventListener('blur',()=>{update();rememberFromForm(type);setTimeout(hideSuggestions,220)});zip.addEventListener('focus',()=>{const normalized=fiveDigitZip(zip.value);if(normalized)renderSuggestions(normalized)});
+    zip.addEventListener('change',()=>{if(fiveDigitZip(zip.value)&&(!city.value.trim()||!state.value.trim()))update();rememberFromForm(type)});zip.addEventListener('blur',()=>{rememberFromForm(type);setTimeout(hideSuggestions,220)});zip.addEventListener('focus',()=>{const normalized=fiveDigitZip(zip.value);if(normalized)renderSuggestions(normalized)});
     ['facility','street','city','state'].forEach(part=>document.getElementById(prefix+part)?.addEventListener('change',()=>rememberFromForm(type)));
     // Existing loads and saved customer addresses can populate ZIP fields directly,
     // without generating input/change events. Resolve any missing city/state on
