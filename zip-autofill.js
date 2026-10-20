@@ -118,6 +118,17 @@
     zip.addEventListener('input',()=>{zip.value=zip.value.replace(/[^\d-]/g,'').slice(0,10);const normalized=fiveDigitZip(zip.value);if(normalized){clearStaleAddress(normalized);update()}else{status.textContent=zip.value?'Enter a valid 5-digit ZIP code.':'';hideSuggestions()}});
     zip.addEventListener('change',()=>{update();rememberFromForm(type)});zip.addEventListener('blur',()=>{update();rememberFromForm(type);setTimeout(hideSuggestions,220)});zip.addEventListener('focus',()=>{const normalized=fiveDigitZip(zip.value);if(normalized)renderSuggestions(normalized)});
     ['facility','street','city','state'].forEach(part=>document.getElementById(prefix+part)?.addEventListener('change',()=>rememberFromForm(type)));
+    // Existing loads and saved customer addresses can populate ZIP fields directly,
+    // without generating input/change events. Resolve any missing city/state on
+    // initialization and again after deferred form restoration has had time to run.
+    // Preserve user-entered city/state and never replace a complete address.
+    const resolveRestoredZip=()=>{
+      if(!fiveDigitZip(zip.value)|| (city.value.trim()&&state.value.trim()))return;
+      update();
+    };
+    [0,150,600,1500].forEach(delay=>setTimeout(resolveRestoredZip,delay));
+    zip.addEventListener('focus',resolveRestoredZip);
+    window.addEventListener('pageshow',resolveRestoredZip);
   }
   document.getElementById('customer-name')?.addEventListener('change',()=>['billing','pickup','delivery'].forEach(rememberFromForm));
   connect('business-zip','business-city','business-state','business');
