@@ -1,141 +1,85 @@
 (() => {
-  const cacheKey='flt-us-zip-cache-v1';
-  const addressBookKey='flt-address-book-v1';
-  const fallback={'28328':{city:'Clinton',state:'NC'},'27601':{city:'Raleigh',state:'NC'}};
-  let cache={};
-  try{cache=JSON.parse(localStorage.getItem(cacheKey)||'{}')||{}}catch(error){cache={}}
-  const saveCache=()=>{try{localStorage.setItem(cacheKey,JSON.stringify(cache))}catch(error){}};
-  const fiveDigitZip=value=>{const match=String(value||'').trim().match(/^(\d{5})(?:-\d{4})?$/);return match?match[1]:''};
-  async function findZip(zip){
-    if(fallback[zip])return fallback[zip];
-    if(cache[zip])return cache[zip];
-    const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),6000);
-    try{
-      const response=await fetch(`https://api.zippopotam.us/us/${zip}`,{signal:controller.signal});
-      if(!response.ok)return null;
-      const data=await response.json(),place=data?.places?.[0];
-      if(!place)return null;
-      const result={city:place['place name']||'',state:place['state abbreviation']||''};
-      if(!result.city||!result.state)return null;
-      cache[zip]=result;saveCache();return result;
-    }catch(error){return null}finally{clearTimeout(timer)}
+  const proposalKey='flt-v38-accepted-proposal',lastDecisionKey='flt-v35-last-decision',evaluationKey='flt-v38-evaluated-decision',zipCacheKey='flt-us-zip-cache-v1';
+  const fiveZip=value=>{const m=String(value||'').trim().match(/^(\d{5})(?:-\d{4})?$/);return m?m[1]:''};
+  const read=(key,fallback=null)=>{try{return JSON.parse(localStorage.getItem(key)||JSON.stringify(fallback))}catch(error){return fallback}};
+  const write=(key,value)=>{try{localStorage.setItem(key,JSON.stringify(value));return true}catch(error){return false}};
+  const decisionAccepted=d=>d?.decision==='ACCEPT LOAD';
+  const proposalReady=p=>Boolean(p&&fiveZip(p.pickupZip)&&fiveZip(p.deliveryZip)&&Number(p.offer)>0&&Number(p.cargoWeight)>=0&&Number(p.loadedMiles)>=0&&Number(p.deadheadMiles)>=0);
+  const acceptedProposal=()=>read(proposalKey,null),canCompleteLoad=()=>proposalReady(acceptedProposal());
+  window.FLTFastLoadWorkflow={fiveZip,decisionAccepted,proposalReady,acceptedProposal,canCompleteLoad};
+  if(typeof document==='undefined')return;
+  const $=id=>document.getElementById(id),nav=$('nav'),decisionForm=$('v35-decision-form'),loadForm=$('load-form');if(!nav||!decisionForm||!loadForm)return;
+  const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+  const style=document.createElement('style');style.id='v38-fast-load-workflow-style';style.textContent=`
+  .v38-quick-section{grid-column:1/-1;border:2px solid var(--green-2);background:#f5f9f4;border-radius:8px;padding:14px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.v38-quick-section .full{grid-column:1/-1}.v38-quick-title{grid-column:1/-1}.v38-quick-title h3{font-size:17px}.v38-quick-title p{margin-top:4px}
+  .v38-training-next{border:4px solid #d4b900!important;background:#fff9b8!important;box-shadow:0 0 0 6px rgba(207,232,106,.62)!important}.v38-training-note{display:block;margin-top:6px;color:#315c16;font-size:12px;font-weight:900}.v38-nav-next{background:#214f48!important;color:#fff!important;border-left:5px solid #d4d72f!important;box-shadow:inset 0 0 0 2px rgba(212,215,47,.65),0 0 0 2px rgba(212,215,47,.2)!important}.v38-nav-next .nav-label{font-weight:900!important}.v38-nav-next::after{content:'NEXT';margin-left:auto;background:#d4d72f;color:#173f39;font-size:9px;font-weight:900;padding:4px 7px;border-radius:999px}
+  .v38-accepted-banner{grid-column:1/-1;border-left:5px solid var(--lime);background:#f4f7e5;padding:12px 14px;border-radius:6px}.v38-source-note{font-size:11px;color:var(--green-2);font-weight:800;margin-top:4px}.v38-decision-actions{display:grid;gap:8px;margin-top:12px}.v38-decision-actions .btn{width:100%}.v38-carried-forward{background:#f6faed!important;border-color:#a9c879!important}.v38-carried-note{display:block;color:var(--green-2);font-size:11px;font-weight:800;margin-top:4px}@media(max-width:700px){.v38-quick-section{grid-template-columns:1fr}}`;document.head.appendChild(style);
+
+  const loadNav=nav.querySelector('[data-view="load"]'),decisionNav=nav.querySelector('[data-view="intelligence"]');
+  if(decisionNav?.querySelector('.nav-label'))decisionNav.querySelector('.nav-label').textContent='1 · Evaluate Proposed Load';
+  if(loadNav?.querySelector('.nav-label'))loadNav.querySelector('.nav-label').textContent='2 · Complete Accepted Load';
+  if(decisionNav&&loadNav&&(loadNav.compareDocumentPosition(decisionNav)&Node.DOCUMENT_POSITION_FOLLOWING))nav.insertBefore(decisionNav,loadNav);
+
+  function workflowNavHighlight(){
+    // V3.8 Workflow Authority is the only owner of the left-navigation NEXT marker.
+    // Fast Load may update workflow state, but it must never choose the global NEXT
+    // destination itself. The old logic forced Evaluate Proposed Load whenever the
+    // Dashboard was active, even when Business Setup or fleet master data was missing.
+    nav.querySelectorAll('.v38-nav-next').forEach(item=>item.classList.remove('v38-nav-next'));
+    window.FLTWorkflowAuthority?.apply?.();
   }
-  function readBook(){try{return JSON.parse(localStorage.getItem(addressBookKey)||'[]')||[]}catch(error){return[]}}
-  function saveBook(book){try{localStorage.setItem(addressBookKey,JSON.stringify(book.slice(-150)))}catch(error){}}
-  function normalizedAddress(item={},type='saved'){
-    return{type,customerId:String(item.customerId||'').trim(),customer:String(item.customer||item.customerName||item.company||'').trim(),facility:String(item.facility||item.name||'').trim(),street:String(item.street||item.address||'').trim(),zip:String(item.zip||item.postalCode||'').trim(),city:String(item.city||'').trim(),state:String(item.state||'').trim().toUpperCase()};
+
+  const firstDecisionField=[...decisionForm.children].find(child=>child.classList.contains('field'))||decisionForm.firstElementChild,quick=document.createElement('div');quick.className='v38-quick-section';quick.innerHTML=`<div class="v38-quick-title"><div class="eyebrow">Step 1 · Fast load decision</div><h3>Enter only what changes for this proposed load</h3><p class="subtle">Driver, truck, trailer, verified weights, ratings, MPG, and recurring cost assumptions are reusable setup data. Decide profitability before entering detailed customer/facility information.</p></div><div class="field"><label>Load source</label><select id="v38-quick-source" data-v38-required="true"><option value="">Select source</option><option>Load Board</option><option>Load App</option><option>Auto Auction</option><option>Broker</option><option>Direct Customer</option><option>Internal / Own Customer</option><option>Other</option></select></div><div class="field"><label>Source / broker / app name</label><input id="v38-quick-source-name" placeholder="e.g. Central Dispatch" data-v38-required="true"></div><div class="field"><label>Pickup ZIP</label><input id="v38-quick-pickup-zip" inputmode="numeric" maxlength="10" data-v38-required="true"><span class="v38-source-note" id="v38-quick-pickup-place"></span></div><div class="field"><label>Delivery ZIP</label><input id="v38-quick-delivery-zip" inputmode="numeric" maxlength="10" data-v38-required="true"><span class="v38-source-note" id="v38-quick-delivery-place"></span></div><div class="field full"><label>Load / auction / broker reference</label><input id="v38-quick-reference" placeholder="Optional until known"></div>`;decisionForm.insertBefore(quick,firstDecisionField);
+  const fields={source:$('v38-quick-source'),sourceName:$('v38-quick-source-name'),pickupZip:$('v38-quick-pickup-zip'),deliveryZip:$('v38-quick-delivery-zip'),reference:$('v38-quick-reference')};[fields.pickupZip,fields.deliveryZip].forEach(i=>i.addEventListener('input',()=>i.value=i.value.replace(/[^\d-]/g,'').slice(0,10)));
+  async function resolveZip(input,note){const zip=fiveZip(input.value);if(!zip){note.textContent='';return null}const cached=read(zipCacheKey,{})?.[zip];if(cached?.city&&cached?.state){note.textContent=cached.city+', '+cached.state;return cached}try{const r=await fetch(`https://api.zippopotam.us/us/${zip}`);if(!r.ok)throw 0;const d=await r.json(),p=d?.places?.[0];if(!p)throw 0;const result={city:p['place name']||'',state:p['state abbreviation']||''};note.textContent=result.city+', '+result.state;const cache=read(zipCacheKey,{})||{};cache[zip]=result;write(zipCacheKey,cache);return result}catch(e){note.textContent='ZIP entered; city/state will be confirmed after acceptance.';return null}}
+  fields.pickupZip.addEventListener('change',()=>resolveZip(fields.pickupZip,$('v38-quick-pickup-place')));fields.deliveryZip.addEventListener('change',()=>resolveZip(fields.deliveryZip,$('v38-quick-delivery-place')));
+
+  const decisionCard=$('v35-decision-card'),actions=document.createElement('div');actions.className='v38-decision-actions';actions.innerHTML='<button type="button" class="btn primary" id="v38-accept-proposal" hidden>Accept This Load → Complete Details</button><div class="subtle" id="v38-decision-next">Run the load decision first.</div>';decisionCard?.appendChild(actions);
+  const currentProposal=()=>{const d=read(lastDecisionKey,null);return{source:fields.source.value,sourceName:fields.sourceName.value.trim(),sourceReference:fields.reference.value.trim(),pickupZip:fiveZip(fields.pickupZip.value),deliveryZip:fiveZip(fields.deliveryZip.value),pickupPlace:$('v38-quick-pickup-place').textContent.trim(),deliveryPlace:$('v38-quick-delivery-place').textContent.trim(),loadedMiles:Number($('v35-loaded-miles')?.value||0),deadheadMiles:Number($('v35-deadhead-miles')?.value||0),offer:Number($('v35-offer')?.value||0),cargoWeight:Number($('v35-cargo-weight')?.value||0),averageMpg:Number($('v35-mpg')?.value||0),fuelPrice:Number($('v35-fuel-price')?.value||0),decision:d?.decision||'',metrics:d?.metrics||{},acceptedAt:new Date().toISOString()}};
+  const decisionInputState=()=>{const ids=['v35-loaded-miles','v35-deadhead-miles','v35-return-deadhead','v35-offer','v35-cargo-weight','v35-fuel-price','v35-mpg-mode','v35-loaded-mpg','v35-empty-mpg','v35-tarping','v35-detention','v35-other-accessorials','v35-maintenance','v35-tires','v35-fixed-cpm','v35-dispatch-percent','v35-factoring-percent','v35-tolls','v35-driver-pay','v35-parking','v35-permits','v35-lodging','v35-meals','v35-scales','v35-washout','v35-loading-cost','v35-securement-cost','v35-insurance-allocation','v35-other-costs','v35-min-profit','v35-target-profit','v35-target-margin','v35-profit-mile-floor','v35-trip-hours','v35-hourly-floor','v35-negotiation-percent'];const values={};ids.forEach(id=>{const control=$(id);values[id]=control?.value??null});return{quick:{source:fields.source.value,sourceName:fields.sourceName.value.trim(),sourceReference:fields.reference.value.trim(),pickupZip:fiveZip(fields.pickupZip.value),deliveryZip:fiveZip(fields.deliveryZip.value)},form:values,selection:{driver:$('v35-estimate-driver')?.value||'',truck:$('v35-estimate-truck')?.value||'',trailer:$('v35-estimate-trailer')?.value||''},classification:read('flt-v35-classification',null)}};
+  const evaluationFingerprint=()=>JSON.stringify(decisionInputState());
+  const evaluatedDecisionMatches=()=>{const d=read(lastDecisionKey,null),evaluated=read(evaluationKey,null);return Boolean(evaluated&&evaluated.decision===d?.decision&&evaluated.snapshotId===d?.snapshotId&&evaluated.key===evaluationFingerprint())};
+  window.FLTFastLoadWorkflow.evaluationFingerprint=evaluationFingerprint;
+  window.FLTFastLoadWorkflow.evaluatedDecisionMatches=evaluatedDecisionMatches;
+  const quickReady=()=>Boolean(fields.source.value&&fields.sourceName.value.trim()&&fiveZip(fields.pickupZip.value)&&fiveZip(fields.deliveryZip.value));
+  function recordEvaluation(){const d=read(lastDecisionKey,null);if(d?.snapshotId)write(evaluationKey,{snapshotId:d.snapshotId,decision:d.decision,key:evaluationFingerprint()})}
+  function syncDecisionAction(){const d=read(lastDecisionKey,null),b=$('v38-accept-proposal'),n=$('v38-decision-next'),currentDecision=decisionAccepted(d)&&evaluatedDecisionMatches();b.hidden=!(currentDecision&&quickReady());if(!quickReady())n.textContent='Complete Load Source, Source / Broker / App Name, Pickup ZIP, and Delivery ZIP before accepting the decision.';else if(currentDecision)n.textContent='Profitable and eligible. Accept the proposal, then enter operational details.';else if(d?.decision==='NEGOTIATE RATE')n.textContent='Negotiate first. Update the offered rate and rerun the decision.';else if(d?.decision==='PASS ON LOAD')n.textContent='Do not spend time building a load record for this offer.';else if(d?.decision==='DO NOT DISPATCH')n.textContent='Hard safety/compliance stop. Detailed load setup remains blocked.';else n.textContent='Run the load decision before entering detailed customer/facility information.';trainingHighlight();workflowNavHighlight()}
+  decisionForm.addEventListener('submit',()=>setTimeout(()=>{recordEvaluation();syncDecisionAction()},25));decisionForm.addEventListener('input',syncDecisionAction);decisionForm.addEventListener('change',syncDecisionAction);
+  window.addEventListener?.('flt:v35-decision-evaluated',()=>{recordEvaluation();syncDecisionAction();window.dispatchEvent?.(new Event('flt:workflow-state-changed'))});
+  function addCarriedNote(control){if(!control||control.parentElement?.querySelector('.v38-carried-note'))return;const note=document.createElement('span');note.className='v38-carried-note';note.textContent='Carried forward from accepted estimate · change the estimate to revise';control.insertAdjacentElement('afterend',note)}
+  function setValue(id,value,locked=false){const c=$(id);if(!c||value==null||value===''||Number.isNaN(value))return;c.value=String(value);if(locked){c.readOnly=true;c.setAttribute('aria-readonly','true');c.classList.add('auto-filled-control','v38-carried-forward');addCarriedNote(c)}}
+  function acceptedSourceType(source){return source==='Broker'?'Broker / Dispatcher':String(source||'')}
+  function applyAcceptedOrigin(p){
+    setValue('v38-load-source-type',acceptedSourceType(p.source));
+    setValue('v38-load-source-name',p.sourceName);
+    setValue('v38-load-source-reference',p.sourceReference);
   }
-  function remember(address){
-    const item=normalizedAddress(address,address.type||'saved');
-    if(!item.street||!fiveDigitZip(item.zip)||!item.city||!item.state)return;
-    const book=readBook(),key=[item.street,fiveDigitZip(item.zip),item.city,item.state].join('|').toLowerCase();
-    const existing=book.findIndex(x=>[x.street,fiveDigitZip(x.zip),x.city,x.state].join('|').toLowerCase()===key);
-    if(existing>=0){
-      const prior=book[existing]||{};
-      item.customer=item.customer||prior.customer||'';
-      item.facility=item.facility||prior.facility||'';
-      book.splice(existing,1);
+  function applyProposalToLoadForm(p=acceptedProposal()){
+    if(!proposalReady(p))return false;
+    let banner=$('v38-accepted-proposal-banner');if(!banner){banner=document.createElement('div');banner.id='v38-accepted-proposal-banner';banner.className='v38-accepted-banner';loadForm.prepend(banner)}
+    const details=[p.source,p.sourceName,p.pickupZip+' → '+p.deliveryZip,'Offer $'+Number(p.offer).toLocaleString()].filter(Boolean).join(' · ');
+    if(typeof banner.replaceChildren==='function'){
+      banner.replaceChildren();
+      const title=document.createElement('strong');title.textContent='Accepted estimate carried forward — no re-entry required.';
+      const detailText=document.createElement('span');detailText.className='subtle';detailText.textContent=details;
+      const note=document.createElement('div');note.className='v38-source-note';note.textContent='Miles, MPG, fuel price, rate, and cargo weight stay tied to the accepted estimate. Complete only customer, exact locations, dates, commodity, and exceptions below.';
+      banner.append(title,document.createElement('br'),detailText,note);
+    }else{
+      banner.innerHTML='<strong>Accepted estimate carried forward — no re-entry required.</strong><br><span class="subtle">'+esc(details)+'</span><div class="v38-source-note">Miles, MPG, fuel price, rate, and cargo weight stay tied to the accepted estimate. Complete only customer, exact locations, dates, commodity, and exceptions below.</div>';
     }
-    book.push({...item,zip:fiveDigitZip(item.zip),savedAt:new Date().toISOString()});saveBook(book);
+    setValue('pickup-zip',p.pickupZip);setValue('pickup-city',p.pickupCity);setValue('pickup-state',p.pickupState);setValue('delivery-zip',p.deliveryZip);setValue('delivery-city',p.deliveryCity);setValue('delivery-state',p.deliveryState);['pickup','delivery'].forEach(type=>{const input=$(type+'-zip');if(input&&typeof input.dispatchEvent==='function')input.dispatchEvent(new Event('flt:address-restored'))});applyAcceptedOrigin(p);
+    setValue('quoted-revenue',p.offer,true);setValue('load-weight',p.cargoWeight,true);setValue('loaded-miles',p.loadedMiles,true);setValue('deadhead-miles',p.deadheadMiles,true);setValue('average-mpg',p.averageMpg||p.metrics?.mpg,true);setValue('fuel-price',p.fuelPrice||p.metrics?.fuelPrice,true);
+    const ref=$('load-reference');if(ref&&!ref.value&&p.sourceReference)ref.value=p.sourceReference;['pickup-city','pickup-state','delivery-city','delivery-state'].forEach(id=>$(id)?.setAttribute('data-v38-autofill','true'));
+    ['loaded-miles','deadhead-miles','average-mpg','fuel-price','quoted-revenue','load-weight'].forEach(id=>$(id)?.dispatchEvent(new Event('input',{bubbles:true})));
+    return true;
   }
-  function loadHistory(){
-    let loads=[];try{loads=JSON.parse(localStorage.getItem('flt-v32-loads')||'[]')||[]}catch(error){loads=[]}
-    const items=[];
-    loads.forEach(load=>['billing','pickup','delivery'].forEach(type=>{
-      const raw=type==='billing'?(load.billingAddress||load.customerAddress||{}):(load[type+'Address']||{});
-      const item=normalizedAddress({...raw,customerId:load.customerId,customer:raw.customer||load.customer||''},type);
-      if(item.street&&fiveDigitZip(item.zip)&&item.city&&item.state)items.push(item);
-    }));
-    return items;
-  }
-  function savedAddresses(type,zip){
-    const masters=(window.FLTCustomerMaster?.list()||[]).flatMap(customer=>[
-      {...customer.billingAddress,type:'billing',customerId:customer.id,customer:customer.name},
-      ...['pickup','delivery'].flatMap(kind=>customer[kind+'Locations'].map(location=>({...location,type:kind,customerId:customer.id,customer:customer.name})))
-    ]);
-    const customerId=window.FLTCustomerMaster?.selectedId,name=currentCustomer().toLowerCase();
-    const all=[...masters,...readBook(),...loadHistory()].map(item=>normalizedAddress(item,item.type||'saved')).filter(item=>!name||(customerId&&item.customerId?item.customerId===customerId:item.customer.toLowerCase()===name));
-    const byKey=new Map();
-    all.forEach(item=>{
-      if(fiveDigitZip(item.zip)!==zip||!item.street)return;
-      const key=[item.street,zip,item.city,item.state].join('|').toLowerCase(),prior=byKey.get(key);
-      if(!prior)byKey.set(key,item);
-      else byKey.set(key,{...prior,...item,customer:item.customer||prior.customer||'',facility:item.facility||prior.facility||''});
-    });
-    return [...byKey.values()].sort((a,b)=>Number(b.type===type)-Number(a.type===type));
-  }
-  function currentCustomer(){return String(document.getElementById('customer-name')?.value||'').trim()}
-  function rememberFromForm(type){
-    const prefix=type+'-';
-    const facility=document.getElementById(prefix+'facility');
-    const street=document.getElementById(prefix+'street');
-    const zip=document.getElementById(prefix+'zip');
-    const city=document.getElementById(prefix+'city');
-    const state=document.getElementById(prefix+'state');
-    if(!street||!zip||!city||!state)return;
-    remember({type,customerId:window.FLTCustomerMaster?.selectedId,customer:currentCustomer(),facility:facility?.value||'',street:street.value,zip:zip.value,city:city.value,state:state.value});
-  }
-  function connect(zipId,cityId,stateId,type){
-    const zip=document.getElementById(zipId),city=document.getElementById(cityId),state=document.getElementById(stateId);if(!zip||!city||!state)return;
-    const prefix=type+'-',facility=document.getElementById(prefix+'facility'),street=document.getElementById(prefix+'street');
-    let lastCommittedZip=fiveDigitZip(zip.value);
-    const status=document.createElement('span');status.className='subtle zip-lookup-status';status.style.fontSize='12px';status.setAttribute('aria-live','polite');zip.insertAdjacentElement('afterend',status);
-    const suggestions=document.createElement('div');suggestions.className='autocomplete-list zip-address-suggestions';suggestions.setAttribute('role','listbox');Object.assign(suggestions.style,{display:'none',position:'absolute',zIndex:'30',left:'0',right:'0',background:'#fff',border:'1px solid #d8ddd6',borderRadius:'8px',padding:'6px',boxShadow:'0 8px 24px rgba(0,0,0,.12)',maxHeight:'220px',overflowY:'auto'});zip.parentElement.style.position='relative';zip.parentElement.appendChild(suggestions);
-    const hideSuggestions=()=>{suggestions.style.display='none'};
-    const clearStaleAddress=normalized=>{
-      if(!normalized||!lastCommittedZip||normalized===lastCommittedZip)return;
-      if(facility)facility.value='';
-      if(street)street.value='';
-      city.value='';state.value='';
-      hideSuggestions();
-      status.textContent='ZIP changed. Choose a saved address or enter a new facility and street.';
-    };
-    const renderSuggestions=normalized=>{
-      const matches=savedAddresses(type,normalized);suggestions.innerHTML='';
-      matches.forEach(address=>{
-        const button=document.createElement('button');button.type='button';button.style.cssText='display:block;width:100%;text-align:left;border:0;background:#fff;padding:9px 10px;border-radius:6px;cursor:pointer';
-        const identity=[address.customer,address.facility].filter(Boolean).join(' / '),label=[identity,address.street,address.city+', '+address.state,address.zip].filter(Boolean).join(' · ');button.textContent=(address.type===type?'Recent '+type+': ':'Saved address: ')+label;
-        button.addEventListener('mousedown',event=>event.preventDefault());button.addEventListener('click',()=>{
-          const customer=document.getElementById('customer-name');
-          if(type==='billing'&&customer&&address.customer)customer.value=address.customer;
-          if(facility)facility.value=address.facility||'';
-          if(street)street.value=address.street||'';
-          zip.value=fiveDigitZip(address.zip);city.value=address.city;state.value=address.state;lastCommittedZip=fiveDigitZip(address.zip);
-          [type==='billing'?customer:null,facility,street,zip,city,state].filter(Boolean).forEach(control=>control.dispatchEvent(new Event('change',{bubbles:true})));
-          remember({...address,type,customer:address.customer||currentCustomer()});status.textContent='Saved address selected: '+address.city+', '+address.state+'.';hideSuggestions();
-        });suggestions.appendChild(button);
-      });suggestions.style.display=matches.length?'block':'none';
-    };
-    let requestNumber=0;
-    zip.addEventListener('flt:address-selected',()=>{lastCommittedZip=fiveDigitZip(zip.value);requestNumber++;hideSuggestions();status.textContent='Saved customer address selected.'});
-    const update=async()=>{
-      const normalized=fiveDigitZip(zip.value);if(!normalized){status.textContent=zip.value.trim()?'Enter a valid 5-digit ZIP code.':'';hideSuggestions();return}
-      clearStaleAddress(normalized);
-      const currentRequest=++requestNumber;status.textContent='Finding city and state…';const result=await findZip(normalized);if(currentRequest!==requestNumber||fiveDigitZip(zip.value)!==normalized)return;
-      if(!result){status.textContent='ZIP not found. Enter city and state manually.';renderSuggestions(normalized);return}
-      city.value=result.city;state.value=result.state.toUpperCase();lastCommittedZip=normalized;city.dispatchEvent(new Event('change',{bubbles:true}));state.dispatchEvent(new Event('change',{bubbles:true}));zip.dispatchEvent(new CustomEvent('flt:zip-resolved',{bubbles:true,detail:{zip:normalized,city:result.city,state:result.state.toUpperCase()}}));status.textContent=`${result.city}, ${result.state} filled automatically.`;rememberFromForm(type);renderSuggestions(normalized);
-    };
-    zip.addEventListener('input',()=>{zip.value=zip.value.replace(/[^\d-]/g,'').slice(0,10);const normalized=fiveDigitZip(zip.value);if(normalized){clearStaleAddress(normalized);update()}else{status.textContent=zip.value?'Enter a valid 5-digit ZIP code.':'';hideSuggestions()}});
-    zip.addEventListener('change',()=>{update();rememberFromForm(type)});zip.addEventListener('blur',()=>{update();rememberFromForm(type);setTimeout(hideSuggestions,220)});zip.addEventListener('focus',()=>{const normalized=fiveDigitZip(zip.value);if(normalized)renderSuggestions(normalized)});
-    ['facility','street','city','state'].forEach(part=>document.getElementById(prefix+part)?.addEventListener('change',()=>rememberFromForm(type)));
-    // Existing loads and saved customer addresses can populate ZIP fields directly,
-    // without generating input/change events. Resolve any missing city/state on
-    // initialization and again after deferred form restoration has had time to run.
-    // Preserve user-entered city/state and never replace a complete address.
-    const resolveRestoredZip=()=>{
-      if(!fiveDigitZip(zip.value)|| (city.value.trim()&&state.value.trim()))return;
-      update();
-    };
-    [0,150,600,1500].forEach(delay=>setTimeout(resolveRestoredZip,delay));
-    // The accepted-load form restores fields after this helper initializes.
-    // Run only when that form signals the ZIP and city/state have been restored.
-    zip.addEventListener('flt:address-restored',resolveRestoredZip);
-    zip.addEventListener('focus',resolveRestoredZip);
-    window.addEventListener('pageshow',resolveRestoredZip);
-  }
-  document.getElementById('customer-name')?.addEventListener('change',()=>['billing','pickup','delivery'].forEach(rememberFromForm));
-  connect('business-zip','business-city','business-state','business');
-  connect('billing-zip','billing-city','billing-state','billing');
-  connect('pickup-zip','pickup-city','pickup-state','pickup');
-  connect('delivery-zip','delivery-city','delivery-state','delivery');
+  $('v38-accept-proposal').addEventListener('click',async()=>{const d=read(lastDecisionKey,null);if(!decisionAccepted(d)||!quickReady()||!evaluatedDecisionMatches()){syncDecisionAction();return}const pickup=await resolveZip(fields.pickupZip,$('v38-quick-pickup-place')),delivery=await resolveZip(fields.deliveryZip,$('v38-quick-delivery-place'));write(proposalKey,{...currentProposal(),pickupCity:pickup?.city||'',pickupState:pickup?.state||'',deliveryCity:delivery?.city||'',deliveryState:delivery?.state||''});workflowNavHighlight();loadNav?.click();setTimeout(()=>{applyProposalToLoadForm();trainingHighlight()},0);if(typeof toast==='function')toast('Accepted estimate carried forward. Complete only the operational details that are still missing.')});
+  loadNav?.addEventListener('click',event=>{if(canCompleteLoad()){setTimeout(()=>applyProposalToLoadForm(),0);return}event.preventDefault();event.stopImmediatePropagation();decisionNav?.click();if(typeof toast==='function')toast('Evaluate profitability and accept the proposed load before entering detailed customer and facility information.');setTimeout(trainingHighlight,50)},true);
+  const loadTitle=$('load')?.querySelector('.section-head h2');if(loadTitle)loadTitle.textContent='Complete accepted load details';const loadEyebrow=$('load')?.querySelector('.section-head .eyebrow');if(loadEyebrow)loadEyebrow.textContent='Step 2 · Only details not known at estimate';const loadNotice=$('load')?.querySelector('.notice');if(loadNotice)loadNotice.textContent='The accepted estimate is carried forward automatically. Complete only customer, exact pickup/delivery information, dates, commodity, and exceptions that were not known during evaluation.';
+
+  function resolved(c){if(c.disabled||c.readOnly)return true;if(c.dataset.v38Autofill==='true'){const p=c.id.startsWith('pickup-')?'pickup':'delivery';return Boolean(fiveZip($(p+'-zip')?.value))}if(c.type==='checkbox'||c.type==='radio')return c.checked;if(/zip$/i.test(c.id||''))return Boolean(fiveZip(c.value));if(c.validity&&c.validity.valid===false)return false;return String(c.value||'').trim()!==''}
+  function candidates(){const active=document.querySelector('.view.active');if(!active)return[];const explicit=[...active.querySelectorAll('[data-v38-required="true"]')],native=[...active.querySelectorAll('input[required],select[required],textarea[required]')];return [...new Set([...explicit,...native])].filter(c=>!resolved(c))}
+  function trainingHighlight(){document.querySelectorAll('.v38-training-next').forEach(c=>c.classList.remove('v38-training-next'));document.querySelectorAll('.v38-training-note[data-v38-training]').forEach(n=>n.remove());const next=candidates()[0];if(!next)return;next.classList.add('v38-training-next');const note=document.createElement('span');note.className='v38-training-note';note.dataset.v38Training='true';note.textContent='NEXT · Complete this item to keep moving.';next.insertAdjacentElement('afterend',note)}
+  document.addEventListener('input',e=>{if(e.target.matches('input,select,textarea'))setTimeout(trainingHighlight,0)},true);document.addEventListener('change',e=>{if(e.target.matches('input,select,textarea'))setTimeout(trainingHighlight,0)},true);nav.addEventListener('click',()=>setTimeout(()=>{trainingHighlight();workflowNavHighlight()},60));
+  applyProposalToLoadForm();syncDecisionAction();setTimeout(()=>{trainingHighlight();workflowNavHighlight()},50);
 })();
