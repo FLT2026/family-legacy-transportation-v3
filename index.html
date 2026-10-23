@@ -414,16 +414,26 @@
         copyDeliveryToBilling();
         const fields = new FormData(enhancedForm), name=readField('customer-name');
         const pickupAddress=addressFrom('pickup'), deliveryAddress=addressFrom('delivery'), customer = {name,street:readField('billing-street'),city:readField('billing-city'),state:readField('billing-state').toUpperCase(),zip:readField('billing-zip')};
+        const proposal=(()=>{try{return JSON.parse(localStorage.getItem('flt-v38-accepted-proposal')||'null')}catch(error){return null}})();
+        const acceptedSnapshotId=String(proposal?.snapshotId||'');
+        // Idempotent creation: an accepted decision can create only one operational load.
+        const prior=acceptedSnapshotId?store.loads.find(item=>item.acceptedEstimateSnapshotId===acceptedSnapshotId):null;
+        if(prior){store.selectedId=prior.id;persist();toast(prior.id+' already created for this estimate.');showView('record');return}
         const master=window.FLTCustomerMaster;
         if(!master?.prepareLoad){toast('Customer Master is still loading.');return}
         const customerResult=master.prepareLoad();
         if(!customerResult.ok){if(customerResult.error)toast(customerResult.error);return}
-        const id='FLT-'+String(store.loads.length+1).padStart(6,'0');
+        // Use the next unused load number, not array length (records may be removed).
+        const usedIds=new Set(store.loads.map(item=>item.id));
+        let serial=store.loads.reduce((max,item)=>Math.max(max,Number(/^FLT-(\\d+)$/.exec(String(item.id||''))?.[1]||0)),0)+1;
+        let id='FLT-'+String(serial).padStart(6,'0');
+        while(usedIds.has(id)){id='FLT-'+String(++serial).padStart(6,'0')}
         const fuel=calculateFuelEstimate(), revenue=Number(fields.get('quotedRevenue'));
         store.loads.push({id,customer:name,customerAddress:customer,billingAddress:customer,reference:String(fields.get('reference')||'').trim(),pickup:pickupAddress.city+', '+pickupAddress.state,delivery:deliveryAddress.city+', '+deliveryAddress.state,pickupDate:fields.get('pickupDate'),deliveryDate:fields.get('deliveryDate'),date:fields.get('pickupDate'),pickupAddress,deliveryAddress,commodity:String(fields.get('commodity')||'').trim(),weight:String(fields.get('loadWeight')||'').trim(),notes:String(fields.get('notes')||'').trim(),revenue,estimatedRevenue:revenue,loadedMiles:fuel.loadedMiles,deadheadMiles:fuel.deadheadMiles,mileage:fuel.totalMiles,totalMiles:fuel.totalMiles,estimatedMpg:fuel.mpg,fuelPricePerGallon:fuel.fuelPrice,estimatedFuelGallons:fuel.gallons,estimatedFuelCost:fuel.fuelCost,estimatedOperatingCosts:fuel.fuelCost,estimatedProfit:fuel.profit,expenses:[],pickupProof:null,deliveryProof:null,pickupDocuments:[],deliveryDocuments:[],invoice:null,payments:[]});
         const createdLoad=store.loads.at(-1),snapshot=customerResult.snapshot;
+        if(acceptedSnapshotId)createdLoad.acceptedEstimateSnapshotId=acceptedSnapshotId;
         Object.assign(createdLoad,{customerId:customerResult.customerId,customerSnapshot:snapshot,customerType:snapshot.type,customerPhone:snapshot.phone,customerEmail:snapshot.email,customerContact:snapshot.primaryContact,customerContacts:JSON.parse(JSON.stringify(snapshot.contacts)),paymentTerms:snapshot.terms});
-        store.selectedId=id; persist(); enhancedForm.reset(); toast(id+' created.'); showView('record');
+        store.selectedId=id; persist(); if(acceptedSnapshotId&&proposal){localStorage.setItem('flt-v38-accepted-proposal',JSON.stringify({...proposal,loadId:id}))} enhancedForm.reset(); toast(id+' created.'); showView('record');
       });
 
       document.getElementById('generate-invoice')?.remove();
