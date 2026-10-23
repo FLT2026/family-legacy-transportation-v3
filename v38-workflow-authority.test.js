@@ -84,4 +84,17 @@ for(const letter of ' updated'.split('')){
 sourceName='Central Dispatch';
 authority.apply();
 assert.equal(loadNav.attributes['data-v38-authoritative-next'],'true','rerun matching ACCEPT LOAD should restore Complete Accepted Load');
+
+// An older load at Delivery must never become NEXT for a new, unaccepted offer.
+const oldLoad={id:'OLD-LOAD',pickupProof:{signature:'signed'},deliveryProof:{}};
+sandbox.store={loads:[oldLoad]};
+storage['flt-v38-accepted-proposal']=JSON.stringify({loadId:'OLD-LOAD',snapshotId:'old-decision',pickupZip:'28328',deliveryZip:'27601',offer:1200,loadedMiles:95,deadheadMiles:25});
+authority.apply();
+assert.equal(authority.nextView(),'load','new evaluation must require Complete Accepted Load instead of old Delivery');
+assert.equal(loadNav.attributes['data-v38-authoritative-next'],'true','old delivery progress must not hijack the NEXT marker');
+storage['flt-v38-accepted-proposal']=JSON.stringify({loadId:'OLD-LOAD',snapshotId:'current',pickupZip:'28328',deliveryZip:'27601',offer:1200,loadedMiles:95,deadheadMiles:25});
+assert.equal(authority.nextView(),'delivery','a genuinely matching accepted proposal may resume its linked load');
+delete storage['flt-v38-accepted-proposal'];
+assert.equal(authority.nextView(),'load','without an accepted proposal, existing loads cannot skip acceptance');
+
 console.log('V3.8 workflow-authority stale-navigation and repeated source-name keystroke checks passed.');
