@@ -93,11 +93,18 @@ document authenticity, legibility, or retrievable file storage. Canvas signature
 are saved separately in browser load records. Downloading a POD summary is not
 a stored package of the original attachments.
 
+Evidence screens and the Test Gate explicitly show **Original document storage:
+NOT AVAILABLE (V4.0)**. Receipt checks say **metadata recorded (not file storage)**.
+Operational PASS/COMPLETE must not be interpreted as a document-storage PASS.
+
 Durable object storage, hashes, backups, and document-package generation are
 explicit V4.0 work in [the V3.8 plan](./V3.8_OPERATIONAL_INTEGRITY_PLAN.md) and
 [carry-forward requirements](./FLT_CARRY_FORWARD_REQUIREMENTS.md), not implemented
 or implied by the prototype's Attached/PASS labels. If retrievable original files
 are required for deployment, that deployment remains blocked pending that work.
+The carry-forward requirements specify durable retrieval, SHA-256 verification,
+backup/restore testing, signed POD/BOL and receipt preservation, and exportable
+compliance packages with verified manifests and explicit missing-evidence states.
 
 Passing automated tests or a disposable load's COMPLETE gate does not constitute
 full V3.8 acceptance. Owner verification of original historical records,

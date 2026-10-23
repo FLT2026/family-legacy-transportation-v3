@@ -56,6 +56,9 @@ function el(id = '') {
     querySelector(selector) {
       if (selector === '.form-actions') return actions;
       return null;
+    },
+    querySelectorAll(selector) {
+      return selector==='.metric-row .tag'?(this.metadataTags||[]):[];
     }
   };
   Object.defineProperty(node, 'innerHTML', {
@@ -242,8 +245,12 @@ assert.match(elements.get('v38-document-compliance-panel').innerHTML, /Internal 
 console.log('V3.8 owner-operator load source persistence, live document gate blocking, audit, evidence attachment, rerender, and self-customer PASS checks passed.');
 
 {
+  const panel=elements.get('v38-document-compliance-panel');
+  panel.metadataTags=[{textContent:'ATTACHED'}];
   ui.render();
+  assert.equal(panel.metadataTags[0].textContent,'METADATA RECORDED');
   assert.ok(elements.get('v38-document-compliance-panel').children.some(child=>/metadata only.*File contents are not stored/.test(child.textContent)),'source evidence must disclose metadata-only storage');
+  assert.ok(panel.children.some(child=>/Original document storage: NOT AVAILABLE \(V4\.0\)/.test(child.textContent)));
   const file=elements.get('v38-document-file'),handler=file.listeners.change.at(-1).fn;
   const other={id:'OTHER-EVIDENCE',documents:[]};
   store.loads.push(other);
@@ -324,7 +331,8 @@ console.log('V3.8 owner-operator load source persistence, live document gate blo
       appendChild(child) { child.parentElement = this; lexElements.set(child.id, child); },
       insertAdjacentElement(position, child) { child.parentElement = this.parentElement || this; lexElements.set(child.id, child); },
       closest() { return lexPanelHost; },
-      querySelector(selector) { if (selector === '.form-actions') return lexActions; return null; }
+      querySelector(selector) { if (selector === '.form-actions') return lexActions; return null; },
+      querySelectorAll() { return []; }
     };
     Object.defineProperty(node, 'innerHTML', {
       get() { return html; },

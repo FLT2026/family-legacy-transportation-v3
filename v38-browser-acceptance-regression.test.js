@@ -75,6 +75,8 @@ const vm=require('node:vm');
   assert.match(modalRule,/max-height:calc\(100dvh - 36px\)/,'fit within the dynamic viewport and backdrop padding');
   assert.match(modalRule,/overflow-y:auto/,'tall forms must scroll to Save and Cancel');
   assert.match(modalRule,/min-height:0/,'grid min-content sizing must not prevent shrinking');
+  const actualTrip=fs.readFileSync('v36-actual-trip.js','utf8');
+  assert.equal((actualTrip.match(/Receipt metadata recorded \(not file storage\)/g)||[]).length,2,'Actual Trip and its gate must describe metadata checks, not stored receipts');
 }
 
 // Exercise the dynamically added button, not a direct view/API call.

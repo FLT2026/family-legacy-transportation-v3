@@ -5,7 +5,12 @@ const document={createElement:()=>el(),getElementById:id=>elements.get(id)||null
 const load={id:'FLT-UI-PD1',transportationType:'General Freight',documents:[],pickupProof:{name:'Shipper',time:'08:00',signature:'pickup-sig'},deliveryProof:{name:'Receiver',time:'15:00',signature:'delivery-sig'}};
 const sandbox={window:{addEventListener(){}},document,current:()=>load,store:{selectedId:load.id,loads:[load]},persist(){persisted++},localStorage:{setItem(){}},toast:value=>toasts.push(value),alert:value=>alerts.push(value),setTimeout:fn=>fn(),Date,globalThis:null};sandbox.globalThis=sandbox;vm.createContext(sandbox);vm.runInContext(fs.readFileSync('v38-document-compliance.js','utf8'),sandbox);vm.runInContext(fs.readFileSync('v38-pickup-delivery-integrity.js','utf8'),sandbox);vm.runInContext(fs.readFileSync('v38-pickup-delivery-ui.js','utf8'),sandbox);const api=sandbox.window.FLTPickupDeliveryUI;
 let state=api.refresh();assert.equal(state.pickup.pass,false);assert.equal(state.delivery.pass,false);assert.equal(pickupStatus.textContent,'Captured');assert.equal(deliveryStatus.textContent,'Complete');assert.match(elements.get('v38-pickup-integrity').innerHTML,/Pickup Document Integrity/);assert.match(elements.get('v38-delivery-integrity').innerHTML,/Delivery Document Integrity/);
-for(const stage of ['pickup','delivery'])assert.match(elements.get('v38-'+stage+'-storage-notice').textContent,/metadata only.*File contents are not stored/);
+for(const stage of ['pickup','delivery']){
+  const notice=elements.get('v38-'+stage+'-storage-notice').textContent;
+  assert.match(notice,/metadata only.*File contents are not stored or retrievable/);
+  assert.match(notice,/Original document storage: NOT AVAILABLE \(V4\.0\)/);
+  assert.match(notice,/PASS verifies required fields and metadata, not permanent storage/);
+}
 function fire(target,type,event={}){const handlers=(target.listeners[type]||[]).sort((a,b)=>Number(b.capture)-Number(a.capture));for(const {fn} of handlers){fn(event);if(event.__stopped)break}}
 let prevented=false,stopped=false;const blockedDeliveryEvent={preventDefault(){prevented=true},stopImmediatePropagation(){stopped=true;this.__stopped=true}};fire(saveDelivery,'click',blockedDeliveryEvent);assert.equal(prevented,true);assert.equal(stopped,true);assert.match(alerts.at(-1),/DELIVERY PROOF NOT READY/);assert.match(toasts.at(-1),/Pickup Document Integrity/);
 prevented=false;stopped=false;fire(pod,'click',{preventDefault(){prevented=true},stopImmediatePropagation(){stopped=true;this.__stopped=true}});assert.equal(prevented,true);assert.equal(stopped,true);assert.match(alerts.at(-1),/POD NOT READY/);assert.match(toasts.at(-1),/Delivery Document Integrity/);

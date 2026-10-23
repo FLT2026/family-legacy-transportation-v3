@@ -48,7 +48,7 @@
     const test=document.getElementById('test');if(!test||document.getElementById('v38-live-acceptance-note'))return;
     const firstPanel=test.querySelector('.panel');if(!firstPanel)return;
     const note=document.createElement('div');note.id='v38-live-acceptance-note';note.className='notice';note.style.margin='12px 0';
-    note.innerHTML='<strong>Live end-to-end acceptance:</strong> complete the operator workflow here before V3.8 is signed off. Negative-path safety checks marked <strong>AUTOMATED TEST</strong> are protected by the full V3.7 + V3.8 regression suite.';
+    note.innerHTML='<strong>Live end-to-end acceptance:</strong> complete the operator workflow here before V3.8 is signed off. Negative-path safety checks marked <strong>AUTOMATED TEST</strong> are protected by the full V3.7 + V3.8 regression suite.<br><strong>Original document storage: NOT AVAILABLE (V4.0).</strong> BOL/POD, photo, and receipt attachments record metadata only; file contents are not stored or retrievable from FLT. Saved canvas signatures are separate browser records. PASS/COMPLETE checks operational fields and metadata, not permanent document storage, authenticity, backup, or final release acceptance. Retain original evidence outside FLT.';
     firstPanel.insertAdjacentElement('afterbegin',note);
   }
   function normalizeLegacyNegativePathTests(){

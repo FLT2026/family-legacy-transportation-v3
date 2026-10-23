@@ -19,6 +19,24 @@ assert.equal(
 );
 
 {
+  const elements=new Map(),host={insertAdjacentElement(_position,node){elements.set(node.id,node)}};
+  const test={querySelector:()=>host,querySelectorAll:()=>[]};
+  const sandbox={window:{addEventListener(){}},document:{
+    readyState:'complete',getElementById:id=>id==='test'?test:elements.get(id),
+    createElement:()=>({style:{}}),addEventListener(){}
+  },setTimeout(){}};
+  vm.createContext(sandbox);vm.runInContext(source,sandbox);
+  sandbox.window.FLTV38TestGateIntegrity.normalizeLegacyNegativePathTests();
+  const note=elements.get('v38-live-acceptance-note');
+  assert.match(note.innerHTML,/Original document storage: NOT AVAILABLE \(V4\.0\)/);
+  assert.match(note.innerHTML,/file contents are not stored or retrievable/);
+  assert.match(note.innerHTML,/PASS\/COMPLETE checks operational fields and metadata/);
+  assert.match(note.innerHTML,/not permanent document storage.*final release acceptance/);
+  sandbox.window.FLTV38TestGateIntegrity.normalizeLegacyNegativePathTests();
+  assert.equal(elements.size,1,'repeated rendering keeps one storage/acceptance notice');
+}
+
+{
   const test={classList:{contains:()=>false},querySelector:()=>null,querySelectorAll:()=>[]};
   let load,persisted=0;
   const sandbox={

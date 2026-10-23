@@ -138,7 +138,7 @@
     if(record&&estimate.cost!==null){const variance=cents(actualCost)-cents(estimate.cost);setVariance('v36-cost-variance',(variance>0?'+':'')+cash(variance),variance>0?'bad':'good');$('v36-cost-detail').textContent=cash(estimate.cost)+' estimated · '+cash(actualCost)+' ledger actual'}else{setVariance('v36-cost-variance','—','');$('v36-cost-detail').textContent=record?'No saved V3.5 cost estimate':'Record the actual trip'}
     if(record&&estimate.miles!==null){const variance=record.actualMiles-estimate.miles;setVariance('v36-mile-variance',(variance>0?'+':'')+variance.toFixed(1)+' mi',variance>0?'bad':'good');$('v36-mile-detail').textContent=estimate.miles.toFixed(1)+' estimated · '+record.actualMiles.toFixed(1)+' actual'}else{setVariance('v36-mile-variance','—','');$('v36-mile-detail').textContent='Estimated versus actual'}
     const postFuel=$('v36-post-fuel'),fuelEntry=(load.expenses||[]).find(item=>item.source==='actual-trip-fuel');postFuel.hidden=!record;postFuel.textContent=fuelEntry?'Update Fuel Ledger':'Post Fuel to Ledger';
-    const evidence=[['Actual mileage',Boolean(record?.actualMiles)],['Gallons and average price',Boolean(record?.actualGallons&&record?.averageFuelPrice)],['Fuel receipt total',Boolean(record&&Number.isFinite(record.fuelCost))],['Dispatched truck linked',Boolean(record?.truckId)],['Toll status',tollsComplete],['Expense ledger',actualCost>0],['Receipt attached',receiptCount(load)>0]];
+    const evidence=[['Actual mileage',Boolean(record?.actualMiles)],['Gallons and average price',Boolean(record?.actualGallons&&record?.averageFuelPrice)],['Fuel receipt total',Boolean(record&&Number.isFinite(record.fuelCost))],['Dispatched truck linked',Boolean(record?.truckId)],['Toll status',tollsComplete],['Expense ledger',actualCost>0],['Receipt metadata recorded (not file storage)',receiptCount(load)>0]];
     $('v36-evidence').innerHTML=evidence.map(([label,pass])=>'<div class="metric-row"><span>'+label+'</span><span class="tag '+(pass?'':'gray')+'">'+(pass?'RECORDED':'PENDING')+'</span></div>').join('');
     const evidencePass=evidence.every(item=>item[1]);$('v36-evidence-status').textContent=evidencePass?'COMPLETE':'INCOMPLETE';$('v36-evidence-status').className='tag '+(evidencePass?'':'gray');
     $('v36-history-count').textContent=history.length+' trip'+(history.length===1?'':'s');
@@ -152,7 +152,7 @@
     const load=current(),record=latest(load),estimate=estimateFor(load),actualCost=ledgerTotal(load),checks={
       'Actual mileage recorded':Boolean(record?.actualMiles),
       'Actual gallons and fuel price recorded':Boolean(record?.actualGallons&&record?.averageFuelPrice),
-      'Receipt evidence attached':receiptCount(load)>0,
+      'Receipt metadata recorded (not file storage)':receiptCount(load)>0,
       'Toll status and operating expenses recorded':(tollTotal(load)>0||Boolean(record?.noTollsIncurred))&&actualCost>0,
       'Estimated-versus-actual variance available':Boolean(record&&estimate.cost!==null&&estimate.miles!==null),
       'Vehicle MPG history created':Boolean(record?.truckId&&Number.isFinite(record.actualMpg))
