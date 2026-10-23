@@ -175,7 +175,7 @@ function makeLoad(records=[]){
   assert.equal(otherLoad.actualTripRecords.length,1,'other load history remains stored');
 }
 
-assert.match(expenseSource,/item=>item\.source===entry\.source\|\|\(entry\.linkedSnapshotId&&item\.linkedSnapshotId===entry\.linkedSnapshotId\)/,'expense confirmation must upsert by stable source or linked snapshot ID');
+assert.match(expenseSource,/load\.expenses\.findIndex\(item=>[\s\S]*?item\.source===entry\.source[\s\S]*?item\.linkedSnapshotId===entry\.linkedSnapshotId\)/,'expense confirmation must upsert by stable source or linked snapshot ID');
 assert.ok(hardfixSource.includes('required to complete Actual Trip Cost'),'truck repair uses the current Actual Trip Cost label');
 
 console.log('V3.8 Actual Trip snapshot, toll persistence, MPG history, and fuel expense idempotency regression checks passed.');
