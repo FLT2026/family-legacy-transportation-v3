@@ -11,9 +11,9 @@
     'v35-fleet-master.js?v=20260904c',
     'v35-proposed-load.js?v=20260906b',
     'v35-data-controls.js?v=20260906a',
-    'v36-actual-trip.js?v=20260906a',
+    'v36-actual-trip.js?v=20261022a',
     'v37-financial-close.js?v=20260908d',
-    'v37-itemized-invoice.js?v=20260908a',
+    'v37-itemized-invoice.js?v=20261022a',
     'v37-payments-receivables.js?v=20260908b',
     'v37-double-entry-ledger.js?v=20260908a',
     'v38-assignment-ui.js?v=20260908b',
@@ -23,17 +23,17 @@
     'v38-dispatch-control-page.js?v=20260910a',
     'v38-pickup-delivery-ui.js?v=20260908b',
     'v38-finance-pod-compat-hardfix.js?v=20260908a',
-    'v38-test-gate-integrity-hardfix.js?v=20260908a',
+    'v38-test-gate-integrity-hardfix.js?v=20261022a',
     'v38-fast-load-workflow.js?v=20260923c',
     'v38-nav-next-hardfix.js?v=20260908a',
     'v38-process-training-hardfix.js?v=20260908a',
     'v38-proposed-load-layout-hardfix.js?v=20260908a',
     'v38-unit-affixes.js?v=20260908a',
-    'v38-v36-autopopulate-hardfix.js?v=20260908a',
-    'v38-navigation-prerequisites-hardfix.js?v=20260922b',
+    'v38-v36-autopopulate-hardfix.js?v=20261022a',
+    'v38-navigation-prerequisites-hardfix.js?v=20261022a',
     'v38-test-data-reset.js?v=20260923b',
     'v38-current-rig-display-hardfix.js?v=20260922b',
-    'v38-workflow-authority.js?v=20260922b',
+    'v38-workflow-authority.js?v=20261022a',
     'v38-fleet-renewal-guidance.js?v=20260912a',
     'v38-master-record-hub.js?v=20260913a',
     'v38-master-record-recovery.js?v=20260913a',
@@ -43,7 +43,8 @@
     'v38-next-needed-ui.js?v=20260910a',
     'v38-dashboard-close-state-hardfix.js?v=20260910a',
     'v38-first-load-cleanup-hardfix.js?v=20261011a',
-    'v38-scroll-position-hardfix.js?v=20261011a'
+    'v38-scroll-position-hardfix.js?v=20261011a',
+    'v38-profit-stage.js?v=20261022a'
   ];
 
   const pageBuildToken=Date.now().toString(36);

@@ -68,17 +68,32 @@
     return status==='closed'&&Boolean(load?.financialClose?.snapshot);
   }
   function liveReviewComplete(load){const reviewed=read(LIVE_REVIEW_KEY,null);return Boolean(load?.id&&reviewed?.loadId===load.id)}
+  const realLoad=load=>Boolean(load?.id&&!String(load.id).startsWith('DEMO-'));
+  function loadStep(load){
+    if(financiallyClosed(load))return liveReviewComplete(load)?null:'test';
+    if(!load.pickupProof?.signature)return'pickup';
+    if(!load.deliveryProof?.signature)return'delivery';
+    return'finance';
+  }
+  // The load the operator is actually working on: the explicitly selected load first,
+  // then the load created from the accepted proposal. Never invents a load.
+  function workingLoad(){
+    try{if(typeof current==='function'){const load=current();if(realLoad(load))return load}}catch(error){}
+    const loads=allLoads();
+    for(const selected of [localStorage.getItem('flt-selected-load-id'),localStorage.getItem('flt-v32-loads-selected')].filter(Boolean)){const found=loads.find(x=>x?.id===selected);if(realLoad(found))return found}
+    const cycle=currentCycleLoad();
+    return realLoad(cycle)?cycle:null;
+  }
   function nextView(){
     if(!businessReady())return'business-setup';
     if(!fleetReady())return'fleet';
-    if(!currentAcceptedDecision())return'intelligence';
-    const load=currentCycleLoad();
-    if(!load)return'load';
-    if(financiallyClosed(load))return liveReviewComplete(load)?null:'test';
-    if(load&&!load.pickupProof?.signature)return'pickup';
-    if(load?.pickupProof?.signature&&!load.deliveryProof?.signature)return'delivery';
-    if(load?.deliveryProof?.signature)return'finance';
-    return null;
+    // A freshly accepted proposal that has not been turned into a load yet is the next action.
+    if(currentAcceptedDecision()&&!currentCycleLoad())return'load';
+    // Otherwise resume the selected existing load at its own unfinished step; editing the
+    // proposal form never hides or replaces an unfinished load's operational step.
+    const load=workingLoad();
+    if(load)return loadStep(load);
+    return'intelligence';
   }
 
   const style=document.createElement('style');
@@ -177,5 +192,5 @@
   apply();
   setTimeout(apply,200);
 
-  window.FLTWorkflowAuthority={apply,nextView,businessReady,fleetReady,acceptedDecision,acceptedProposalReady,hasRealLoad,hasCurrentCycleLoad,currentCycleLoad,selectedLoad,financiallyClosed,liveReviewComplete,syncDashboardCallToAction};
+  window.FLTWorkflowAuthority={apply,nextView,businessReady,fleetReady,acceptedDecision,acceptedProposalReady,hasRealLoad,hasCurrentCycleLoad,currentCycleLoad,selectedLoad,workingLoad,loadStep,financiallyClosed,liveReviewComplete,syncDashboardCallToAction};
 })();

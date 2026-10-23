@@ -28,7 +28,9 @@ const tests=[
   'v38-acceptance-gate.test.js',
   'v38-test-data-reset.test.js',
   'v38-customer-master.test.js',
-  'v38-business-fleet-bridge.test.js'
+  'v38-business-fleet-bridge.test.js',
+  'v38-invoice-finalization-integrity.test.js',
+  'v38-profit-stage.test.js'
 ];
 
 const missingTests=tests.filter(file=>!fs.existsSync(path.join(process.cwd(),file)));

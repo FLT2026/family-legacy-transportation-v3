@@ -36,11 +36,8 @@
     if(!load)return false;
     if(load?.financialClose?.status==='Closed')return restoreClosedHardfixReceipt(load);
     let changed=false;
-    const record=latestActualTrip(load);
-    if(record&&(!record.truckId||!record.truckUnit)){
-      const assignment=activeV38Assignment(load.id);
-      if(assignment?.truckId){const truck=fleetTruck(assignment.truckId);record.truckId=assignment.truckId;record.truckUnit=truck?.unit||assignment.truckId;changed=true;}
-    }
+    // Saved Actual Trip snapshots keep their original truck ID (including a missing one).
+    // Truck links are only added through the confirmed correction snapshot in Finance.
     const receipt=receiptDocument(load);
     if(receipt){const fuel=(load.expenses||[]).find(item=>/fuel/i.test(String(item?.category||''))&&!item.receipt);if(fuel){fuel.receipt={documentId:receipt.id,filename:receipt.filename,type:receipt.type,source:'v38-load-document'};changed=true;}}
     if(changed)persistLoad();
@@ -52,7 +49,7 @@
   function setAutomatedTag(tag){if(!tag)return;if(tag.textContent!=='AUTOMATED TEST')tag.textContent='AUTOMATED TEST';if(tag.className!=='tag gray')tag.className='tag gray';}
   function repairV36Gate(load){
     const gate=document.getElementById('v36-gate');if(!gate)return;
-    const record=latestActualTrip(load);const mpgPass=Boolean(record&&Number.isFinite(Number(record.actualMpg))&&Number(record.actualMpg)>0);
+    const record=latestActualTrip(load);const mpgPass=Boolean(record&&record.truckId&&Number.isFinite(Number(record.actualMpg))&&Number(record.actualMpg)>0);
     [...gate.querySelectorAll('.metric-row')].forEach(row=>{if(!/Vehicle MPG history created/i.test(row.textContent||''))return;setTag(row.querySelector('.tag'),mpgPass?'PASS':'PENDING',mpgPass);});
     const checks=[...gate.querySelectorAll('.metric-row .tag')];const pass=checks.length>0&&checks.every(tag=>tag.textContent.trim()==='PASS');
     const status=document.getElementById('v36-gate-status');if(status){status.textContent=pass?'PASS':'PENDING';status.className='tag '+(pass?'':'orange');}

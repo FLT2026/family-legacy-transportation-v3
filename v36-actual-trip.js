@@ -24,12 +24,29 @@
       snapshot
     };
   };
-  const assignedTruck=load=>{
-    try{
-      const fleet=JSON.parse(localStorage.getItem('flt-v35-fleet')||'{}'),locks=Array.isArray(fleet.locks)?fleet.locks:[];
-      return [...locks].reverse().find(lock=>lock.loadId===load.id)||null;
-    }catch(error){return null}
-  };
+  const readStored=(key,fallback)=>{try{const value=JSON.parse(localStorage.getItem(key)||'null');return value??fallback}catch(error){return fallback}};
+  // Resolves the truck that actually ran this load from independent records. Each source is
+  // reported separately; disagreement is a conflict and is never silently resolved.
+  function resolveTruck(load){
+    const fleet=readStored('flt-v35-fleet',{}),trucks=Array.isArray(fleet?.trucks)?fleet.trucks:[],locks=Array.isArray(fleet?.locks)?fleet.locks:[];
+    const assignments=readStored('flt-v38-assignments',{}),assignmentList=Array.isArray(assignments?.assignments)?assignments.assignments:[];
+    const sources=[],add=(source,truckId,truckUnit)=>{if(truckId)sources.push({source,truckId:String(truckId),truckUnit:truckUnit?String(truckUnit):''})};
+    const assignment=[...assignmentList].reverse().find(item=>item?.loadId===load?.id&&item.status==='Verified / Locked');
+    add('Dispatch assignment',assignment?.truckId,null);
+    const lock=[...locks].reverse().find(item=>item?.loadId===load?.id);
+    add('Dispatch lock',lock?.truckId,lock?.truckUnit);
+    const estimates=readStored('flt-v35-estimate-snapshots',[]);
+    const accepted=load?.acceptedEquipment||(Array.isArray(estimates)?estimates.filter(item=>item?.loadId===load?.id&&item.selectedFleet).at(-1)?.selectedFleet:null)||null;
+    add('Accepted estimate',accepted?.truckId,accepted?.truckUnit);
+    const unitFor=truckId=>trucks.find(item=>item?.id===truckId)?.unit||sources.find(item=>item.truckId===truckId&&item.truckUnit)?.truckUnit||truckId;
+    const ids=[...new Set(sources.map(item=>item.truckId))];
+    if(!ids.length)return{status:'missing',truckId:null,truckUnit:null,sources,message:'Truck assignment cannot be verified: no dispatch assignment, dispatch lock, or accepted estimate truck is linked to '+(load?.id||'this load')+'. Lock the verified truck at Dispatch Control before saving the Actual Trip snapshot.'};
+    if(ids.length>1)return{status:'conflict',truckId:null,truckUnit:null,sources,candidates:ids.map(truckId=>({truckId,truckUnit:unitFor(truckId),sources:sources.filter(item=>item.truckId===truckId).map(item=>item.source)})),message:'Truck assignment conflict: '+sources.map(item=>item.source+' = '+unitFor(item.truckId)).join('; ')+'. Correct the dispatch assignment so all records name the same truck before saving MPG history.'};
+    const truckId=ids[0],truck=trucks.find(item=>item?.id===truckId),truckUnit=unitFor(truckId);
+    if(!truck||truck.status!=='active')return{status:'unverified',truckId,truckUnit,sources,message:'Truck '+truckUnit+' is '+(truck?'not Active / Verified ('+(truck.status||'unknown status')+')':'not in Drivers & Equipment')+'. Verify the truck record before saving MPG history against it.'};
+    return{status:'verified',truckId,truckUnit,sources,message:truckUnit+' · verified via '+sources.map(item=>item.source.toLowerCase()).join(' + ')};
+  }
+  window.FLTActualTripTruck={resolve:resolveTruck};
 
   const finance=$('finance');
   if(!finance)return;
@@ -47,6 +64,7 @@
       <div class="field"><label for="v36-fuel-cost-input">Fuel receipt total</label><input id="v36-fuel-cost-input" name="fuelCost" type="number" min="0.01" step="0.01" inputmode="decimal" required></div>
       <div class="field full"><label for="v36-trip-note-input">Trip close note</label><input id="v36-trip-note-input" name="note" maxlength="240" placeholder="Route changes, idle time, fuel variance, or exceptions"></div>
       <label class="checkbox-field field full"><input name="noTollsIncurred" type="checkbox"> No tolls incurred for this trip</label>
+      <p class="field full" id="v36-truck-notice" role="alert" hidden style="margin:0;padding:10px 12px;border:2px solid var(--red);border-radius:8px;font-weight:700;color:var(--red)"></p>
       <div class="form-actions field full"><button class="btn" id="v36-use-estimate" type="button">Use Approved Estimate</button><button class="btn" id="v36-post-fuel" type="button" hidden>Post Fuel to Ledger</button><button class="btn primary">Save Actual Trip Snapshot</button></div>
     </form>
     <div class="grid three" style="margin-top:14px">
@@ -108,11 +126,15 @@
     if(notify){form.elements.actualMiles.focus();toast('Approved estimate copied. Review the actual values before saving.');}
     return true;
   }
+  const mpgOf=record=>Number.isFinite(Number(record?.actualMpg))&&record?.actualMpg!==null?Number(record.actualMpg):(Number(record?.actualMiles)>0&&Number(record?.actualGallons)>0?Number(record.actualMiles)/Number(record.actualGallons):null);
   function render(){
-    const load=current(),record=latest(load),estimate=estimateFor(load),actualCost=ledgerTotal(load),assignment=assignedTruck(load),truckId=record?.truckId||assignment?.truckId||null,history=allVehicleRecords(truckId),tollsComplete=tollTotal(load)>0||Boolean(record?.noTollsIncurred);
+    const load=current(),record=latest(load),estimate=estimateFor(load),actualCost=ledgerTotal(load),truck=resolveTruck(load),truckId=record?.truckId||(truck.status==='verified'?truck.truckId:null),history=allVehicleRecords(truckId),tollsComplete=tollTotal(load)>0||Boolean(record?.noTollsIncurred);
     $('v36-record-status').textContent=record?'SNAPSHOT SAVED':'NOT RECORDED';$('v36-record-status').className='tag '+(record?'':'orange');
-    $('v36-actual-mpg').textContent=record?record.actualMpg.toFixed(2):'—';
-    $('v36-truck-label').textContent=record?.truckUnit||assignment?.truckUnit||'No assigned truck';
+    $('v36-actual-mpg').textContent=record&&mpgOf(record)!==null?mpgOf(record).toFixed(2):'—';
+    const label=$('v36-truck-label'),notice=$('v36-truck-notice'),truckProblem=truck.status!=='verified';
+    label.textContent=record?.truckId?(record.truckUnit||record.truckId)+' · snapshot truck':truck.status==='verified'?truck.message:(record?'Snapshot has no truck · ':'')+'Truck not verified — see correction message';
+    label.style.color=!record?.truckId&&truckProblem?'var(--red)':'';
+    notice.hidden=!truckProblem;notice.textContent=truckProblem?truck.message:'';
     if(record&&estimate.cost!==null){const variance=cents(actualCost)-cents(estimate.cost);setVariance('v36-cost-variance',(variance>0?'+':'')+cash(variance),variance>0?'bad':'good');$('v36-cost-detail').textContent=cash(estimate.cost)+' estimated · '+cash(actualCost)+' ledger actual'}else{setVariance('v36-cost-variance','—','');$('v36-cost-detail').textContent=record?'No saved V3.5 cost estimate':'Record the actual trip'}
     if(record&&estimate.miles!==null){const variance=record.actualMiles-estimate.miles;setVariance('v36-mile-variance',(variance>0?'+':'')+variance.toFixed(1)+' mi',variance>0?'bad':'good');$('v36-mile-detail').textContent=estimate.miles.toFixed(1)+' estimated · '+record.actualMiles.toFixed(1)+' actual'}else{setVariance('v36-mile-variance','—','');$('v36-mile-detail').textContent='Estimated versus actual'}
     const postFuel=$('v36-post-fuel'),fuelEntry=(load.expenses||[]).find(item=>item.source==='actual-trip-fuel');postFuel.hidden=!record;postFuel.textContent=fuelEntry?'Update Fuel Ledger':'Post Fuel to Ledger';
@@ -120,7 +142,7 @@
     $('v36-evidence').innerHTML=evidence.map(([label,pass])=>'<div class="metric-row"><span>'+label+'</span><span class="tag '+(pass?'':'gray')+'">'+(pass?'RECORDED':'PENDING')+'</span></div>').join('');
     const evidencePass=evidence.every(item=>item[1]);$('v36-evidence-status').textContent=evidencePass?'COMPLETE':'INCOMPLETE';$('v36-evidence-status').className='tag '+(evidencePass?'':'gray');
     $('v36-history-count').textContent=history.length+' trip'+(history.length===1?'':'s');
-    $('v36-mpg-history').className=history.length?'':'empty';$('v36-mpg-history').innerHTML=history.length?history.slice(0,8).map(item=>'<div class="metric-row"><span><strong>'+esc(item.loadId)+'</strong><br><small class="subtle">'+new Date(item.createdAt).toLocaleDateString()+' · '+esc(item.truckUnit||'Unassigned truck')+'</small></span><strong>'+item.actualMpg.toFixed(2)+' MPG</strong></div>').join(''):'No actual trip snapshots recorded.';
+    $('v36-mpg-history').className=history.length?'':'empty';$('v36-mpg-history').innerHTML=history.length?history.slice(0,8).map(item=>'<div class="metric-row"><span><strong>'+esc(item.loadId)+'</strong><br><small class="subtle">'+new Date(item.createdAt).toLocaleDateString()+' · '+esc(item.truckUnit||'Unassigned truck')+'</small></span><strong>'+(mpgOf(item)===null?'—':mpgOf(item).toFixed(2))+' MPG</strong></div>').join(''):'No actual trip snapshots recorded.';
     renderReconciliation(load,estimate);
     const form=$('v36-actual-form'),required=['actualMiles','actualGallons','averageFuelPrice','fuelCost'];
     if(!record&&required.every(name=>String(form.elements[name].value).trim()===''))fillApprovedEstimate(false);
@@ -150,7 +172,9 @@
     if((start===null)!==(end===null)){toast('Enter both odometer readings or leave both blank.');return}
     if(start!==null&&end<=start){toast('Odometer end must be greater than odometer start.');return}
     if(start!==null&&Math.abs((end-start)-actualMiles)>1){toast('Actual miles must be within 1 mile of the odometer difference.');return}
-    const load=current(),assignment=assignedTruck(load),candidate={snapshotId:'ACT-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,7),version:'V3.6',createdAt:new Date().toISOString(),loadId:load.id,odometerStart:start,odometerEnd:end,actualMiles,actualGallons,averageFuelPrice,fuelCost,actualMpg:actualMiles/actualGallons,truckId:assignment?.truckId||null,truckUnit:assignment?.truckUnit||null,noTollsIncurred:data.get('noTollsIncurred')==='on',tollsAtSnapshot:tollTotal(load),ledgerCostAtSnapshot:ledgerTotal(load),receiptCountAtSnapshot:receiptCount(load),note:String(data.get('note')||'').trim()};
+    const load=current(),truck=resolveTruck(load);
+    if(truck.status!=='verified'){$('v36-truck-notice').hidden=false;$('v36-truck-notice').textContent=truck.message;toast(truck.message);return}
+    const candidate={snapshotId:'ACT-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,7),version:'V3.6',createdAt:new Date().toISOString(),loadId:load.id,odometerStart:start,odometerEnd:end,actualMiles,actualGallons,averageFuelPrice,fuelCost,actualMpg:actualMiles/actualGallons,truckId:truck.truckId,truckUnit:truck.truckUnit,truckSources:truck.sources.map(item=>item.source),noTollsIncurred:data.get('noTollsIncurred')==='on',tollsAtSnapshot:tollTotal(load),ledgerCostAtSnapshot:ledgerTotal(load),receiptCountAtSnapshot:receiptCount(load),note:String(data.get('note')||'').trim()};
     load.actualTripRecords=records(load);const existing=latest(load),record=existing&&sameTripSnapshot(existing,candidate)?existing:candidate;
     if(record===candidate)load.actualTripRecords.push(record);
     load.actualMiles=actualMiles;load.actualFuelGallons=actualGallons;load.actualFuelPrice=averageFuelPrice;load.actualMpg=record.actualMpg;persist();
