@@ -16,6 +16,7 @@ const todayISO=[now.getFullYear(),String(now.getMonth()+1).padStart(2,'0'),Strin
       addEventListener(){},appendChild(){},
       setAttribute(name,value){this.attributes[name]=String(value)},
       removeAttribute(name){delete this.attributes[name]},
+    hasAttribute(name){return Object.prototype.hasOwnProperty.call(this.attributes,name)},
       querySelector(){return null},querySelectorAll(){return[]}
     };
     elements.set(id,node);
