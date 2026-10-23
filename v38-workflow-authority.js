@@ -48,7 +48,9 @@
   }
   function currentCycleLoad(){
     const proposal=acceptedProposal();
-    if(!proposal?.loadId)return null;
+    // An old proposal/load must not advance a newly evaluated offer to Delivery.
+    const decision=read('flt-v35-last-decision',null);
+    if(!proposal?.loadId||!proposal.snapshotId||proposal.snapshotId!==decision?.snapshotId)return null;
     return allLoads().find(load=>load?.id===proposal.loadId)||null;
   }
   function hasCurrentCycleLoad(){return Boolean(currentCycleLoad())}
