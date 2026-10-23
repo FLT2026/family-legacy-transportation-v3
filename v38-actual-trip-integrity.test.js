@@ -143,6 +143,20 @@ function makeLoad(records=[]){
   assert.equal(load.expenses[0].receipt.filename,'legacy-receipt.pdf','updating legacy fuel preserves receipt evidence');
 }
 
+
+// Rendering must keep different load IDs separate without changing saved records.
+{
+  const first={snapshotId:'ACT-LOAD1',loadId:'FLT-TRIP-1',createdAt:'2026-10-15T10:00:00.000Z',truckId:'TRUCK-1',truckUnit:'Truck 1',actualMiles:100,actualGallons:20,actualMpg:5};
+  const another={...first,snapshotId:'ACT-LOAD2',loadId:'FLT-TRIP-2',createdAt:'2026-10-16T10:00:00.000Z',actualMiles:160,actualGallons:20,actualMpg:8};
+  const load=makeLoad([first]),other=makeLoad([another]);other.id='FLT-TRIP-2';
+  const harness=createHarness(load);
+  harness.sandbox.store.loads.push(other);
+  harness.sandbox.renderFinance();
+  assert.equal(harness.elements.get('v36-history-count').textContent,'2 trips','distinct load IDs must retain separate MPG-history rows');
+  assert.equal(load.actualTripRecords.length,1,'history rendering must not rewrite the first load');
+  assert.equal(other.actualTripRecords.length,1,'history rendering must not rewrite the second load');
+}
+
 assert.match(expenseSource,/item=>item\.source===entry\.source\|\|\(entry\.linkedSnapshotId&&item\.linkedSnapshotId===entry\.linkedSnapshotId\)/,'expense confirmation must upsert by stable source or linked snapshot ID');
 assert.ok(hardfixSource.includes('required to complete Actual Trip Cost'),'truck repair uses the current Actual Trip Cost label');
 
