@@ -6,4 +6,9 @@ assert.match(html,/The V3\.8 operating path, tested end to end\./,'active test-p
 assert.doesNotMatch(html,/The V3\.5 operating path, tested end to end\./,'V3.5 must not be described as the active operating path');
 assert.match(financial,/Current milestone · V3\.8 acceptance/,'current financial gate milestone must be V3.8');
 assert.doesNotMatch(financial,/Current milestone · V3\.7 acceptance/,'V3.7 must not be described as the current milestone');
+assert.match(html,/profitStat\.querySelector\('\.trend'\)/,'finance must update the profit disclaimer for the selected load');
+assert.match(html,/Provisional — unrecorded costs are excluded/,'recorded profit must be marked provisional');
+assert.match(html,/const load=current\(\),complete=Boolean\(load\.deliveryProof\?\.signature\)/,'invoice readiness must check the selected load signature');
+assert.match(html,/Delivery proof pending/,'unsigned deliveries must be described as pending');
+assert.match(html,/Invoice readiness is not confirmed/,'finance must not claim unsigned delivery is ready');
 console.log('V3.8 active-release wording assertions passed.');
