@@ -79,6 +79,8 @@ assert.equal(h.api.receivableLabel({invoice:{number:'INV-1',status:'Draft'}}),'U
 assert.equal(h.api.receivableLabel({invoice:{number:'INV-1',status:'Finalized',finalizedAt:'2026-10-22T00:00:00Z'}}),'Receivable balance');
 
 // Static markup must not claim final profit before the selected load is evaluated.
+const close=fs.readFileSync('v37-financial-close.js','utf8');
+assert.match(close,/\(closed\?'Final earned profit':'Provisional profit \(recorded costs only\)'\)/,'financial close panel must only say Final earned profit once the load is closed');
 assert.doesNotMatch(html,/<h2>Final profit<\/h2>/);
 assert.doesNotMatch(html,/<span>Final profit<\/span>/);
 assert.match(modules,/'v38-profit-stage\.js\?v=\w+'\s*\]/,'profit stage module must load last so its labels are authoritative');

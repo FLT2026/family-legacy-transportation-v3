@@ -12,7 +12,7 @@
     'v35-proposed-load.js?v=20260906b',
     'v35-data-controls.js?v=20260906a',
     'v36-actual-trip.js?v=20261022a',
-    'v37-financial-close.js?v=20260908d',
+    'v37-financial-close.js?v=20261022a',
     'v37-itemized-invoice.js?v=20261022a',
     'v37-payments-receivables.js?v=20260908b',
     'v37-double-entry-ledger.js?v=20260908a',
