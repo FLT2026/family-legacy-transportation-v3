@@ -5,6 +5,8 @@ const financial=fs.readFileSync('v37-financial-close.js','utf8');
 assert.match(html,/The V3\.8 operating path, tested end to end\./,'active test-page copy must use V3.8');
 assert.doesNotMatch(html,/The V3\.5 operating path, tested end to end\./,'V3.5 must not be described as the active operating path');
 assert.match(financial,/Current milestone · V3\.8 acceptance/,'current financial gate milestone must be V3.8');
+assert.match(financial,/Provisional profit \(recorded costs only\)/,'financial close must not label unrecorded cost remainder earned profit');
+assert.doesNotMatch(financial,/<span class="label">Earned profit<\/span>/,'financial close must not label provisional result as earned profit');
 assert.doesNotMatch(financial,/Current milestone · V3\.7 acceptance/,'V3.7 must not be described as the current milestone');
 assert.match(html,/profitStat\.querySelector\('\.trend'\)/,'finance must update the profit disclaimer for the selected load');
 assert.match(html,/Provisional — unrecorded costs are excluded/,'recorded profit must be marked provisional');
