@@ -9,7 +9,7 @@ const makeElement=(id='')=>{
   const node={
     id,
     dataset:{},
-    classList:{remove(){}},
+    classList:{remove(){},contains(){return false}},
     children:[],
     addEventListener(){},
     appendChild(){},
