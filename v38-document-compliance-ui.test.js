@@ -32,6 +32,7 @@ function el(id = '') {
     className: '',
     style: {},
     listeners: {},
+    children: [],
     parentElement: null,
     addEventListener(type, fn, capture) {
       (this.listeners[type] || (this.listeners[type] = [])).push({ fn, capture: Boolean(capture) });
@@ -42,6 +43,7 @@ function el(id = '') {
     },
     appendChild(child) {
       child.parentElement = this;
+      this.children.push(child);
       elements.set(child.id, child);
     },
     insertAdjacentElement(position, child) {
@@ -60,6 +62,7 @@ function el(id = '') {
     get() { return html; },
     set(value) {
       html = String(value ?? '');
+      node.children = [];
       registerHtmlIds(node, html);
     }
   });
@@ -237,6 +240,28 @@ ui.render();
 assert.match(elements.get('v38-document-compliance-panel').innerHTML, /Internal \/ Own Customer/);
 
 console.log('V3.8 owner-operator load source persistence, live document gate blocking, audit, evidence attachment, rerender, and self-customer PASS checks passed.');
+
+{
+  ui.render();
+  assert.ok(elements.get('v38-document-compliance-panel').children.some(child=>/metadata only.*File contents are not stored/.test(child.textContent)),'source evidence must disclose metadata-only storage');
+  const file=elements.get('v38-document-file'),handler=file.listeners.change.at(-1).fn;
+  const other={id:'OTHER-EVIDENCE',documents:[]};
+  store.loads.push(other);
+  loadSelect.value=other.id;
+  file.files=[{name:'wrong-load.pdf',type:'application/pdf'}];
+  elements.get('v38-document-type').value='Customer Order / Work Order';
+  elements.get('v38-document-stage').value='source';
+  handler();
+  assert.equal(other.documents.length,0,'a stale document picker must not attach to another load');
+  loadSelect.value=load.id;
+  store.loads.pop();
+  ui.render();
+  const clearedHandler=file.listeners.change.at(-1).fn,before=JSON.stringify(load);
+  loadSelect.value='';
+  clearedHandler();
+  assert.equal(JSON.stringify(load),before,'clearing Dispatch selection must not fall back to the current load');
+  loadSelect.value=load.id;
+}
 
 {
   localStorage.setItem('flt-v38-assignments',JSON.stringify({assignments:[],assignmentAudit:[]}));

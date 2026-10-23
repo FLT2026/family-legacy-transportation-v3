@@ -64,6 +64,13 @@ and fleet records:
   delivery proof, drafts ready to finalize, and finalized invoices.
 - Shared financial/reset modals fit the current viewport height and scroll
   internally, keeping Save and Cancel reachable on short screens.
+- Pickup/delivery canvas drafts survive viewport resize without reverting to
+  saved signatures. Clearing or resizing a draft does not rewrite saved proof.
+- Receipt file selection is pinned to the original Load ID and expense, not a
+  mutable row index. Changing loads or removing the expense requires selecting
+  the target again; new receipt metadata includes Load ID and expense ID.
+- Dispatch evidence selection rejects a stale panel after its selected load
+  changes, matching the pickup/delivery evidence guard.
 - Rendering the Test Gate never attaches shipping documents as fuel receipts or
   repairs saved financial evidence. Attach actual expense receipts explicitly;
   existing receipts, historical trip snapshots, and closed records are preserved.
@@ -75,3 +82,25 @@ Run `node v38-full-regression.test.js`, including
 Use only a disposable browser origin/profile to test navigation, receipt
 classification, invoice readiness, and reload persistence. Original saved-record
 and authentic-document verification remain manual acceptance requirements.
+
+### Evidence storage and release limits
+
+V3.8 shipping documents and expense receipts store **attachment metadata, not
+file contents**. Keep the original BOL, POD, photographs, and receipts outside
+FLT. A document-integrity PASS verifies required metadata, classification,
+Load-ID/stage associations, and saved signature fields; it does not establish
+document authenticity, legibility, or retrievable file storage. Canvas signatures
+are saved separately in browser load records. Downloading a POD summary is not
+a stored package of the original attachments.
+
+Durable object storage, hashes, backups, and document-package generation are
+explicit V4.0 work in [the V3.8 plan](./V3.8_OPERATIONAL_INTEGRITY_PLAN.md) and
+[carry-forward requirements](./FLT_CARRY_FORWARD_REQUIREMENTS.md), not implemented
+or implied by the prototype's Attached/PASS labels. If retrievable original files
+are required for deployment, that deployment remains blocked pending that work.
+
+Passing automated tests or a disposable load's COMPLETE gate does not constitute
+full V3.8 acceptance. Owner verification of original historical records,
+authentic evidence, required release smoke checks, and physical mobile/tablet
+keyboard/touch behavior remain manual acceptance requirements. Do not clear
+original storage to perform them.

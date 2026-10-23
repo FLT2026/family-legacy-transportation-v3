@@ -3,6 +3,71 @@ const fs=require('node:fs');
 const vm=require('node:vm');
 
 {
+  const html=fs.readFileSync('index.html','utf8'),start=html.indexOf('    function setupCanvas('),end=html.indexOf('    const signatures=',start);
+  assert.ok(start>=0&&end>start);
+  for(const type of ['pickup','delivery']){
+    const handlers={},canvas={ink:'',clientWidth:200,clientHeight:180,
+      getBoundingClientRect:()=>({width:200,height:180,left:0,top:0}),setPointerCapture(){},
+      toDataURL(){return this.ink},addEventListener(name,fn){handlers[name]=fn}
+    };
+    Object.defineProperty(canvas,'width',{set(){canvas.ink=''}});
+    const context={setTransform(){},clearRect(){canvas.ink=''},beginPath(){},moveTo(){},lineTo(){},stroke(){canvas.ink='draft-signature'},drawImage(image){canvas.ink=image.src}};
+    canvas.getContext=()=>context;
+    const saved={signature:'historical-signature'},load={[type+'Proof']:saved};
+    const sandbox={document:{getElementById:()=>canvas,querySelector:()=>({addEventListener(_name,fn){handlers.clear=fn}})},
+      window:{devicePixelRatio:1,addEventListener(name,fn){handlers[name]=fn}},
+      current:()=>load,Image:class{set src(value){this.value=value;this.onload()}get src(){return this.value}}
+    };
+    vm.createContext(sandbox);vm.runInContext(html.slice(start,end),sandbox);
+    const signature=sandbox.setupCanvas(type+'-signature',type);signature.restore(saved.signature);
+    handlers.pointerdown({pointerId:1,clientX:10,clientY:10});handlers.pointermove({clientX:20,clientY:20});handlers.pointerup();
+    handlers.resize();
+    assert.equal(signature.capture(),'draft-signature',type+' draft must survive viewport resize instead of reverting to saved proof');
+    handlers.clear();handlers.resize();
+    assert.equal(signature.capture(),null,'resize must not resurrect a deliberately cleared signature');
+    assert.equal(saved.signature,'historical-signature','resizing must never change saved proof');
+  }
+}
+
+{
+  const html=fs.readFileSync('index.html','utf8'),start=html.indexOf('    // V3.4 expense receipt attachments.'),end=html.indexOf('    function invoice()',start);
+  assert.ok(start>=0&&end>start);
+  const handlers={},picker={files:[],addEventListener(type,fn){handlers[type]=fn},click(){}};
+  const ledger={addEventListener(type,fn){handlers['ledger-'+type]=fn},insertAdjacentElement(_position,notice){assert.match(notice.textContent,/metadata only.*File contents are not stored/)}};
+  const a={id:'A',expenses:[{id:'EA'},{id:'EA2'}]},b={id:'B',expenses:[{id:'EB'}]};
+  let selected=a,persisted=0;
+  const toasts=[],sandbox={
+    document:{createElement:tag=>tag==='input'?picker:{},body:{append(){}},getElementById:()=>ledger},
+    current:()=>selected,persist(){persisted++},renderFinance(){},toast:message=>toasts.push(message),Date
+  };
+  vm.createContext(sandbox);vm.runInContext(html.slice(start,end),sandbox);
+  const attach=index=>handlers['ledger-click']({target:{closest:selector=>selector==='[data-attach-receipt]'?{dataset:{attachReceipt:String(index)}}:null}});
+  const choose=()=>{picker.files=[{name:'receipt.pdf',type:'application/pdf'}];handlers.change()};
+  attach(0);selected=b;choose();
+  assert.equal(b.expenses[0].receipt,undefined,'a pending receipt must never follow selection to another load');
+  assert.equal(persisted,0);
+  assert.match(toasts.at(-1),/load.*changed/i);
+  selected=a;attach(0);a.expenses.reverse();choose();
+  assert.equal(a.expenses.find(e=>e.id==='EA2').receipt,undefined,'reordering cannot redirect evidence');
+  const receipt=a.expenses.find(e=>e.id==='EA').receipt;
+  assert.equal(receipt.loadId,'A');assert.equal(receipt.expenseId,'EA');
+  assert.equal(receipt.expenseIndex,1);
+  attach(0);a.expenses.shift();const before=JSON.stringify(a);choose();
+  assert.equal(JSON.stringify(a),before,'removed expense cannot redirect to its replacement index');
+  assert.match(toasts.at(-1),/expense.*changed/i);
+  attach(0);a.financialClose={status:'Closed'};const closed=JSON.stringify(a);choose();
+  assert.equal(JSON.stringify(a),closed,'closing while the picker is open must block the receipt');
+  assert.match(toasts.at(-1),/closed/i);
+  a.financialClose.status='Correction Open';
+  attach(0);choose();
+  assert.equal(a.expenses[0].receipt.expenseId,a.expenses[0].id,'protected correction can attach to the same stable expense');
+  const legacy={id:'LEGACY',expenses:[{category:'Fuel'}]};
+  selected=legacy;attach(0);choose();
+  assert.equal(legacy.expenses[0].receipt.loadId,legacy.id,'legacy expenses without IDs retain object identity');
+  assert.equal(legacy.expenses[0].id,undefined,'attaching evidence must not backfill historical expense IDs');
+}
+
+{
   const html=fs.readFileSync('index.html','utf8');
   const modalRule=html.match(/\.modal\s*\{([^}]+)\}/)?.[1];
   assert.ok(modalRule,'the shared financial/reset modal needs a layout rule');
@@ -127,4 +192,4 @@ const vm=require('node:vm');
   assert.equal(get('fleet-utilization').textContent,'0%');
 }
 
-console.log('V3.8 scrollable modal layout, Dispatch navigation, Dashboard utilization captions, closed-load exclusion, and selected-load invoice readiness checks passed.');
+console.log('V3.8 signature draft resize, stable receipt associations, scrollable modals, Dispatch navigation, and Dashboard readiness checks passed.');
