@@ -101,7 +101,16 @@
     });
   }
   function clearLegacyNext(){nav.querySelectorAll('button[data-view]').forEach(button=>{button.classList.remove('nav-required','v38-nav-next');button.removeAttribute('data-v38-hard-next');button.removeAttribute('data-v38-authoritative-next')})}
-  function applyNav(){clearLegacyNext();const view=nextView(),button=view?nav.querySelector(`[data-view="${view}"]`):null;if(button)button.setAttribute('data-v38-authoritative-next','true')}
+  function applyNav(){
+    const view=nextView(),button=view?nav.querySelector(`[data-view="${view}"]`):null;
+    const buttons=[...nav.querySelectorAll('button[data-view]')];
+    const marked=buttons.filter(item=>item.hasAttribute('data-v38-authoritative-next'));
+    const legacy=buttons.some(item=>item.classList.contains('nav-required')||item.classList.contains('v38-nav-next')||item.hasAttribute('data-v38-hard-next'));
+    // Do not remove/readd the same marker on each keystroke: that makes NEXT flash.
+    if(!legacy&&marked.length===(button?1:0)&&(!button||marked[0]===button))return;
+    clearLegacyNext();
+    if(button)button.setAttribute('data-v38-authoritative-next','true');
+  }
   function syncDashboardCallToAction(){
     const dashboard=document.getElementById('dashboard');if(!dashboard)return;
     const hero=dashboard.querySelector('.hero');
