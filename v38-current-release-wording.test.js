@@ -12,5 +12,6 @@ assert.match(html,/profitStat\.querySelector\('\.trend'\)/,'finance must update 
 assert.match(html,/Provisional — unrecorded costs are excluded/,'recorded profit must be marked provisional');
 assert.match(html,/const load=current\(\),complete=Boolean\(load\.deliveryProof\?\.signature\)/,'invoice readiness must check the selected load signature');
 assert.match(html,/Delivery proof pending/,'unsigned deliveries must be described as pending');
+assert.match(html,/DRAFT INVOICE - DELIVERY PROOF PENDING/,'unsigned printable invoices must visibly identify themselves as drafts');
 assert.match(html,/Invoice readiness is not confirmed/,'finance must not claim unsigned delivery is ready');
 console.log('V3.8 active-release wording assertions passed.');
