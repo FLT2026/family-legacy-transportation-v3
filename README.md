@@ -51,3 +51,27 @@ and fleet records:
    stealing focus. Return to Dashboard and repeat, including after another reload.
 4. Confirm saved setup, fleet, estimates, customer records, and recurring
    assumptions remain unchanged.
+
+## PR #66 browser acceptance corrections
+
+- Dispatch Control has its own dynamically loaded navigation handler, like the
+  other module-owned screens. It refreshes open loads on entry and evaluates the
+  same proposed combination for weight and compliance before creating a first
+  dispatch lock; all document and safety gates still apply.
+- Dashboard utilization and its caption use active assignments to verified
+  trucks; financially closed loads do not consume active capacity.
+- Dashboard invoice readiness distinguishes drafts awaiting load-specific
+  delivery proof, drafts ready to finalize, and finalized invoices.
+- Shared financial/reset modals fit the current viewport height and scroll
+  internally, keeping Save and Cancel reachable on short screens.
+- Rendering the Test Gate never attaches shipping documents as fuel receipts or
+  repairs saved financial evidence. Attach actual expense receipts explicitly;
+  existing receipts, historical trip snapshots, and closed records are preserved.
+  Previously auto-linked shipping evidence requires operator review, not an
+  automatic rewrite; closed loads still require protected correction.
+
+Run `node v38-full-regression.test.js`, including
+[browser acceptance regressions](./v38-browser-acceptance-regression.test.js).
+Use only a disposable browser origin/profile to test navigation, receipt
+classification, invoice readiness, and reload persistence. Original saved-record
+and authentic-document verification remain manual acceptance requirements.

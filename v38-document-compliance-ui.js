@@ -29,7 +29,20 @@
     panel=document.createElement('div');panel.id='v38-document-compliance-panel';panel.className='panel';panel.style.marginTop='14px';
     const anchor=document.getElementById('v38-weight-fit-panel')||dispatchForm.closest('.panel');anchor?.insertAdjacentElement('afterend',panel);return panel;
   }
-  function gateInput(){const load=selectedLoad(),fleet=readJson(fleetKey,{drivers:[],trucks:[],trailers:[]}),assignment=load?activeAssignment(load.id):null,driver=assignment?fleet.drivers?.find(item=>item.id===assignment.driverId):null,truck=assignment?fleet.trucks?.find(item=>item.id===assignment.truckId):null,trailer=assignment?fleet.trailers?.find(item=>item.id===assignment.trailerId):null,fit=fitUi?.evaluate?.()||window.FLTWeightEquipmentFit?.evaluate?.({load,assignment,driver,truck,trailer});return{load,classification:classification(),assignment,fit,driver,truck,trailer}}
+  function gateInput(){
+    const load=selectedLoad(),candidate=fitUi?.candidate?.();
+    // Review the same proposed combination as the weight gate before the first
+    // lock exists; compliance must not require the lock it is deciding to allow.
+    if(load&&candidate?.load?.id===load.id){
+      return{...candidate,load,classification:classification(),fit:fitUi.evaluate()};
+    }
+    const fleet=readJson(fleetKey,{drivers:[],trucks:[],trailers:[]}),assignment=load?activeAssignment(load.id):null,
+      driver=assignment?fleet.drivers?.find(item=>item.id===assignment.driverId):null,
+      truck=assignment?fleet.trucks?.find(item=>item.id===assignment.truckId):null,
+      trailer=assignment?fleet.trailers?.find(item=>item.id===assignment.trailerId):null,
+      fit=window.FLTWeightEquipmentFit?.evaluate?.({load,assignment,driver,truck,trailer})||fitUi?.evaluate?.();
+    return{load,classification:classification(),assignment,fit,driver,truck,trailer};
+  }
   function evaluate(){return api.evaluate(gateInput())}
   function documentOptions(){return Object.entries(api.docTypes).flatMap(([group,types])=>types.map(type=>({group,type}))) }
   function renderDispatch(){

@@ -238,6 +238,23 @@ assert.match(elements.get('v38-document-compliance-panel').innerHTML, /Internal 
 
 console.log('V3.8 owner-operator load source persistence, live document gate blocking, audit, evidence attachment, rerender, and self-customer PASS checks passed.');
 
+{
+  localStorage.setItem('flt-v38-assignments',JSON.stringify({assignments:[],assignmentAudit:[]}));
+  const before=JSON.stringify(storage);
+  const fitUi=sandbox.window.FLTWeightEquipmentUI;
+  fitUi.candidate=()=>({load,assignment:{...assignment},driver:{id:'D1'},truck:{id:'T1'},trailer:{id:'R1'}});
+  assert.equal(ui.evaluate().status,'PASS','the first dispatch can review a verified candidate before the lock exists');
+  assert.equal(JSON.stringify(storage),before,'evaluating a candidate must not create a saved assignment');
+  fitUi.evaluate=()=>({status:'DO NOT DISPATCH',pass:false,reasons:['Cargo exceeds verified payload']});
+  assert.equal(ui.evaluate().status,'DO NOT DISPATCH','candidate review cannot bypass the weight hard stop');
+  fitUi.evaluate=()=>({status:'PASS',pass:true,reasons:[]});
+  fitUi.candidate=()=>({load:{...load,id:'OTHER'},assignment:{...assignment}});
+  assert.equal(ui.evaluate().status,'MORE INFORMATION REQUIRED','another load candidate cannot authorize this dispatch');
+  fitUi.candidate=()=>({load,assignment:{...assignment}});
+  load.documents=[];
+  assert.equal(ui.evaluate().status,'MORE INFORMATION REQUIRED','candidate review still requires the source document');
+}
+
 // Fail-closed store access: the live app declares `store` as a top-level
 // lexical const in index.html (not a globalThis/window property). This
 // scenario mirrors that exact binding shape via two separate vm.runInContext

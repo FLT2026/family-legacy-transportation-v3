@@ -78,6 +78,7 @@
     const reason='Other assignment change — '+explanation;
     select.add(new Option(reason,reason,true,true));
   },true);
+  window.FLTFleetCore={render};
   document.querySelectorAll('[data-view="test"],[data-view-jump="test"]').forEach(button=>button.addEventListener('click',renderFleetGate));
   render();
 })();

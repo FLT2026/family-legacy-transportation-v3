@@ -25,6 +25,7 @@ const tests=[
   'v38-fleet-renewal-guidance.test.js',
   'v38-master-record-edit-reveal.test.js',
   'v38-test-gate-integrity-hardfix.test.js',
+  'v38-browser-acceptance-regression.test.js',
   'v38-acceptance-gate.test.js',
   'v38-test-data-reset.test.js',
   'v38-customer-master.test.js',
