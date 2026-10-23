@@ -19,8 +19,6 @@ const tests=[
   'v38-fast-load-workflow.test.js',
   'v38-actual-trip-integrity.test.js',
   'v38-current-release-wording.test.js',
-  'v38-actual-trip-integrity.test.js',
-  'v38-current-release-wording.test.js',
   'v38-proposed-load-navigation.test.js',
   'v38-workflow-authority.test.js',
   'v38-navigation-prerequisites-hardfix.test.js',
