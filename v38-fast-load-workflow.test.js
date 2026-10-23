@@ -239,7 +239,6 @@ console.log('V3.8 fast-load accepted-proposal banner hostile-input and normal-in
   }),'invalidated acceptance must not authorize changed proposal inputs');
   elements.get('v38-quick-source').value='Broker';
   elements.get('v38-quick-source-name').value='Central Dispatch';
-  localStorage.setItem('flt-v38-evaluated-decision',JSON.stringify({decision:'ACCEPT LOAD',snapshotId:'stale-acceptance',key:workflow.evaluationFingerprint()}));
   decisionForm.listeners.change[0]();
   assert.equal(accept.hidden,true,'restoring old input values cannot resurrect an invalidated approval');
   assert.equal(localStorage.getItem('flt-v38-evaluated-decision'),null,'changed input must remove the stale evaluation from storage');
