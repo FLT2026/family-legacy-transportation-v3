@@ -14,4 +14,8 @@ assert.match(html,/const load=current\(\),complete=Boolean\(load\.deliveryProof\
 assert.match(html,/Delivery proof pending/,'unsigned deliveries must be described as pending');
 assert.match(html,/DRAFT INVOICE - DELIVERY PROOF PENDING/,'unsigned printable invoices must visibly identify themselves as drafts');
 assert.match(html,/Invoice readiness is not confirmed/,'finance must not claim unsigned delivery is ready');
+assert.match(html,/DRAFT INVOICE - DELIVERY PROOF PENDING/,'printing unsigned invoice must identify it as a draft');
+assert.match(html,/Pending delivery proof/,'printed invoice must distinguish missing POD');
+assert.match(html,/const podStatus=load\.deliveryProof\?\.signature\?/,'printed invoice POD status must derive from the selected load');
+assert.match(financial,/Provisional profit \(recorded costs only\)/,'close screen profit must be provisional before reconciliation');
 console.log('V3.8 active-release wording assertions passed.');
