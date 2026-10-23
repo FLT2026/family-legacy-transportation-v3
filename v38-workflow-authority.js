@@ -48,7 +48,9 @@
   }
   function currentCycleLoad(){
     const proposal=acceptedProposal();
-    if(!proposal?.loadId)return null;
+    // An old proposal/load must not advance a newly evaluated offer to Delivery.
+    const decision=read('flt-v35-last-decision',null);
+    if(!proposal?.loadId||!proposal.snapshotId||proposal.snapshotId!==decision?.snapshotId)return null;
     return allLoads().find(load=>load?.id===proposal.loadId)||null;
   }
   function hasCurrentCycleLoad(){return Boolean(currentCycleLoad())}
@@ -87,7 +89,7 @@
     #nav button.nav-required::after,#nav button.v38-nav-next::after,#nav button[data-v38-hard-next="true"]::after{display:none!important;content:none!important}
     #nav button[data-v38-authoritative-next="true"]{background:#214f48!important;color:#fff!important;border-left:6px solid #d4d72f!important;box-shadow:inset 0 0 0 2px rgba(212,215,47,.88),0 0 0 2px rgba(212,215,47,.3)!important;opacity:1!important}
     #nav button[data-v38-authoritative-next="true"] .nav-label{font-weight:900!important}
-    #nav button[data-v38-authoritative-next="true"]::after{display:inline-block!important;content:'NEXT'!important;margin-left:auto;background:#d4d72f;color:#173f39;font-size:9px;font-weight:900;padding:4px 7px;border-radius:999px}
+    #nav button[data-v38-authoritative-next="true"]::after{display:inline-flex!important;align-items:center;justify-content:center;content:'NEXT'!important;flex:0 0 auto;white-space:nowrap;margin-left:auto;background:#ffed56!important;color:#102920!important;-webkit-text-fill-color:#102920!important;opacity:1!important;font-size:10px;font-weight:900;line-height:1.2;min-width:38px;padding:5px 8px;border:1px solid #102920;border-radius:999px}
     .v38-authority-missing{border:4px solid #ffea00!important;background:#fff8a8!important;box-shadow:0 0 0 5px rgba(255,234,0,.32)!important}
     .v38-authority-wrap{position:relative!important}.v38-authority-wrap::before{content:'NEXT';position:absolute;right:8px;top:-15px;z-index:61;background:#ffea00;color:#102f2b;border:2px solid #102f2b;font-size:10px;font-weight:900;padding:4px 8px;border-radius:999px}
   `;
@@ -101,7 +103,16 @@
     });
   }
   function clearLegacyNext(){nav.querySelectorAll('button[data-view]').forEach(button=>{button.classList.remove('nav-required','v38-nav-next');button.removeAttribute('data-v38-hard-next');button.removeAttribute('data-v38-authoritative-next')})}
-  function applyNav(){clearLegacyNext();const view=nextView(),button=view?nav.querySelector(`[data-view="${view}"]`):null;if(button)button.setAttribute('data-v38-authoritative-next','true')}
+  function applyNav(){
+    const view=nextView(),button=view?nav.querySelector(`[data-view="${view}"]`):null;
+    const buttons=[...nav.querySelectorAll('button[data-view]')];
+    const marked=buttons.filter(item=>item.hasAttribute('data-v38-authoritative-next'));
+    const legacy=buttons.some(item=>item.classList.contains('nav-required')||item.classList.contains('v38-nav-next')||item.hasAttribute('data-v38-hard-next'));
+    // Do not remove/readd the same marker on each keystroke: that makes NEXT flash.
+    if(!legacy&&marked.length===(button?1:0)&&(!button||marked[0]===button))return;
+    clearLegacyNext();
+    if(button)button.setAttribute('data-v38-authoritative-next','true');
+  }
   function syncDashboardCallToAction(){
     const dashboard=document.getElementById('dashboard');if(!dashboard)return;
     const hero=dashboard.querySelector('.hero');

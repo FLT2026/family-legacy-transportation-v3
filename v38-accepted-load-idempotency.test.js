@@ -1,0 +1,30 @@
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const vm=require('node:vm');
+const source=fs.readFileSync('index.html','utf8');
+const start=source.indexOf("        const proposal=(()=>{try{return JSON.parse(localStorage.getItem('flt-v38-accepted-proposal')");
+const end=source.indexOf("        const master=window.FLTCustomerMaster;",start);
+assert.ok(start>0&&end>start,'find the production duplicate-create guard');
+const guard=source.slice(start,end);
+function runGuard(existing,proposal){
+  const storage={'flt-v38-accepted-proposal':JSON.stringify(proposal)};
+  const store={loads:existing.map(x=>({...x})),selectedId:null};
+  let persisted=0,notifications=[],views=[];
+  const context={localStorage:{getItem:k=>storage[k]??null},store,persist:()=>persisted++,toast:x=>notifications.push(x),showView:x=>views.push(x)};
+  vm.runInNewContext('(function(){'+guard+';return "new"})()',context);
+  return {store,persisted,notifications,views};
+}
+const snapshot='EST-test-unique';
+const existing=[{id:'FLT-000008',acceptedEstimateSnapshotId:snapshot,pickupProof:{signature:'existing'}}];
+const duplicate=runGuard(existing,{snapshotId:snapshot});
+assert.equal(duplicate.store.loads.length,1,'resubmitting an accepted estimate cannot append a load');
+assert.equal(duplicate.store.selectedId,'FLT-000008','duplicate returns to original load');
+assert.equal(duplicate.persisted,1,'existing load selection is persisted');
+assert.equal(duplicate.views[0],'record','duplicate opens existing record');
+assert.equal(duplicate.store.loads[0].pickupProof.signature,'existing','existing proof retained');
+const newProposal=runGuard(existing,{snapshotId:'EST-different'});
+assert.equal(newProposal.store.loads.length,1,'non-duplicate guard does not itself create loads');
+assert.equal(newProposal.persisted,0,'new snapshot proceeds to creation code without modifying history');
+assert.ok(source.includes('createdLoad.acceptedEstimateSnapshotId=acceptedSnapshotId'),'created load records originating snapshot');
+assert.ok(source.includes("loadId:id"),'accepted proposal links to created load');
+console.log('V3.8 accepted-estimate duplicate guard tests passed.');

@@ -17,6 +17,8 @@ const tests=[
   'v38-pickup-delivery-ui.test.js',
   'v38-autopopulate-audit.test.js',
   'v38-fast-load-workflow.test.js',
+  'v38-accepted-load-idempotency.test.js',
+  'v38-accepted-load-idempotency.test.js',
   'v38-proposed-load-navigation.test.js',
   'v38-workflow-authority.test.js',
   'v38-navigation-prerequisites-hardfix.test.js',

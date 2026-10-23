@@ -76,14 +76,13 @@
   }
   function apply(){
     const required=prerequisite();
-    // Remove stale NEXT markers created by older workflow logic before applying the current one.
-    nav.querySelectorAll('button[data-view]').forEach(button=>button.classList.remove('nav-required','nav-waiting'));
+    // Workflow Authority alone renders sidebar NEXT. This module only guards
+    // prerequisites and disabled state; do not churn NEXT classes on each input.
     nav.querySelectorAll('button[data-view]').forEach(button=>{
-      const view=button.dataset.view,isRequired=Boolean(required&&view===required.view);
-      button.classList.toggle('nav-required',isRequired);
-      button.classList.toggle('nav-waiting',Boolean(required)&&!isRequired);
-      button.setAttribute('aria-disabled',blockedView(view)?'true':'false');
+      const disabled=blockedView(button.dataset.view)?'true':'false';
+      if(button.getAttribute('aria-disabled')!==disabled)button.setAttribute('aria-disabled',disabled);
     });
+    window.FLTWorkflowAuthority?.apply?.();
     clearTraining();
     moveIntegrityBadge();
     const active=nav.querySelector('button.active')?.dataset.view||'';

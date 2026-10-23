@@ -109,7 +109,8 @@ function buildDomStub() {
   const storage = {};
   const localStorage = {
     getItem: key => storage[key] ?? null,
-    setItem: (key, value) => { storage[key] = String(value); }
+    setItem: (key, value) => { storage[key] = String(value); },
+    removeItem: key => { delete storage[key]; }
   };
   return { elements, document, localStorage };
 }
@@ -238,9 +239,11 @@ console.log('V3.8 fast-load accepted-proposal banner hostile-input and normal-in
   }),'invalidated acceptance must not authorize changed proposal inputs');
   elements.get('v38-quick-source').value='Broker';
   elements.get('v38-quick-source-name').value='Central Dispatch';
-  localStorage.setItem('flt-v38-evaluated-decision',JSON.stringify({decision:'ACCEPT LOAD',snapshotId:'stale-acceptance',key:workflow.evaluationFingerprint()}));
   decisionForm.listeners.change[0]();
-  assert.equal(accept.hidden,false,'rerun matching ACCEPT LOAD should restore authorization');
+  assert.equal(accept.hidden,true,'restoring old input values cannot resurrect an invalidated approval');
+  assert.equal(localStorage.getItem('flt-v38-evaluated-decision'),null,'changed input must remove the stale evaluation from storage');
+  domWindow.dispatchEvent({type:'flt:v35-decision-evaluated'});
+  assert.equal(accept.hidden,false,'a newly completed ACCEPT LOAD evaluation can restore authorization');
   await accept.listeners.click[0]();
   const carried=JSON.parse(localStorage.getItem('flt-v38-accepted-proposal'));
   assert.equal(carried.source,'Broker');

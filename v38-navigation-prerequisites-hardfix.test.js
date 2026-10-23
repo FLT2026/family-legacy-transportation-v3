@@ -15,7 +15,10 @@ const todayISO=[now.getFullYear(),String(now.getMonth()+1).padStart(2,'0'),Strin
       children:[],attributes:{},
       addEventListener(){},appendChild(){},
       setAttribute(name,value){this.attributes[name]=String(value)},
+      getAttribute(name){return this.attributes[name]??null},
+      getAttribute(name){return this.attributes[name]??null},
       removeAttribute(name){delete this.attributes[name]},
+    hasAttribute(name){return Object.prototype.hasOwnProperty.call(this.attributes,name)},
       querySelector(){return null},querySelectorAll(){return[]}
     };
     elements.set(id,node);
@@ -44,7 +47,7 @@ const todayISO=[now.getFullYear(),String(now.getMonth()+1).padStart(2,'0'),Strin
     }),
     'flt-v35-last-decision':JSON.stringify({decision:'ACCEPT LOAD',snapshotId:'stale-snapshot'})
   };
-  const localStorage={getItem:key=>storage[key]??null,setItem:(key,value)=>{storage[key]=String(value)}};
+  const localStorage={getItem:key=>storage[key]??null,setItem:(key,value)=>{storage[key]=String(value)},removeItem:key=>{delete storage[key]}};
   const document={
     getElementById:id=>elements.get(id)||(id==='nav'?nav:null),
     querySelectorAll:()=>[],
@@ -83,7 +86,8 @@ const todayISO=[now.getFullYear(),String(now.getMonth()+1).padStart(2,'0'),Strin
   assert.equal(hardfix.prerequisite().view,'load','matching evaluated ACCEPT LOAD should authorize Complete Accepted Load');
   activeButton=intelligenceButton;
   hardfix.apply();
-  assert.equal(loadButton.classList.contains('nav-required'),true,'matching evaluated ACCEPT LOAD should mark Complete Accepted Load nav-required');
+  assert.equal(loadButton.classList.contains('nav-required'),false,'legacy prerequisite module must not own NEXT classes');
+  assert.equal(loadButton.attributes['aria-disabled'],'false','matching evaluation must enable Complete Accepted Load');
 
   console.log('V3.8 navigation-prerequisites-hardfix stale-decision and keystroke checks passed.');
 })();
@@ -155,7 +159,7 @@ const todayISO=[now.getFullYear(),String(now.getMonth()+1).padStart(2,'0'),Strin
     querySelectorAll:()=>[]
   };
   const storage={};
-  const localStorage={getItem:key=>storage[key]??null,setItem:(key,value)=>{storage[key]=String(value)}};
+  const localStorage={getItem:key=>storage[key]??null,setItem:(key,value)=>{storage[key]=String(value)},removeItem:key=>{delete storage[key]}};
   const domSandbox={window:{},document,localStorage,Date,console,setTimeout:fn=>fn(),globalThis:null,Node:{DOCUMENT_POSITION_FOLLOWING:4}};
   domSandbox.globalThis=domSandbox;
   vm.createContext(domSandbox);
