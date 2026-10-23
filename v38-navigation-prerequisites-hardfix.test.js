@@ -44,7 +44,7 @@ const todayISO=[now.getFullYear(),String(now.getMonth()+1).padStart(2,'0'),Strin
     }),
     'flt-v35-last-decision':JSON.stringify({decision:'ACCEPT LOAD',snapshotId:'stale-snapshot'})
   };
-  const localStorage={getItem:key=>storage[key]??null,setItem:(key,value)=>{storage[key]=String(value)}};
+  const localStorage={getItem:key=>storage[key]??null,setItem:(key,value)=>{storage[key]=String(value)},removeItem:key=>{delete storage[key]}};
   const document={
     getElementById:id=>elements.get(id)||(id==='nav'?nav:null),
     querySelectorAll:()=>[],
@@ -155,7 +155,7 @@ const todayISO=[now.getFullYear(),String(now.getMonth()+1).padStart(2,'0'),Strin
     querySelectorAll:()=>[]
   };
   const storage={};
-  const localStorage={getItem:key=>storage[key]??null,setItem:(key,value)=>{storage[key]=String(value)}};
+  const localStorage={getItem:key=>storage[key]??null,setItem:(key,value)=>{storage[key]=String(value)},removeItem:key=>{delete storage[key]}};
   const domSandbox={window:{},document,localStorage,Date,console,setTimeout:fn=>fn(),globalThis:null,Node:{DOCUMENT_POSITION_FOLLOWING:4}};
   domSandbox.globalThis=domSandbox;
   vm.createContext(domSandbox);
