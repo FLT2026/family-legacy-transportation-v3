@@ -15,6 +15,7 @@ const makeElement=(id='')=>{
     appendChild(){},
     setAttribute(name,value){this.attributes[name]=String(value)},
     removeAttribute(name){delete this.attributes[name]},
+    hasAttribute(name){return Object.prototype.hasOwnProperty.call(this.attributes,name)},
     attributes:{},
     querySelector(){return null},
     querySelectorAll(){return[]}
