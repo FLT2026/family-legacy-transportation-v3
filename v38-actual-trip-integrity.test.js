@@ -157,6 +157,24 @@ function makeLoad(records=[]){
   assert.equal(other.actualTripRecords.length,1,'history rendering must not rewrite the second load');
 }
 
+// Historical MPG views are non-destructive: multiple snapshots within a load
+// resolve to its latest displayed trip, but other Load IDs remain distinct.
+{
+  const first={snapshotId:'ACT-ONE',loadId:'FLT-TRIP-1',createdAt:'2026-10-10T10:00:00.000Z',truckId:'TRUCK-1',truckUnit:'Truck 1',actualMiles:100,actualGallons:20,actualMpg:5};
+  const second={...first,snapshotId:'ACT-TWO',createdAt:'2026-10-11T10:00:00.000Z',actualMiles:120,actualMpg:6};
+  const other={...first,snapshotId:'ACT-OTHER',loadId:'FLT-TRIP-2',createdAt:'2026-10-12T10:00:00.000Z',actualMiles:140,actualMpg:7};
+  const load=makeLoad([first,second]),otherLoad={...makeLoad([other]),id:'FLT-TRIP-2'};
+  const harness=createHarness(load);
+  harness.sandbox.store.loads.push(otherLoad);
+  harness.sandbox.renderFinance();
+  assert.equal(harness.elements.get('v36-history-count').textContent,'2 trips','different Load IDs remain distinct in MPG history');
+  const rendered=harness.elements.get('v36-mpg-history').innerHTML;
+  assert.ok(rendered.includes('6.00 MPG'),'latest snapshot of first Load ID is displayed');
+  assert.ok(rendered.includes('7.00 MPG'),'second Load ID is displayed independently');
+  assert.equal(load.actualTripRecords.length,2,'both historical snapshots remain stored');
+  assert.equal(otherLoad.actualTripRecords.length,1,'other load history remains stored');
+}
+
 assert.match(expenseSource,/item=>item\.source===entry\.source\|\|\(entry\.linkedSnapshotId&&item\.linkedSnapshotId===entry\.linkedSnapshotId\)/,'expense confirmation must upsert by stable source or linked snapshot ID');
 assert.ok(hardfixSource.includes('required to complete Actual Trip Cost'),'truck repair uses the current Actual Trip Cost label');
 
