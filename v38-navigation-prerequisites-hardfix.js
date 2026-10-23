@@ -38,7 +38,9 @@
     if(localStorage.getItem(dashboardKey)!=='true')return{view:'dashboard',label:'Dashboard'};
     if(!businessReady())return{view:'business-setup',label:'Business Setup'};
     if(!fleetReady())return{view:'fleet',label:'Drivers & Equipment'};
-    if(!currentAcceptedDecision())return{view:'intelligence',label:'Evaluate Proposed Load'};
+    // Existing loads resume their own operational step through FLTWorkflowAuthority;
+    // only a carrier with no real load is pushed back to Evaluate Proposed Load.
+    if(!currentAcceptedDecision())return hasRealLoad()?null:{view:'intelligence',label:'Evaluate Proposed Load'};
     if(!hasRealLoad())return{view:'load',label:'Complete Accepted Load'};
     return null;
   }

@@ -32,6 +32,7 @@ function el(id = '') {
     className: '',
     style: {},
     listeners: {},
+    children: [],
     parentElement: null,
     addEventListener(type, fn, capture) {
       (this.listeners[type] || (this.listeners[type] = [])).push({ fn, capture: Boolean(capture) });
@@ -42,6 +43,7 @@ function el(id = '') {
     },
     appendChild(child) {
       child.parentElement = this;
+      this.children.push(child);
       elements.set(child.id, child);
     },
     insertAdjacentElement(position, child) {
@@ -54,12 +56,16 @@ function el(id = '') {
     querySelector(selector) {
       if (selector === '.form-actions') return actions;
       return null;
+    },
+    querySelectorAll(selector) {
+      return selector==='.metric-row .tag'?(this.metadataTags||[]):[];
     }
   };
   Object.defineProperty(node, 'innerHTML', {
     get() { return html; },
     set(value) {
       html = String(value ?? '');
+      node.children = [];
       registerHtmlIds(node, html);
     }
   });
@@ -238,6 +244,49 @@ assert.match(elements.get('v38-document-compliance-panel').innerHTML, /Internal 
 
 console.log('V3.8 owner-operator load source persistence, live document gate blocking, audit, evidence attachment, rerender, and self-customer PASS checks passed.');
 
+{
+  const panel=elements.get('v38-document-compliance-panel');
+  panel.metadataTags=[{textContent:'ATTACHED'}];
+  ui.render();
+  assert.equal(panel.metadataTags[0].textContent,'METADATA RECORDED');
+  assert.ok(elements.get('v38-document-compliance-panel').children.some(child=>/metadata only.*File contents are not stored/.test(child.textContent)),'source evidence must disclose metadata-only storage');
+  assert.ok(panel.children.some(child=>/Original document storage: NOT AVAILABLE \(V4\.0\)/.test(child.textContent)));
+  const file=elements.get('v38-document-file'),handler=file.listeners.change.at(-1).fn;
+  const other={id:'OTHER-EVIDENCE',documents:[]};
+  store.loads.push(other);
+  loadSelect.value=other.id;
+  file.files=[{name:'wrong-load.pdf',type:'application/pdf'}];
+  elements.get('v38-document-type').value='Customer Order / Work Order';
+  elements.get('v38-document-stage').value='source';
+  handler();
+  assert.equal(other.documents.length,0,'a stale document picker must not attach to another load');
+  loadSelect.value=load.id;
+  store.loads.pop();
+  ui.render();
+  const clearedHandler=file.listeners.change.at(-1).fn,before=JSON.stringify(load);
+  loadSelect.value='';
+  clearedHandler();
+  assert.equal(JSON.stringify(load),before,'clearing Dispatch selection must not fall back to the current load');
+  loadSelect.value=load.id;
+}
+
+{
+  localStorage.setItem('flt-v38-assignments',JSON.stringify({assignments:[],assignmentAudit:[]}));
+  const before=JSON.stringify(storage);
+  const fitUi=sandbox.window.FLTWeightEquipmentUI;
+  fitUi.candidate=()=>({load,assignment:{...assignment},driver:{id:'D1'},truck:{id:'T1'},trailer:{id:'R1'}});
+  assert.equal(ui.evaluate().status,'PASS','the first dispatch can review a verified candidate before the lock exists');
+  assert.equal(JSON.stringify(storage),before,'evaluating a candidate must not create a saved assignment');
+  fitUi.evaluate=()=>({status:'DO NOT DISPATCH',pass:false,reasons:['Cargo exceeds verified payload']});
+  assert.equal(ui.evaluate().status,'DO NOT DISPATCH','candidate review cannot bypass the weight hard stop');
+  fitUi.evaluate=()=>({status:'PASS',pass:true,reasons:[]});
+  fitUi.candidate=()=>({load:{...load,id:'OTHER'},assignment:{...assignment}});
+  assert.equal(ui.evaluate().status,'MORE INFORMATION REQUIRED','another load candidate cannot authorize this dispatch');
+  fitUi.candidate=()=>({load,assignment:{...assignment}});
+  load.documents=[];
+  assert.equal(ui.evaluate().status,'MORE INFORMATION REQUIRED','candidate review still requires the source document');
+}
+
 // Fail-closed store access: the live app declares `store` as a top-level
 // lexical const in index.html (not a globalThis/window property). This
 // scenario mirrors that exact binding shape via two separate vm.runInContext
@@ -282,7 +331,8 @@ console.log('V3.8 owner-operator load source persistence, live document gate blo
       appendChild(child) { child.parentElement = this; lexElements.set(child.id, child); },
       insertAdjacentElement(position, child) { child.parentElement = this.parentElement || this; lexElements.set(child.id, child); },
       closest() { return lexPanelHost; },
-      querySelector(selector) { if (selector === '.form-actions') return lexActions; return null; }
+      querySelector(selector) { if (selector === '.form-actions') return lexActions; return null; },
+      querySelectorAll() { return []; }
     };
     Object.defineProperty(node, 'innerHTML', {
       get() { return html; },

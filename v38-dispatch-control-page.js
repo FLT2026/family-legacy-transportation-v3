@@ -19,6 +19,14 @@
     const fleet = nav.querySelector('[data-view="fleet"]');
     if (fleet) fleet.insertAdjacentElement('afterend', button);
     else nav.appendChild(button);
+    button.addEventListener('click', () => {
+      window.FLTFleetCore.render();
+      document.querySelectorAll('.view').forEach(section => section.classList.toggle('active', section.id === viewId));
+      nav.querySelectorAll('button[data-view]').forEach(item => item.classList.toggle('active', item === button));
+      document.getElementById('page-title').textContent = 'Dispatch Control.';
+      document.getElementById('page-subtitle').textContent = 'Assign verified people and equipment to accepted loads.';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
     return button;
   }
 

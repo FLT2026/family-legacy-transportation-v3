@@ -101,22 +101,34 @@
     localStorage.setItem('flt-v35-fleet',JSON.stringify(fleet));
   }
 
-  function linkTruckToSnapshot(truckId){
+  // Manual truck repair never edits the saved snapshot. It appends a confirmed correction
+  // snapshot that references the original, so the historical record and its original
+  // (possibly missing) truck ID stay intact for audit.
+  function linkTruckToSnapshot(truckId,options={}){
     const load=getLoad();
     if(!load||!truckId)return false;
+    const notify=message=>{if(typeof toast==='function')toast(message)};
     const records=Array.isArray(load.actualTripRecords)?load.actualTripRecords:[];
     const record=records.at(-1);
     if(!record)return false;
+    if(record.truckId){notify('This Actual Trip snapshot already has a truck. Historical snapshots are not rewritten.');return false}
+    if(load.financialClose?.status==='Closed'){notify('Financially closed loads are locked. Open a protected correction before repairing the Actual Trip truck.');return false}
     const fleet=readJson('flt-v35-fleet',{trucks:[]});
     const truck=(Array.isArray(fleet?.trucks)?fleet.trucks:[]).find(item=>String(item.id)===String(truckId));
-    if(!truck)return false;
-    const before={truckId:record.truckId||null,truckUnit:record.truckUnit||null};
-    record.truckId=String(truck.id);
-    record.truckUnit=truck.unit||truck.name||String(truck.id);
-    persistRepairAudit(load.id,before,{truckId:record.truckId,truckUnit:record.truckUnit});
+    if(!truck||truck.status!=='active'){notify('Only an Active / Verified truck can be linked to Actual Trip MPG history.');return false}
+    const resolved=window.FLTActualTripTruck?.resolve?.(load);
+    if(resolved?.status==='conflict'){notify(resolved.message);return false}
+    if(resolved?.status==='verified'&&resolved.truckId!==String(truck.id)){notify('Dispatch records verify '+resolved.truckUnit+' for '+load.id+'. Correct the dispatch assignment instead of linking a different truck.');return false}
+    const unit=truck.unit||truck.name||String(truck.id);
+    const ask=options.confirm||globalThis.confirm;
+    if(typeof ask!=='function'||!ask('Record a correction linking '+unit+' to '+load.id+'? The original snapshot stays unchanged and the correction is added to audit history.'))return false;
+    const at=new Date().toISOString();
+    const correction={...record,snapshotId:'ACT-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,7),createdAt:at,originalCreatedAt:record.originalCreatedAt||record.createdAt,correctsSnapshotId:record.snapshotId,truckId:String(truck.id),truckUnit:unit,actualMpg:Number.isFinite(Number(record.actualMpg))&&record.actualMpg!==null?Number(record.actualMpg):(num(record.actualMiles)>0&&num(record.actualGallons)>0?num(record.actualMiles)/num(record.actualGallons):null),truckSources:[resolved?.status==='verified'?'Manual correction (matches dispatch records)':'Manual correction (operator confirmed)'],correctionReason:'Link missing truck to saved V3.6 actual trip'};
+    load.actualTripRecords=[...records,correction];
+    persistRepairAudit(load.id,{snapshotId:record.snapshotId,truckId:record.truckId||null,truckUnit:record.truckUnit||null},{snapshotId:correction.snapshotId,correctsSnapshotId:record.snapshotId,truckId:correction.truckId,truckUnit:correction.truckUnit});
     try{if(typeof persist==='function')persist()}catch(error){}
     try{if(typeof renderFinance==='function')renderFinance()}catch(error){}
-    if(typeof toast==='function')toast('Dispatched truck linked to the saved V3.6 trip.');
+    notify('Truck correction recorded. The original Actual Trip snapshot was preserved.');
     return true;
   }
 
@@ -133,9 +145,9 @@
     let host=existing;
     if(!host){
       host=document.createElement('div');host.id='v36-truck-repair-field';host.className='field full';
-      host.innerHTML='<label for="v36-truck-repair-select">Dispatched truck <span class="subtle">— required to complete Actual Trip Cost</span></label><select id="v36-truck-repair-select"><option value="">Select the truck used for this trip</option></select><div class="subtle" style="margin-top:6px">Historical assignment data is missing for this saved trip. Selecting the actual truck repairs the link and records the change in audit history.</div>';
+      host.innerHTML='<label for="v36-truck-repair-select">Dispatched truck <span class="subtle">— required to complete Actual Trip Cost</span></label><select id="v36-truck-repair-select"><option value="">Select the truck used for this trip</option></select><div class="subtle" style="margin-top:6px">This saved trip has no verified truck. Selecting an Active / Verified truck asks for confirmation, then adds a correction snapshot; the original snapshot is never rewritten.</div>';
       form.querySelector('.form-actions')?.insertAdjacentElement('beforebegin',host);
-      $('v36-truck-repair-select')?.addEventListener('change',event=>{if(event.target.value)linkTruckToSnapshot(event.target.value)});
+      $('v36-truck-repair-select')?.addEventListener('change',event=>{if(event.target.value&&!linkTruckToSnapshot(event.target.value))event.target.value=''});
     }
     const select=$('v36-truck-repair-select');
     if(select){
@@ -144,35 +156,15 @@
       // interpreted as markup.
       select.innerHTML='';
       select.appendChild(new Option('Select the truck used for this trip',''));
-      trucks.forEach(truck=>select.appendChild(new Option(String(truck.unit||truck.name||truck.id),String(truck.id))));
+      trucks.filter(truck=>truck?.status!=='cancelled').forEach(truck=>select.appendChild(new Option(String(truck.unit||truck.name||truck.id),String(truck.id))));
     }
   }
 
+  // Saved Actual Trip snapshots are immutable history. This no longer back-fills truck IDs
+  // or recomputes MPG on saved records; missing links are repaired only through the
+  // confirmed correction snapshot in linkTruckToSnapshot.
   function enrichLatestSnapshot(load){
-    if(!load)return false;
-    const records=Array.isArray(load.actualTripRecords)?load.actualTripRecords:[];
-    const record=records.at(-1);
-    if(!record)return false;
-    const assignment=resolveAssignment(load.id);
-    let changed=false;
-
-    if(assignment?.truckId&&record.truckId!==String(assignment.truckId)){record.truckId=String(assignment.truckId);changed=true}
-    const unit=assignment?.truckId?resolveTruckUnit(assignment.truckId,assignment):record.truckUnit;
-    if(unit&&record.truckUnit!==unit){record.truckUnit=unit;changed=true}
-
-    const miles=num(record.actualMiles),gallons=num(record.actualGallons);
-    if(miles>0&&gallons>0){
-      const mpg=miles/gallons;
-      if(!Number.isFinite(record.actualMpg)||Math.abs(Number(record.actualMpg)-mpg)>0.0001){record.actualMpg=mpg;changed=true}
-    }
-
-    if(changed){
-      load.actualMiles=miles??load.actualMiles;
-      load.actualFuelGallons=gallons??load.actualFuelGallons;
-      load.actualFuelPrice=num(record.averageFuelPrice)??load.actualFuelPrice;
-      try{if(typeof persist==='function')persist()}catch(error){}
-    }
-    return changed;
+    return false;
   }
 
   function fillForm(){
