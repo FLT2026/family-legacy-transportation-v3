@@ -456,6 +456,24 @@
 
       const renderFinanceProfit=()=>{const load=current(),card=document.querySelector('#finance > .grid.two > .panel:nth-child(2)');if(!card)return;const metricRows=card.querySelectorAll('.metric-row'),rows=card.querySelectorAll('.metric-row strong'),estimate=financeEstimate(load),recordedRevenue=Number(load.actualRevenue??load.revenue??0),estimatedRevenue=Number(load.estimatedRevenue??load.revenue??0),recordedExpenses=load.expenses.reduce((sum,item)=>sum+Number(item.amount),0),hasEstimate=Number.isFinite(estimate.cost),variance=hasEstimate?roundCurrency(recordedExpenses)-roundCurrency(estimate.cost):null;metricRows[0].querySelector('span').textContent='Revenue (estimated / recorded)';metricRows[1].querySelector('span').textContent='Costs (estimated / recorded)';metricRows[2].querySelector('span').textContent='Cost variance';metricRows[3].querySelector('span').textContent='Recorded profit';rows[0].textContent=money(estimatedRevenue)+' / '+money(recordedRevenue);rows[1].textContent=hasEstimate?money(estimate.cost)+' / '+money(recordedExpenses):'Not saved / '+money(recordedExpenses);rows[2].textContent=hasEstimate?((variance>0?'+':variance<0?'-':'')+money(Math.abs(variance))+(variance>0?' over estimate':variance<0?' under estimate':' on estimate')):'Unavailable';rows[2].style.color=!hasEstimate?'var(--muted)':(variance>0?'var(--red)':'var(--green)');rows[3].textContent=money(recordedRevenue-recordedExpenses);card.querySelector('.bar i').style.width=(recordedRevenue?Math.max(0,Math.min(100,(recordedRevenue-recordedExpenses)/recordedRevenue*100)):'0')+'%';};
       const printableWithProfit=renderFinance; renderFinance=()=>{printableWithProfit();renderFinanceProfit();}; renderFinance();
+      // Finance status must reflect the selected load, not static sample markup.
+      const financeStatusBase=renderFinance; renderFinance=()=>{
+        financeStatusBase();
+        const load=current(),complete=Boolean(load.deliveryProof?.signature);
+        const invoiceCard=document.querySelector('#finance .grid.three > .panel:nth-child(3)');
+        if(invoiceCard){
+          const title=invoiceCard.querySelector('h2'),description=invoiceCard.querySelector('.subtle'),tag=invoiceCard.querySelector('.tag');
+          if(title)title.textContent=complete?'Delivery proof recorded':'Delivery proof pending';
+          if(description)description.textContent=complete?'Signed delivery proof recorded for this load. Review all required documents before invoicing.':'The selected load has no signed delivery proof yet. Invoice readiness is not confirmed.';
+          if(tag){tag.textContent=complete?'Delivery recorded':'Signature pending';tag.className=complete?'tag':'tag orange'}
+        }
+        const profitStat=document.querySelector('#finance .stat:nth-child(3)');
+        if(profitStat){
+          const label=profitStat.querySelector('.label'),trend=profitStat.querySelector('.trend');
+          if(label)label.textContent='Profit based on recorded expenses';
+          if(trend)trend.textContent='Provisional — unrecorded costs are excluded';
+        }
+      }; renderFinance();
       // V3.4 invoice persistence fix: save the invoice before any print dialog can open.
       const ensureInvoice=load=>{if(load.invoice?.number)return load.invoice;const nextNumber=store.loads.reduce((highest,item)=>{const match=item.invoice?.number?.match(/^INV-(\d+)$/);return match?Math.max(highest,Number(match[1])):highest},0)+1;load.invoice={number:'INV-'+String(nextNumber).padStart(6,'0'),created:new Date().toISOString(),status:'Unpaid'};persist();return load.invoice;};
       document.querySelectorAll('#generate-invoice-top').forEach(button=>button.addEventListener('click',()=>{ensureInvoice(current());renderFinance();renderGate();},{capture:true}));
