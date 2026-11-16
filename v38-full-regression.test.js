@@ -21,6 +21,7 @@ const tests=[
   'v38-workflow-authority.test.js',
   'v38-navigation-prerequisites-hardfix.test.js',
   'v38-fleet-renewal-guidance.test.js',
+  'v38-fleet-duplicate-save.test.js',
   'v38-master-record-edit-reveal.test.js',
   'v38-test-gate-integrity-hardfix.test.js',
   'v38-acceptance-gate.test.js',
